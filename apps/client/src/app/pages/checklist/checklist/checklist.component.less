@@ -96,9 +96,23 @@ table {
     text-align: left;
     line-height: 20px;
 
+    .task-name-content {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .task-icon {
       width: 24px;
       height: 24px;
+      flex-shrink: 0;
+    }
+
+    .task-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 
@@ -213,7 +227,7 @@ table {
     border-right: 1px solid #666;
     border-collapse: collapse;
     text-align: center;
-    min-width: 210px;
+    min-width: 115px;
 
     @media screen and (max-width: 992px) {
       min-width: 60px;

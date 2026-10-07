@@ -22,6 +22,7 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
+import { checklistTaskColumnWidth, computeChecklistScroll } from './checklist-layout';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -239,25 +240,26 @@ export class ChecklistComponent {
 
   private windowResize$ = new BehaviorSubject<void>(void 0);
 
-  public scrolling$ = combineLatest([this.roster$, this.windowResize$]).pipe(
-    map(([roster]) => {
-      const y = window.innerHeight - 400;
-      const scrolling: { x?: string | null, y: string | null } = { y: `${y}px` };
-      const widthPerCharacter = window.innerWidth < 992 ? 80 : 120;
-      if (window.innerWidth < widthPerCharacter * roster.length + 200) {
-        scrolling.x = `${window.innerWidth - 64 - 48 - 210 - 20}px`;
-      }
-      return scrolling;
-    }),
-    startWith({ x: null, y: null })
-  );
-
   public characters$ = combineLatest([this.roster$, this.showHiddenCharacters$]).pipe(
     map(([roster, showHidden]) => filterVisibleCharacters(roster, showHidden))
   );
 
   public charactersDisplay$ = combineLatest([this.tableDisplay$, this.showHiddenCharacters$]).pipe(
     map(([display, showHidden]) => filterVisibleCharacters(display.roster, showHidden))
+  );
+
+  public taskColumnWidth$ = this.layoutState.sidebarCollapsed$.pipe(
+    map(sidebarCollapsed => checklistTaskColumnWidth(sidebarCollapsed))
+  );
+
+  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$]).pipe(
+    map(([characters, sidebarCollapsed]) => computeChecklistScroll({
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visibleCharacterCount: characters.length,
+      sidebarCollapsed
+    })),
+    startWith({ x: null, y: null })
   );
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
