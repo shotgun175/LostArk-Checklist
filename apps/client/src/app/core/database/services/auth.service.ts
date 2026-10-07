@@ -1,7 +1,9 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { catchError, filter, first } from "rxjs/operators";
 import { EMPTY, from, map, mapTo, Observable, shareReplay, switchMap } from "rxjs";
-import { Auth, authState, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail, signInAnonymously, signInWithEmailAndPassword, signOut, UserCredential } from "@angular/fire/auth";
+import { Auth, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail, signInAnonymously, signInWithEmailAndPassword, signOut, UserCredential } from "firebase/auth";
+import { FIREBASE_AUTH } from "../../firebase/firebase.providers";
+import { authState$ } from "../../firebase/rx";
 import { NzMessageService } from "ng-zorro-antd/message";
 
 @Injectable({
@@ -9,7 +11,7 @@ import { NzMessageService } from "ng-zorro-antd/message";
 })
 export class AuthService {
 
-  private authState$ = authState(this.auth);
+  private authState$ = authState$(this.auth);
 
   public uid$ = this.authState$.pipe(
     filter(Boolean),
@@ -24,7 +26,7 @@ export class AuthService {
     shareReplay(1)
   );
 
-  constructor(private auth: Auth, private message: NzMessageService) {
+  constructor(@Inject(FIREBASE_AUTH) private auth: Auth, private message: NzMessageService) {
     this.authState$.subscribe((state) => {
       if (!state) {
         signInAnonymously(auth);

@@ -1,17 +1,23 @@
 import { TestBed } from "@angular/core/testing";
 import { EnergyService } from "./energy.service";
-import { getFirestore, provideFirestore } from "@angular/fire/firestore";
-import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
-import { environment } from "../../../../environments/environment";
-import { getAuth, provideAuth } from "@angular/fire/auth";
 import { NzMessageModule } from "ng-zorro-antd/message";
 import { TimeService } from "../../time.service";
-import { of } from "rxjs";
+import { NEVER, of } from "rxjs";
 import { TasksService } from "./tasks.service";
 import { tasks } from "../../tasks";
 import { RosterService } from "./roster.service";
 import { CompletionService } from "./completion.service";
 import { CompletionEntry } from "../../../model/completion-entry";
+import { AuthService } from "./auth.service";
+import { FIRESTORE } from "../../firebase/firebase.providers";
+
+// No real Firebase in unit tests. The Node build of firebase/auth 10 cannot load on Node 16,
+// and FirestoreStorage only needs collection().withConverter() at construction.
+jest.mock("firebase/app", () => ({}));
+jest.mock("firebase/auth", () => ({}));
+jest.mock("firebase/firestore", () => ({
+  collection: jest.fn(() => ({ withConverter: jest.fn(() => ({})) }))
+}));
 
 const mockTask = {
   ...tasks[0],
@@ -24,12 +30,11 @@ describe("EnergyService", () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [
-        provideFirebaseApp(() => initializeApp(environment.firebase)),
-        provideAuth(() => getAuth()),
-        provideFirestore(() => getFirestore()),
         NzMessageModule
       ],
       providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: NEVER } },
         {
           provide: TimeService,
           useValue: {

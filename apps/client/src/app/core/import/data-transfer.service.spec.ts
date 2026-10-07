@@ -1,5 +1,5 @@
 import { of } from "rxjs";
-import { Firestore } from "@angular/fire/firestore";
+import { Firestore } from "firebase/firestore";
 import { AuthService } from "../database/services/auth.service";
 import { CompletionService } from "../database/services/completion.service";
 import { DataTransferService } from "./data-transfer.service";
@@ -8,7 +8,11 @@ import { LostarkExport } from "./lostark-export";
 const commit = jest.fn();
 const getDocMock = jest.fn();
 
-jest.mock("@angular/fire/firestore", () => ({
+// DataTransferService pulls in AuthService and the FIRESTORE token, which import firebase/app and
+// firebase/auth. The Node build of firebase/auth 10 cannot load on Node 16, so they are stubbed.
+jest.mock("firebase/app", () => ({}));
+jest.mock("firebase/auth", () => ({}));
+jest.mock("firebase/firestore", () => ({
   collection: jest.fn(() => ({})),
   doc: jest.fn(() => ({ id: "fresh" })),
   getDoc: (...args: unknown[]) => getDocMock(...args),

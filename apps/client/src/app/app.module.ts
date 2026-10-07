@@ -11,11 +11,8 @@ import { AppRoutingModule } from "./app-routing.module";
 import { IconsProviderModule } from "./icons-provider.module";
 import { NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMenuModule } from "ng-zorro-antd/menu";
-import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
 import { environment } from "../environments/environment";
-import { connectAuthEmulator, getAuth, provideAuth } from "@angular/fire/auth";
-import { connectFirestoreEmulator, getFirestore, provideFirestore } from "@angular/fire/firestore";
-import { USE_DEVICE_LANGUAGE } from "@angular/fire/compat/auth";
+import { provideFirebase } from "./core/firebase/firebase.providers";
 import { NzDropDownModule } from "ng-zorro-antd/dropdown";
 import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
@@ -33,21 +30,6 @@ registerLocaleData(en);
     IconsProviderModule,
     NzLayoutModule,
     NzMenuModule,
-    provideAuth(() => {
-      const auth = getAuth();
-      if (environment.useEmulators) {
-        connectAuthEmulator(auth, "http://localhost:9099");
-      }
-      return auth;
-    }),
-    provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideFirestore(() => {
-      const firestore = getFirestore();
-      if (environment.useEmulators) {
-        connectFirestoreEmulator(firestore, "localhost", 8085);
-      }
-      return firestore;
-    }),
     NzDropDownModule,
     AuthPopupsModule,
     NzModalModule,
@@ -55,7 +37,7 @@ registerLocaleData(en);
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },
-    { provide: USE_DEVICE_LANGUAGE, useValue: true }
+    ...provideFirebase(environment)
   ],
   bootstrap: [AppComponent]
 })

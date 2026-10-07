@@ -1,5 +1,6 @@
-import { Injectable } from "@angular/core";
-import { collection, doc, Firestore, getDoc, getDocs, query, where, writeBatch } from "@angular/fire/firestore";
+import { Inject, Injectable } from "@angular/core";
+import { collection, doc, Firestore, getDoc, getDocs, query, where, writeBatch } from "firebase/firestore";
+import { FIRESTORE } from "../firebase/firebase.providers";
 import { firstValueFrom } from "rxjs";
 import { AuthService } from "../database/services/auth.service";
 import { CompletionService } from "../database/services/completion.service";
@@ -11,7 +12,7 @@ import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
 })
 export class DataTransferService {
 
-  constructor(private firestore: Firestore, private auth: AuthService,
+  constructor(@Inject(FIRESTORE) private firestore: Firestore, private auth: AuthService,
               private completionService: CompletionService) {
   }
 

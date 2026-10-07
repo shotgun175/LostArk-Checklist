@@ -1,7 +1,8 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
 import { LAHUser } from "../../../model/lah-user";
-import { Firestore } from "@angular/fire/firestore";
+import { Firestore } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { AuthService } from "./auth.service";
 import { combineLatest, map, Observable, of, shareReplay, switchMap } from "rxjs";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
@@ -64,7 +65,7 @@ export class UserService extends FirestoreStorage<LAHUser> {
       );
   }
 
-  constructor(firestore: Firestore, private auth: AuthService,
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService,
               private modal: NzModalService) {
     super(firestore);
   }

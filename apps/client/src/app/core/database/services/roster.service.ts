@@ -1,9 +1,10 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { map, Observable, of, shareReplay, switchMap } from "rxjs";
 import { FirestoreStorage } from "../firestore-storage";
 import { Roster } from "../../../model/roster";
 import { AuthService } from "./auth.service";
-import { Firestore } from "@angular/fire/firestore";
+import { Firestore } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { mapTo } from "rxjs/operators";
 
 @Injectable({
@@ -29,7 +30,7 @@ export class RosterService extends FirestoreStorage<Roster> {
     shareReplay(1)
   );
 
-  constructor(private auth: AuthService, firestore: Firestore) {
+  constructor(private auth: AuthService, @Inject(FIRESTORE) firestore: Firestore) {
     super(firestore);
   }
 

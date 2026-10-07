@@ -10,7 +10,7 @@ import { CompletionService } from '../../../core/database/services/completion.se
 import { Character } from "../../../model/character/character";
 import { TimeService } from "../../../core/time.service";
 import { ManualWeeklyGoldEntry, Settings } from "../../../model/settings";
-import { UpdateData } from "@angular/fire/firestore";
+import { UpdateData } from "firebase/firestore";
 import { getCompletionEntry } from '../../../core/get-completion-entry-key';
 import { Completion } from "../../../model/completion";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
