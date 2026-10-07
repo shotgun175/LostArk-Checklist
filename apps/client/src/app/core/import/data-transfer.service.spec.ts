@@ -58,4 +58,11 @@ describe("DataTransferService", () => {
     await service.importExport(file());
     expect(setLocal).toHaveBeenCalledTimes(1);
   });
+
+  it("backs up an account with no roster or settings document as a restorable file", async () => {
+    getDocMock.mockResolvedValue({ data: () => undefined });
+    const backup = await service.buildBackup();
+    expect(backup.roster).toEqual({ characters: [], trackedTasks: {}, showAllTasks: false });
+    expect(backup.settings).toEqual({});
+  });
 });

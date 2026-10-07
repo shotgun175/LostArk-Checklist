@@ -60,8 +60,10 @@ export class DataTransferService {
       format: EXPORT_FORMAT,
       exportedAt: new Date().toISOString(),
       sourceUid: uid,
-      roster: roster.data() as LostarkExport["roster"],
-      settings: settings.data() as LostarkExport["settings"],
+      // Same defaults as RosterService and an empty settings map, so a backup of an account
+      // that never saved these documents can still be restored.
+      roster: (roster.data() ?? { characters: [], trackedTasks: {}, showAllTasks: false }) as LostarkExport["roster"],
+      settings: (settings.data() ?? {}) as LostarkExport["settings"],
       completion: (completion.data() ?? null) as LostarkExport["completion"],
       energy: (energy.data() ?? null) as LostarkExport["energy"],
       tasks: tasks.docs.map(task => ({ ...task.data(), $key: task.id }) as LostarkExport["tasks"][number])
