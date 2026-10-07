@@ -19,7 +19,9 @@
       z-index: 12;
     }
 
-    // nz-table sets ant-table-ping-left once the body is scrolled away from its left edge
+    // nz-table sets ant-table-ping-left once the body is scrolled away from its left edge.
+    // This is an ng-zorro internal class, not a public API: after an ng-zorro upgrade,
+    // check that the shadow still appears when the table is scrolled sideways.
     .ant-table-ping-left {
       .ant-table-thead > tr > th:first-child,
       td.task-name {
