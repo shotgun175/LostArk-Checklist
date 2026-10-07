@@ -5,13 +5,8 @@ import { NzModalService } from "ng-zorro-antd/modal";
 import { RegisterPopupComponent } from "./components/auth-popups/register-popup/register-popup.component";
 import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-popup.component";
 import { LocalStorageService } from "./core/database/services/local-storage.service";
-import { FriendInvitesService } from "./core/database/services/friend-invites.service";
-import { distinctUntilChanged, filter, pairwise, startWith } from "rxjs";
 import { NzMessageService } from "ng-zorro-antd/message";
-import { LostarkRegion } from "./model/lostark-region";
 import { LAHUser } from "./model/lah-user";
-import { NavigationEnd, Router } from "@angular/router";
-import { Pirsch } from "pirsch-sdk/web";
 
 @Component({
   selector: "lostark-helper-root",
@@ -21,17 +16,6 @@ import { Pirsch } from "pirsch-sdk/web";
 export class AppComponent implements OnInit {
   isCollapsed = localStorage.getItem("sidebar:collapsed") === "true";
 
-  public allRegions = Object.keys(LostarkRegion)
-    .filter((k, i, array) => array.indexOf(k) === i)
-    .map(key => {
-      return {
-        value: key,
-        label: key.split("_")
-          .map(word => `${word[0]}${word.slice(1).toLowerCase()}`)
-          .join(" ")
-      };
-    });
-
   public user$ = this.userService.user$;
 
   public anonymous$ = this.auth.isAnonymous$;
@@ -40,40 +24,8 @@ export class AppComponent implements OnInit {
               private auth: AuthService,
               private modalService: NzModalService,
               private localStorageService: LocalStorageService,
-              private friendInvitesService: FriendInvitesService,
-              private message: NzMessageService,
-              router: Router
+              private message: NzMessageService
   ) {
-
-    const pirsch = new Pirsch({
-      identificationCode: "m0n4FeGzHPMNNQNJQJ5YAORKsY71AyaY",
-      hostname: "lostark-helper.com"
-    });
-
-    router.events
-      .pipe(
-        distinctUntilChanged((previous: unknown, current: unknown) => {
-          if (current instanceof NavigationEnd) {
-            return (previous as NavigationEnd).url === current.url;
-          }
-          return true;
-        })
-      )
-      .subscribe(() => {
-        pirsch.hit();
-      });
-
-    friendInvitesService.invitesReceived$
-      .pipe(
-        startWith([]),
-        pairwise(),
-        filter(([before, after]) => after.length > before.length)
-      )
-      .subscribe(([before, after]) => {
-        this.message.info(`You have ${after.length - before.length} pending friend invite(s), open friends page to manage them.`, {
-          nzDuration: 10000
-        });
-      });
   }
 
   saveCollapsed(collapsed: boolean): void {
@@ -103,21 +55,6 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     if (localStorage.getItem("tasks:default") !== null && localStorage.getItem("imported") !== "true") {
       this.localStorageService.migrate();
-    }
-    this.localStorageService.upgrade(+(localStorage.getItem("version") || "1"));
-  }
-
-  setUserRegion(user: LAHUser, region: LostarkRegion, anonymous?: boolean): void {
-    if (anonymous) {
-      this.userService.setOne(user.$key, {
-        name: "Anonymous",
-        region: region,
-        friends: []
-      });
-    } else {
-      this.userService.updateOne(user.$key, {
-        region: region
-      });
     }
   }
 

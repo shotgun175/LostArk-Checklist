@@ -10,10 +10,6 @@
     <div class="sidebar-container">
       <div class="main-navbar">
         <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed">
-          <a nz-menu-item nzMatchRouter nzMatchRouterExact routerLink="/">
-            <i nz-icon nzType="home" nzTheme="outline"></i>
-            <span>Home</span>
-          </a>
           <li nz-submenu nzTitle="Helpers" nzIcon="appstore" nzOpen>
             <ul>
               <li>
@@ -28,72 +24,8 @@
                   <span>Gold Planner</span>
                 </a>
               </li>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/mari-optimizer" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="credit-card" nzTheme="outline"></i>
-                  <span>Mari Optimizer</span>
-                </a>
-              </li>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/honing-cost-optimizer" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="arrow-up" nzTheme="outline"></i>
-                  <span>Honing Cost Optimizer</span>
-                </a>
-              </li>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/gearsets" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="usergroup-add" nzTheme="outline"></i>
-                  <span>Gearsets</span>
-                </a>
-              </li>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/engraving-search" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="search" nzTheme="outline"></i>
-                  <span>Engraving Search</span>
-                </a>
-              </li>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/other-tools" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="appstore-add" nzTheme="outline"></i>
-                  <span>More cool tools</span>
-                </a>
-              </li>
             </ul>
           </li>
-          <li nz-submenu nzTitle="Party Helpers" nzIcon="team" nzOpen>
-            <ul>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/party-planner" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="team" nzTheme="outline"></i>
-                  <span>Party Planner</span>
-                </a>
-              </li>
-            </ul>
-            <ul>
-              <li>
-                <a nz-menu-item nzMatchRouter routerLink="/friends" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="smile" nzTheme="outline"></i>
-                  <span>Friends</span>
-                </a>
-              </li>
-            </ul>
-          </li>
-          <!--          <li nz-submenu nzTitle="Guild" nzIcon="flag" nzOpen>-->
-          <!--            <ul>-->
-          <!--              <li>-->
-          <!--                <a nz-menu-item nzMatchRouter routerLink="/guild" [nzPaddingLeft]="32">-->
-          <!--                  <i nz-icon nzType="unordered-list" nzTheme="outline"></i>-->
-          <!--                  <span>Your Guilds</span>-->
-          <!--                </a>-->
-          <!--              </li>-->
-          <!--              <li>-->
-          <!--                <a nz-menu-item nzMatchRouter routerLink="/planned-tasks" [nzPaddingLeft]="32">-->
-          <!--                  <i nz-icon nzType="schedule" nzTheme="outline"></i>-->
-          <!--                  <span>Planned tasks</span>-->
-          <!--                </a>-->
-          <!--              </li>-->
-          <!--            </ul>-->
-          <!--          </li>-->
           <li nz-submenu nzTitle="Configuration" nzIcon="setting" nzOpen>
             <ul>
               <li>
@@ -108,12 +40,6 @@
                   <span>Tasks Manager</span>
                 </a>
               </li>
-              <!--              <li>-->
-              <!--                <a nz-menu-item nzMatchRouter routerLink="/availability" [nzPaddingLeft]="32">-->
-              <!--                  <i nz-icon nzType="calendar" nzTheme="outline"></i>-->
-              <!--                  <span>Availability</span>-->
-              <!--                </a>-->
-              <!--              </li>-->
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/settings" [nzPaddingLeft]="32">
                   <i nz-icon nzType="setting" nzTheme="outline"></i>
@@ -142,11 +68,6 @@
   </nz-sider>
   <nz-layout>
     <nz-header>
-      <nz-input-group nzAddOnBefore="Region" *ngIf="user$ | async as user">
-        <nz-select [ngModel]="user.region" (ngModelChange)="setUserRegion(user, $event, user.notFound)" class="region-selector">
-          <nz-option *ngFor="let region of allRegions" [nzLabel]="region.label" [nzValue]="region.value"></nz-option>
-        </nz-select>
-      </nz-input-group>
       <div class="user-menu" [class.anonymous]="anonymous$ | async" nz-dropdown [nzDropdownMenu]="menu"
            nzOverlayClassName="user-menu">
         <i nz-icon nzType="user" nzTheme="outline"></i>

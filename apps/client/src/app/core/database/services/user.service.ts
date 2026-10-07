@@ -42,15 +42,6 @@ export class UserService extends FirestoreStorage<LAHUser> {
     shareReplay(1)
   );
 
-  public region$ = this.user$.pipe(
-    map(user => user.region || LostarkRegion.EUROPE_CENTRAL)
-  );
-
-  public friendIds$ = this.user$.pipe(
-    map(user => user?.friends || []),
-    shareReplay(1)
-  );
-
   public updateUserName(user: LAHUser): Observable<void> {
     this.updatingUserName = true;
     return this.modal.create({

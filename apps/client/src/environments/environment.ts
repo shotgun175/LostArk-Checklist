@@ -12,8 +12,7 @@ export const environment = {
     authDomain: 'lostark-helper-8dfb0.firebaseapp.com',
     messagingSenderId: '149724175977',
   },
-  production: false,
-  marketApi: '/api'
+  production: false
 };
 
 /*
