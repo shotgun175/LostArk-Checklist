@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// LostArk-Checklist: every signed-in user (anonymous users included) can reach only their own data.
+// Anything not matched below is denied, including the collections of removed features.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /roster/{uid} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /settings/{uid} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /completion/{uid} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /energy/{uid} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /users/{uid} {
+      allow read, write: if isUser(uid);
+    }
+
+    match /tasks/{taskId} {
+      allow read, delete: if request.auth != null
+        && resource.data.authorId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.authorId == request.auth.uid
+        && request.resource.data.authorId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid;
+    }
+  }
+}
