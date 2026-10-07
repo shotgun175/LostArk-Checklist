@@ -160,7 +160,10 @@ export class SettingsComponent {
 
   public hasLocalstorageData = false;
 
-  public pendingImport: { fileName: string; validation: ExportValidation } | null = null;
+  public pendingImport: { fileName: string; validation: ExportValidation; fromLostarkHelper: boolean } | null = null;
+
+  /** Which button opened the file picker: Import from Lostark-helper (true) or Restore backup (false). */
+  public importFromLostarkHelper = false;
 
   public transferBusy = false;
 
@@ -281,13 +284,14 @@ export class SettingsComponent {
     }
     this.pendingImport = {
       fileName: file.name,
-      validation: parseExportFile(await file.text())
+      validation: parseExportFile(await file.text()),
+      fromLostarkHelper: this.importFromLostarkHelper
     };
   }
 
-  confirmImport(data: LostarkExport): void {
+  confirmImport(data: LostarkExport, fromLostarkHelper: boolean): void {
     this.transferBusy = true;
-    this.dataTransfer.importExport(data).then(() => {
+    this.dataTransfer.importExport(data, fromLostarkHelper).then(() => {
       this.message.success("Import done, reloading");
       window.location.reload();
     }, (error: Error) => {

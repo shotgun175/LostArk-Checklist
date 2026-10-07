@@ -29,13 +29,13 @@
              (change)="onImportFileSelected(importFile)">
       <div nz-row [nzGutter]="[10, 10]">
         <div nz-col>
-          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFile.click()">Import from Lostark-helper</button>
+          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFromLostarkHelper = true; importFile.click()">Import from Lostark-helper</button>
         </div>
         <div nz-col>
           <button nz-button [nzLoading]="transferBusy" (click)="downloadBackup()">Download backup</button>
         </div>
         <div nz-col>
-          <button nz-button [disabled]="transferBusy" (click)="importFile.click()">Restore backup</button>
+          <button nz-button [disabled]="transferBusy" (click)="importFromLostarkHelper = false; importFile.click()">Restore backup</button>
         </div>
       </div>
       <div *ngIf="pendingImport as pending" class="import-summary">
@@ -51,7 +51,7 @@
                 [nzLoading]="transferBusy"
                 nz-popconfirm
                 nzPopconfirmTitle="This replaces the roster, tasks, ticks, rest bonus and settings of this account. Continue?"
-                (nzOnConfirm)="confirmImport(data)">Import this file
+                (nzOnConfirm)="confirmImport(data, pending.fromLostarkHelper)">Import this file
         </button>
       </div>
     </nz-card>

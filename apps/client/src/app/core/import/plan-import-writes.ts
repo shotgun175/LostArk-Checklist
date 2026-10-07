@@ -1,5 +1,7 @@
 import { Completion } from "../../model/completion";
+import { LostarkTask } from "../../model/lostark-task";
 import { LostarkExport, StoredDoc } from "./lostark-export";
+import { isRaidTask } from "../task-tracking";
 
 /** Firestore's maximum number of writes in one batch. */
 export const FIRESTORE_BATCH_LIMIT = 500;
@@ -32,14 +34,37 @@ function remapKeys<T>(map: Record<string, T> | undefined, newIds: Map<string, st
 }
 
 /**
+ * The file's tracking choices worth keeping: entries whose task ("taskId", "charId:taskId" or
+ * "charName:taskId") is not in the file are dropped, and so are raid entries when dropRaids is set,
+ * so the imported roster starts on the automatic newest raids.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks from the file.
+ *   tasks: the file's tasks.
+ *   dropRaids: whether to drop entries of raid tasks too.
+ */
+export function cleanImportedTracking(trackedTasks: Record<string, boolean | undefined> | undefined, tasks: LostarkTask[], dropRaids: boolean): Record<string, boolean | undefined> | undefined {
+  if (!trackedTasks) {
+    return trackedTasks;
+  }
+  const taskByKey = new Map(tasks.map(task => [task.$key, task]));
+  return Object.fromEntries(Object.entries(trackedTasks).filter(([key]) => {
+    const task = taskByKey.get(key.slice(key.lastIndexOf(":") + 1));
+    return task !== undefined && !(dropRaids && isRaidTask(task));
+  }));
+}
+
+/**
  * Lists the writes that replace the current user's data with an export.
  *
  * Every task the current user has is deleted, and each imported task gets a fresh id from
  * `newTaskId`. Task documents live in one shared collection, so reusing the file's ids would
  * fail whenever the same file was already imported into another account. Completion, rest
- * bonus, tracking and lazy-flag keys are rewritten to the fresh ids.
+ * bonus, tracking and lazy-flag keys are rewritten to the fresh ids. Tracking choices are
+ * cleaned first (see cleanImportedTracking); dropRaidTracking is set for Lostark-helper files,
+ * not for this app's own backups.
  */
-export function planImportWrites(uid: string, existingTaskIds: string[], data: LostarkExport, newTaskId: () => string): ImportPlan {
+export function planImportWrites(uid: string, existingTaskIds: string[], data: LostarkExport, newTaskId: () => string, dropRaidTracking = false): ImportPlan {
   const newIds = new Map(data.tasks.map(task => [task.$key, newTaskId()]));
   const deletes: ImportWrite[] = existingTaskIds.map(id => ({ op: "delete", collection: "tasks", id }));
   const taskSets: ImportWrite[] = data.tasks.map(({ $key, ...task }) => ({
@@ -56,7 +81,7 @@ export function planImportWrites(uid: string, existingTaskIds: string[], data: L
     settings["lazytracking"] = remapKeys(data.settings.lazytracking, newIds);
   }
   const docSets: ImportWrite[] = [
-    { op: "set", collection: "roster", id: uid, data: { ...data.roster, trackedTasks: remapKeys(data.roster.trackedTasks, newIds) ?? {} } },
+    { op: "set", collection: "roster", id: uid, data: { ...data.roster, trackedTasks: remapKeys(cleanImportedTracking(data.roster.trackedTasks, data.tasks, dropRaidTracking), newIds) ?? {} } },
     { op: "set", collection: "settings", id: uid, data: settings },
     { op: "set", collection: "completion", id: uid, data: { ...completion } },
     { op: "set", collection: "energy", id: uid, data: { ...sourceEnergy, data: remapKeys(sourceEnergy.data, newIds) ?? {} } }

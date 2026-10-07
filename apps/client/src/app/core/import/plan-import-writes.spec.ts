@@ -1,5 +1,6 @@
 import { LostarkExport } from "./lostark-export";
-import { ImportWrite, planImportWrites } from "./plan-import-writes";
+import { cleanImportedTracking, ImportWrite, planImportWrites } from "./plan-import-writes";
+import { TaskScope } from "../../model/task-scope";
 
 function sampleExport(): LostarkExport {
   return {
@@ -95,5 +96,47 @@ describe("planImportWrites", () => {
     expect(plan(["fresh1"]).map(w => `${w.op}:${w.collection}`)).toEqual([
       "delete:tasks", "set:tasks", "set:tasks", "set:roster", "set:settings", "set:completion", "set:energy"
     ]);
+  });
+
+  it("drops tracking for tasks not in the file and, from Lostark-helper, for raids", () => {
+    const file = {
+      ...sampleExport(),
+      roster: {
+        characters: [], showAllTasks: false, trackedTasks: {
+          "42:t1": false, "Alice:t1": true, "42:raid": true, "Alice:raid": false, "42:gone": false
+        }
+      },
+      tasks: [...sampleExport().tasks, { $key: "raid", label: "Echidna" }] as LostarkExport["tasks"]
+    };
+    const fromHelper = planImportWrites("me", [], file, counter(), true).writes;
+    expect(dataOf(fromHelper, "roster")?.["trackedTasks"]).toEqual({ "42:new1": false, "Alice:new1": true });
+    const fromBackup = planImportWrites("me", [], file, counter()).writes;
+    expect(dataOf(fromBackup, "roster")?.["trackedTasks"]).toEqual({ "42:new1": false, "Alice:new1": true, "42:new3": true, "Alice:new3": false });
+  });
+});
+
+describe("cleanImportedTracking", () => {
+  const tasks = [
+    { $key: "daily", label: "Chaos Dungeon" },
+    { $key: "roster", label: "Chaos Gate", scope: TaskScope.ROSTER },
+    { $key: "abyss", label: "Demon Beast Canyon" },
+    { $key: "custom", label: "Echidna", custom: true }
+  ] as unknown as LostarkExport["tasks"];
+
+  it("keeps non-raid choices, including roster tasks keyed by task id alone", () => {
+    expect(cleanImportedTracking({ "1:daily": false, "Bob:daily": true, roster: false }, tasks, true))
+      .toEqual({ "1:daily": false, "Bob:daily": true, roster: false });
+  });
+
+  it("drops built-in raid and abyssal dungeon choices but keeps a custom task named like a raid", () => {
+    expect(cleanImportedTracking({ "1:abyss": true, "1:custom": true }, tasks, true)).toEqual({ "1:custom": true });
+  });
+
+  it("drops orphans whose task is not in the file, even when raids are kept", () => {
+    expect(cleanImportedTracking({ "1:missing": true, missing: false, "1:abyss": true }, tasks, false)).toEqual({ "1:abyss": true });
+  });
+
+  it("passes a missing map through", () => {
+    expect(cleanImportedTracking(undefined, tasks, true)).toBeUndefined();
   });
 });
