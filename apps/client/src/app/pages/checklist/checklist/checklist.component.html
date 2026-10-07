@@ -1,10 +1,14 @@
-<nz-page-header nzTitle="Checklist" [nzSubtitle]="subtitle">
+<nz-page-header class="checklist-header" [nzTitle]="title" [nzSubtitle]="subtitle">
+  <ng-template #title>
+    Checklist <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Ctrl + Click a task to mark it as entirely done in a single click" class="title-info"></i>
+  </ng-template>
   <ng-template #subtitle>
-    Track your daily and weekly tasks with automated resets and rest bonus support <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Ctrl + Click a task to mark it as entirely done in a single click"></i>
-    <br />
-    <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
-    Show your hidden characters
-    <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></i>
+    <div>Track your daily and weekly tasks with automated resets and rest bonus support</div>
+    <div class="hidden-characters">
+      <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
+      Show your hidden characters
+      <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></i>
+    </div>
   </ng-template>
 
   <nz-page-header-extra>
@@ -62,7 +66,7 @@
       <ng-container *ngIf="energy$ | async as energy">
         <ng-container *ngIf="scrolling$ | async as scrolling">
         <ng-container *ngIf="taskColumnWidth$ | async as taskColumnWidth">
-          <nz-table *ngIf="tableDisplay$ | async as display" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
+          <nz-table *ngIf="tableDisplay$ | async as display" class="checklist-table" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
             <ng-template #empty></ng-template>
             <table>
               <thead>
@@ -156,14 +160,16 @@
                               [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
                             >
                               <ng-container *ngIf="row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl">
-                                <span class="gold-badge" *ngIf="row.completionData[i].takingGold">
-                                  <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">
-                                    {{ row.completionData[i].modeBadge }}
-                                    <i *ngIf="row.completionData[i].higherModeInfo" nz-icon nzType="arrow-up" nzTheme="outline" class="gold-badge-up" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo"></i>
+                                <ng-container *ngIf="row.completionData[i].takingGold">
+                                  <span class="gold-badge">
+                                    <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">{{ row.completionData[i].modeBadge }}</span>
+                                    <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
                                   </span>
-                                  <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
-                                </span>
-                                <div class="counter">
+                                  <span class="gold-badge-up" *ngIf="row.completionData[i].modeBadge && row.completionData[i].higherModeInfo" role="img" [attr.aria-label]="row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
+                                    <i nz-icon nzType="arrow-up" nzTheme="outline"></i>
+                                  </span>
+                                </ng-container>
+                                <div class="counter" [class.has-gold-badge]="row.completionData[i].takingGold">
                                   <div>
                                     <button
                                       nz-button

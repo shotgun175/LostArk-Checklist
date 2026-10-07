@@ -11,35 +11,54 @@ describe('checklistTaskColumnWidth', () => {
 });
 
 describe('computeChecklistScroll', () => {
-  it('does not force a table width for 6 visible characters at 1080x1920, sidebar collapsed', () => {
+  it('scrolls sideways for 7 characters at 1080x1920 with the sidebar collapsed', () => {
+    // 180 task + 7 x 115 = 985 > 1080 - 80 sidebar - 79 = 921
+    expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 7, sidebarCollapsed: true }))
+      .toEqual({ y: '1520px', x: '985px' });
+  });
+
+  it('scrolls sideways for 7 characters at 1080x1920 with the sidebar open', () => {
+    // 130 task + 7 x 115 = 935 > 1080 - 200 sidebar - 79 = 801
+    expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 7, sidebarCollapsed: false }))
+      .toEqual({ y: '1520px', x: '935px' });
+  });
+
+  it('does not scroll sideways for 6 characters at 1080x1920 with the sidebar collapsed', () => {
+    // 180 + 6 x 115 = 870 <= 921
     expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 6, sidebarCollapsed: true }))
       .toEqual({ y: '1520px' });
   });
 
-  it('does not force a table width for 6 visible characters at 1080x1920, sidebar open', () => {
+  it('scrolls sideways for 6 characters at 1080x1920 with the sidebar open', () => {
+    // 130 + 6 x 115 = 820 > 801
     expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 6, sidebarCollapsed: false }))
-      .toEqual({ y: '1520px' });
+      .toEqual({ y: '1520px', x: '820px' });
   });
 
-  it('uses the open sidebar and task widths when 15 characters are shown', () => {
-    // 1080 - 200 sidebar - 48 padding - 130 task column - 20
+  it('does not scroll sideways for 7 characters at 2560x1440 in either sidebar state', () => {
+    expect(computeChecklistScroll({ innerWidth: 2560, innerHeight: 1440, visibleCharacterCount: 7, sidebarCollapsed: true }))
+      .toEqual({ y: '1040px' });
+    expect(computeChecklistScroll({ innerWidth: 2560, innerHeight: 1440, visibleCharacterCount: 7, sidebarCollapsed: false }))
+      .toEqual({ y: '1040px' });
+  });
+
+  it('sets x to the full table width when 15 characters are shown', () => {
     expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 15, sidebarCollapsed: false }))
-      .toEqual({ y: '1520px', x: '682px' });
-  });
-
-  it('uses the collapsed sidebar and task widths when 15 characters are shown', () => {
-    // 1080 - 80 sidebar - 48 padding - 180 task column - 20
+      .toEqual({ y: '1520px', x: '1855px' });
     expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 15, sidebarCollapsed: true }))
-      .toEqual({ y: '1520px', x: '752px' });
+      .toEqual({ y: '1520px', x: '1905px' });
   });
 
-  it('uses 80px per character below 992px', () => {
-    // 10 x 80 + 200 = 1000 > 900, so x = 900 - 80 - 48 - 180 - 20
-    expect(computeChecklistScroll({ innerWidth: 900, innerHeight: 800, visibleCharacterCount: 10, sidebarCollapsed: true }))
-      .toEqual({ y: '400px', x: '572px' });
-    // 6 x 80 + 200 = 680 < 900, no forced width
+  it('uses 66px per character at 992px and below', () => {
+    // 180 + 7 x 66 = 642 > 390 - 80 - 79 = 231
+    expect(computeChecklistScroll({ innerWidth: 390, innerHeight: 844, visibleCharacterCount: 7, sidebarCollapsed: true }))
+      .toEqual({ y: '444px', x: '642px' });
+    // 180 + 6 x 66 = 576 <= 900 - 80 - 79 = 741
     expect(computeChecklistScroll({ innerWidth: 900, innerHeight: 800, visibleCharacterCount: 6, sidebarCollapsed: true }))
       .toEqual({ y: '400px' });
+    // At exactly 992 the narrow width still applies: 180 + 10 x 66 = 840 > 992 - 80 - 79 = 833
+    expect(computeChecklistScroll({ innerWidth: 992, innerHeight: 800, visibleCharacterCount: 10, sidebarCollapsed: true }))
+      .toEqual({ y: '400px', x: '840px' });
   });
 });
 

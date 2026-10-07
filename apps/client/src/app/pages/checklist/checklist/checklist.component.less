@@ -10,6 +10,53 @@
     overflow-y: auto;
   }
 
+  // The task column stays on the left when the table scrolls sideways.
+  // z-index keeps it above the rest bonus bar thresholds (z-index 10).
+  .checklist-table {
+    .ant-table-thead > tr > th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 12;
+    }
+
+    // nz-table sets ant-table-ping-left once the body is scrolled away from its left edge.
+    // This is an ng-zorro internal class, not a public API: after an ng-zorro upgrade,
+    // check that the shadow still appears when the table is scrolled sideways.
+    .ant-table-ping-left {
+      .ant-table-thead > tr > th:first-child,
+      td.task-name {
+        box-shadow: 4px 0 6px -2px rgba(0, 0, 0, .8);
+      }
+    }
+  }
+
+  // Title, subtitle and the hidden characters checkbox each get their own line,
+  // so the subtitle can no longer squeeze the title into an ellipsis
+  .checklist-header {
+    .ant-page-header-heading-left {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .ant-page-header-heading-title {
+      overflow: visible;
+    }
+
+    .title-info {
+      margin-left: 4px;
+      font-size: 14px;
+      vertical-align: 3px;
+    }
+
+    .ant-page-header-heading-sub-title {
+      overflow: visible;
+      white-space: normal;
+    }
+
+    .hidden-characters {
+      margin-top: 4px;
+    }
+  }
 
   .countdowns-container {
     display: flex;
@@ -81,10 +128,17 @@ table {
       }
     }
 
+    // Centered as before; when the table scrolls sideways far enough to move
+    // the title out of view, sticky keeps it inside the visible part of the row
     .section-span-toggle {
       display: flex;
       align-items: center;
       justify-content: center;
+      width: max-content;
+      margin: 0 auto;
+      position: sticky;
+      left: 8px;
+      right: 8px;
 
       > nz-switch {
         margin-right: 10px;
@@ -95,6 +149,13 @@ table {
   .task-name {
     text-align: left;
     line-height: 20px;
+    // Pinned while the table scrolls sideways, so it needs an opaque background:
+    // the table background (#141414) or zebra, with the row tint drawn on top
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background-color: var(--pinned-base, #141414);
+    background-image: linear-gradient(var(--pinned-tint, transparent), var(--pinned-tint, transparent));
 
     .task-name-content {
       display: flex;
@@ -254,35 +315,85 @@ table {
     }
   }
 
-  tr, td {
+  // Row tints, shared by the row rules and the pinned task cell below
+  @row-even: #222;
+  @tint-weekly: rgba(84, 58, 94, .5);
+  @tint-daily: rgba(55, 105, 60, .5);
+  @tint-one-time: rgba(102, 105, 55, 0.5);
+  @tint-weekly-even: rgba(84, 58, 94, .7);
+  @tint-daily-even: rgba(55, 105, 60, .7);
+  @tint-one-time-even: rgba(102, 105, 55, 0.7);
+
+  // The pinned task cell repeats its row's background (set by the tr rules below)
+  // on an opaque base: --pinned-base is what the row shows through, --pinned-tint
+  // the row's translucent tint. Row hover still wins, as in the other cells.
+  tr {
+    &.even {
+      --pinned-base: @row-even;
+    }
+
     &.completed {
       &.weekly {
-        background-color: rgba(84, 58, 94, .5);
+        --pinned-tint: @tint-weekly;
       }
 
       &.daily {
-        background-color: rgba(55, 105, 60, .5);
+        --pinned-tint: @tint-daily;
       }
 
       &.one-time {
-        background-color: rgba(102, 105, 55, 0.5);
+        --pinned-tint: @tint-one-time;
+      }
+
+      // A tinted even row replaces the zebra color, so its base is the table again
+      &.even {
+        &.weekly {
+          --pinned-base: #141414;
+          --pinned-tint: @tint-weekly-even;
+        }
+
+        &.daily {
+          --pinned-base: #141414;
+          --pinned-tint: @tint-daily-even;
+        }
+
+        &.one-time {
+          --pinned-base: #141414;
+          --pinned-tint: @tint-one-time-even;
+        }
+      }
+    }
+  }
+
+  tr, td {
+    &.completed {
+      &.weekly {
+        background-color: @tint-weekly;
+      }
+
+      &.daily {
+        background-color: @tint-daily;
+      }
+
+      &.one-time {
+        background-color: @tint-one-time;
       }
     }
 
     &.even {
-      background-color: #222;
+      background-color: @row-even;
 
       &.completed {
         &.weekly {
-          background-color: rgba(84, 58, 94, .7);
+          background-color: @tint-weekly-even;
         }
 
         &.daily {
-          background-color: rgba(55, 105, 60, .7);
+          background-color: @tint-daily-even;
         }
 
         &.one-time {
-          background-color: rgba(102, 105, 55, 0.7);
+          background-color: @tint-one-time-even;
         }
       }
     }
@@ -307,33 +418,91 @@ table {
   margin-bottom: 10px;
 }
 
+// Mode text over the gold coin, centered vertically left of the counter button.
+// At the 115px minimum column width the widest mode ("Solo") needs a slimmer
+// counter button in these cells to keep at least 8px between badge and button.
 .gold-badge {
   position: absolute;
-  top: 3px;
+  top: 0;
+  bottom: 0;
   left: 3px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  line-height: 1;
+  justify-content: center;
+  align-items: center;
 
   .gold-badge-mode {
-    display: flex;
-    align-items: center;
-    gap: 1px;
-    font-size: 9px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 13px;
+    white-space: nowrap;
     color: #faad14;
-  }
-
-  .gold-badge-up {
-    font-size: 8px;
-    color: #52c41a;
   }
 
   .gold-badge-coin {
     width: 13px;
     height: 13px;
     margin-top: 1px;
+  }
+
+  // Narrow cells (66px) have no room left of the counter button, so the badge
+  // becomes one small row in the cell's 12px top padding, above the button
+  @media screen and (max-width: 992px) {
+    bottom: auto;
+    right: 0;
+    left: 0;
+    height: 12px;
+    flex-direction: row;
+    gap: 2px;
+
+    .gold-badge-mode {
+      font-size: 9px;
+      line-height: 12px;
+    }
+
+    .gold-badge-coin {
+      width: 9px;
+      height: 9px;
+      margin-top: 0;
+    }
+  }
+}
+
+.counter.has-gold-badge > div:first-child button {
+  padding: 0 3px;
+}
+
+// A higher mode is available: small green arrow in the cell's top right corner
+.gold-badge-up {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #52c41a;
+  color: #fff;
+  font-size: 7px;
+  line-height: 10px;
+  text-align: center;
+  cursor: help;
+
+  .anticon {
+    vertical-align: top;
+    line-height: 10px;
+  }
+}
+
+// With the arrow above it, the reset button shrinks to 20px so they stay apart
+.gold-badge-up ~ .counter .reset-button button {
+  display: block; // no line box around it, so it stays vertically centered
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  font-size: 12px;
+
+  > * {
+    font-size: 12px;
   }
 }
 
