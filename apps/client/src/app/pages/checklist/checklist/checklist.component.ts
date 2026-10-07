@@ -22,7 +22,7 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
-import { checklistTaskColumnWidth, computeChecklistScroll } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge } from './checklist-layout';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -148,6 +148,7 @@ export class ChecklistComponent {
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
               return {
                 runningMode,
+                modeBadge: formatModeBadge(runningMode),
                 higherModeInfo: this.getHigherModeInfoForTask(raidModesForGoldPlanner, character, task.label),
                 done: Math.min(isTaskDone(
                   task,

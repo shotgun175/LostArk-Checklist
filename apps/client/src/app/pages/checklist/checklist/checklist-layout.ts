@@ -37,3 +37,19 @@ export function computeChecklistScroll(input: ChecklistScrollInput): ChecklistSc
   }
   return scrolling;
 }
+
+/** Short mode label for the checklist gold badge; empty when no mode is set. */
+export function formatModeBadge(runningMode: string | undefined): string {
+  switch (runningMode) {
+    case undefined:
+    case '':
+      return '';
+    case 'Nightmare':
+    case 'NiM':
+      return 'NiM';
+    case 'Mixed':
+      return 'Mix';
+    default:
+      return runningMode;
+  }
+}

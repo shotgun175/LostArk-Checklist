@@ -224,6 +224,7 @@ table {
   }
 
   td {
+    position: relative;
     border-right: 1px solid #666;
     border-collapse: collapse;
     text-align: center;
@@ -306,17 +307,34 @@ table {
   margin-bottom: 10px;
 }
 
-.gold-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.gold-mode {
+.gold-badge {
   position: absolute;
-  left: 5px;
+  top: 3px;
+  left: 3px;
   display: flex;
-  align-items: center;
-  gap: 3px;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+
+  .gold-badge-mode {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    font-size: 9px;
+    font-weight: 600;
+    color: #faad14;
+  }
+
+  .gold-badge-up {
+    font-size: 8px;
+    color: #52c41a;
+  }
+
+  .gold-badge-coin {
+    width: 13px;
+    height: 13px;
+    margin-top: 1px;
+  }
 }
 
 .header-link {

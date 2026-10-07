@@ -1,4 +1,4 @@
-import { checklistTaskColumnWidth, computeChecklistScroll } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge } from './checklist-layout';
 
 describe('checklistTaskColumnWidth', () => {
   it('is 180px with the sidebar collapsed', () => {
@@ -40,5 +40,28 @@ describe('computeChecklistScroll', () => {
     // 6 x 80 + 200 = 680 < 900, no forced width
     expect(computeChecklistScroll({ innerWidth: 900, innerHeight: 800, visibleCharacterCount: 6, sidebarCollapsed: true }))
       .toEqual({ y: '400px' });
+  });
+});
+
+describe('formatModeBadge', () => {
+  it('keeps NM, HM and Solo as they are', () => {
+    expect(formatModeBadge('NM')).toBe('NM');
+    expect(formatModeBadge('HM')).toBe('HM');
+    expect(formatModeBadge('Solo')).toBe('Solo');
+  });
+
+  it('shows Nightmare as NiM, whichever spelling it arrives in', () => {
+    expect(formatModeBadge('Nightmare')).toBe('NiM');
+    expect(formatModeBadge('NiM')).toBe('NiM');
+  });
+
+  it('shortens Mixed to Mix', () => {
+    expect(formatModeBadge('Mixed')).toBe('Mix');
+  });
+
+  it('shows nothing when no mode is set', () => {
+    expect(formatModeBadge(undefined)).toBe('');
+    // setRunningModeFlagForGate writes '' to clear a gate
+    expect(formatModeBadge('')).toBe('');
   });
 });
