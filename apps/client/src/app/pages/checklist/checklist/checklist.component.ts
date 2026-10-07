@@ -106,12 +106,15 @@ export class ChecklistComponent {
 
   public tasks$: Observable<LostarkTask[]> = combineLatest([
     this.rawRoster$,
-    this.tasksService.tasks$
+    this.tasksService.tasks$,
+    this.showHiddenCharacters$
   ]).pipe(
-    map(([roster, tasks]) => {
+    map(([roster, tasks, showHidden]) => {
+      // Rows follow the characters the table shows, so a hidden character does not keep blank rows.
+      const visibleCharacters = filterVisibleCharacters(roster.characters, showHidden);
       return tasks.filter(task => {
         return task.enabled &&
-          (!task.maxIlvl || roster.characters.some(c => c.ilvl < (task.maxIlvl || Infinity) && c.ilvl >= (task.minIlvl || 0) && isTaskTracked(roster.trackedTasks, c, task, tasks)));
+          (!task.maxIlvl || visibleCharacters.some(c => c.ilvl < (task.maxIlvl || Infinity) && c.ilvl >= (task.minIlvl || 0) && isTaskTracked(roster.trackedTasks, c, task, tasks)));
       });
     })
   );
