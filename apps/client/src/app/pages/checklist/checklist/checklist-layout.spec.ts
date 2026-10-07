@@ -5,8 +5,8 @@ describe('checklistTaskColumnWidth', () => {
     expect(checklistTaskColumnWidth(true)).toBe(180);
   });
 
-  it('is 140px with the sidebar open', () => {
-    expect(checklistTaskColumnWidth(false)).toBe(140);
+  it('is 130px with the sidebar open', () => {
+    expect(checklistTaskColumnWidth(false)).toBe(130);
   });
 });
 
@@ -22,9 +22,9 @@ describe('computeChecklistScroll', () => {
   });
 
   it('uses the open sidebar and task widths when 15 characters are shown', () => {
-    // 1080 - 200 sidebar - 48 padding - 140 task column - 20
+    // 1080 - 200 sidebar - 48 padding - 130 task column - 20
     expect(computeChecklistScroll({ innerWidth: 1080, innerHeight: 1920, visibleCharacterCount: 15, sidebarCollapsed: false }))
-      .toEqual({ y: '1520px', x: '672px' });
+      .toEqual({ y: '1520px', x: '682px' });
   });
 
   it('uses the collapsed sidebar and task widths when 15 characters are shown', () => {

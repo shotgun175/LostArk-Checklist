@@ -15,7 +15,7 @@ export const SIDEBAR_WIDTH_COLLAPSED = 80;
 export const SIDEBAR_WIDTH_OPEN = 200;
 
 export const TASK_COLUMN_WIDTH_COLLAPSED = 180;
-export const TASK_COLUMN_WIDTH_OPEN = 140;
+export const TASK_COLUMN_WIDTH_OPEN = 130;
 
 export function checklistTaskColumnWidth(sidebarCollapsed: boolean): number {
   return sidebarCollapsed ? TASK_COLUMN_WIDTH_COLLAPSED : TASK_COLUMN_WIDTH_OPEN;
