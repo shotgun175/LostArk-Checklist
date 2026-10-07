@@ -10,6 +10,24 @@
     overflow-y: auto;
   }
 
+  // The task column stays on the left when the table scrolls sideways.
+  // z-index keeps it above the rest bonus bar thresholds (z-index 10).
+  .checklist-table {
+    .ant-table-thead > tr > th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 12;
+    }
+
+    // nz-table sets ant-table-ping-left once the body is scrolled away from its left edge
+    .ant-table-ping-left {
+      .ant-table-thead > tr > th:first-child,
+      td.task-name {
+        box-shadow: 4px 0 6px -2px rgba(0, 0, 0, .8);
+      }
+    }
+  }
+
   // Title, subtitle and the hidden characters checkbox each get their own line,
   // so the subtitle can no longer squeeze the title into an ellipsis
   .checklist-header {
@@ -108,10 +126,17 @@ table {
       }
     }
 
+    // Centered as before; when the table scrolls sideways far enough to move
+    // the title out of view, sticky keeps it inside the visible part of the row
     .section-span-toggle {
       display: flex;
       align-items: center;
       justify-content: center;
+      width: max-content;
+      margin: 0 auto;
+      position: sticky;
+      left: 8px;
+      right: 8px;
 
       > nz-switch {
         margin-right: 10px;
@@ -122,6 +147,13 @@ table {
   .task-name {
     text-align: left;
     line-height: 20px;
+    // Pinned while the table scrolls sideways, so it needs an opaque background:
+    // the table background (#141414) or zebra, with the row tint drawn on top
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background-color: var(--pinned-base, #141414);
+    background-image: linear-gradient(var(--pinned-tint, transparent), var(--pinned-tint, transparent));
 
     .task-name-content {
       display: flex;
@@ -278,6 +310,47 @@ table {
 
     @media screen and (max-width: 992px) {
       display: none;
+    }
+  }
+
+  // The pinned task cell repeats its row's background (set by the tr rules below)
+  // on an opaque base: --pinned-base is what the row shows through, --pinned-tint
+  // the row's translucent tint. Row hover still wins, as in the other cells.
+  tr {
+    &.even {
+      --pinned-base: #222;
+    }
+
+    &.completed {
+      &.weekly {
+        --pinned-tint: rgba(84, 58, 94, .5);
+      }
+
+      &.daily {
+        --pinned-tint: rgba(55, 105, 60, .5);
+      }
+
+      &.one-time {
+        --pinned-tint: rgba(102, 105, 55, 0.5);
+      }
+
+      // A tinted even row replaces the zebra color, so its base is the table again
+      &.even {
+        &.weekly {
+          --pinned-base: #141414;
+          --pinned-tint: rgba(84, 58, 94, .7);
+        }
+
+        &.daily {
+          --pinned-base: #141414;
+          --pinned-tint: rgba(55, 105, 60, .7);
+        }
+
+        &.one-time {
+          --pinned-base: #141414;
+          --pinned-tint: rgba(102, 105, 55, 0.7);
+        }
+      }
     }
   }
 

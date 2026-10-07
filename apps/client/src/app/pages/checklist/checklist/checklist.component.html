@@ -66,7 +66,7 @@
       <ng-container *ngIf="energy$ | async as energy">
         <ng-container *ngIf="scrolling$ | async as scrolling">
         <ng-container *ngIf="taskColumnWidth$ | async as taskColumnWidth">
-          <nz-table *ngIf="tableDisplay$ | async as display" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
+          <nz-table *ngIf="tableDisplay$ | async as display" class="checklist-table" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
             <ng-template #empty></ng-template>
             <table>
               <thead>
