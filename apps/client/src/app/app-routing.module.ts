@@ -10,19 +10,6 @@ const routes: Routes = [
     path: "gold-planner",
     loadChildren: () => import("./pages/gold-planner/gold-planner.module").then(m => m.GoldPlannerModule)
   },
-  { path: "friends", loadChildren: () => import("./pages/friends/friends.module").then(m => m.FriendsModule) },
-  {
-    path: "party-planner",
-    loadChildren: () => import("./pages/party-planner/party-planner.module").then(m => m.PartyPlannerModule)
-  },
-  // {
-  //   path: "guild",
-  //   loadChildren: () => import("./pages/guild/guild.module").then(m => m.GuildModule)
-  // },
-  // {
-  //   path: "availability",
-  //   loadChildren: () => import("./pages/availability/availability.module").then(m => m.AvailabilityModule)
-  // },
   { path: "settings", loadChildren: () => import("./pages/settings/settings.module").then(m => m.SettingsModule) }
 ];
 

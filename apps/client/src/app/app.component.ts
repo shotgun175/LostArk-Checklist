@@ -5,8 +5,7 @@ import { NzModalService } from "ng-zorro-antd/modal";
 import { RegisterPopupComponent } from "./components/auth-popups/register-popup/register-popup.component";
 import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-popup.component";
 import { LocalStorageService } from "./core/database/services/local-storage.service";
-import { FriendInvitesService } from "./core/database/services/friend-invites.service";
-import { distinctUntilChanged, filter, pairwise, startWith } from "rxjs";
+import { distinctUntilChanged } from "rxjs";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { LostarkRegion } from "./model/lostark-region";
 import { LAHUser } from "./model/lah-user";
@@ -40,7 +39,6 @@ export class AppComponent implements OnInit {
               private auth: AuthService,
               private modalService: NzModalService,
               private localStorageService: LocalStorageService,
-              private friendInvitesService: FriendInvitesService,
               private message: NzMessageService,
               router: Router
   ) {
@@ -61,18 +59,6 @@ export class AppComponent implements OnInit {
       )
       .subscribe(() => {
         pirsch.hit();
-      });
-
-    friendInvitesService.invitesReceived$
-      .pipe(
-        startWith([]),
-        pairwise(),
-        filter(([before, after]) => after.length > before.length)
-      )
-      .subscribe(([before, after]) => {
-        this.message.info(`You have ${after.length - before.length} pending friend invite(s), open friends page to manage them.`, {
-          nzDuration: 10000
-        });
       });
   }
 
