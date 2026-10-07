@@ -14,6 +14,10 @@ import { LocalStorageService } from "../../../core/database/services/local-stora
 import { AuthService } from "../../../core/database/services/auth.service";
 import { Roster } from "../../../model/roster";
 import { Character } from "../../../model/character/character";
+import { NzMessageService } from "ng-zorro-antd/message";
+import { DataTransferService } from "../../../core/import/data-transfer.service";
+import { ExportValidation, parseExportFile } from "../../../core/import/validate-export";
+import { LostarkExport } from "../../../core/import/lostark-export";
 
 @Component({
   selector: "lostark-helper-settings",
@@ -112,9 +116,14 @@ export class SettingsComponent {
 
   public hasLocalstorageData = false;
 
+  public pendingImport: { fileName: string; validation: ExportValidation } | null = null;
+
+  public transferBusy = false;
+
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
-              private localStorageService: LocalStorageService, private auth: AuthService) {
+              private localStorageService: LocalStorageService, private auth: AuthService,
+              private dataTransfer: DataTransferService, private message: NzMessageService) {
     this.updateHasLocalStorageData();
   }
 
@@ -165,5 +174,40 @@ export class SettingsComponent {
 
   resetBonuses(key: string): void {
     this.energyService.setOne(key, { data: {}, updated: Date.now() });
+  }
+
+  async onImportFileSelected(input: HTMLInputElement): Promise<void> {
+    const file = input.files?.item(0);
+    input.value = "";
+    if (!file) {
+      return;
+    }
+    this.pendingImport = {
+      fileName: file.name,
+      validation: parseExportFile(await file.text())
+    };
+  }
+
+  confirmImport(data: LostarkExport): void {
+    this.transferBusy = true;
+    this.dataTransfer.importExport(data).then(() => {
+      this.message.success("Import done, reloading");
+      window.location.reload();
+    }, (error: Error) => {
+      this.transferBusy = false;
+      console.error(error);
+      this.message.error(`Import failed: ${error.message}`);
+    });
+  }
+
+  downloadBackup(): void {
+    this.transferBusy = true;
+    this.dataTransfer.downloadBackup().then(() => {
+      this.transferBusy = false;
+    }, (error: Error) => {
+      this.transferBusy = false;
+      console.error(error);
+      this.message.error(`Backup failed: ${error.message}`);
+    });
   }
 }

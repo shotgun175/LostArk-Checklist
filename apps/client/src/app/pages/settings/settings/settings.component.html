@@ -23,6 +23,39 @@
       </button>
     </div>
   </div>
+  <div nz-row class="lazy-matrix">
+    <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">
+      <input #importFile type="file" accept=".json,application/json" hidden
+             (change)="onImportFileSelected(importFile)">
+      <div nz-row [nzGutter]="[10, 10]">
+        <div nz-col>
+          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFile.click()">Import from Lostark-helper</button>
+        </div>
+        <div nz-col>
+          <button nz-button [nzLoading]="transferBusy" (click)="downloadBackup()">Download backup</button>
+        </div>
+        <div nz-col>
+          <button nz-button [disabled]="transferBusy" (click)="importFile.click()">Restore backup</button>
+        </div>
+      </div>
+      <div *ngIf="pendingImport as pending" class="import-summary">
+        <p>
+          {{pending.fileName}}: {{pending.validation.counts.characters}} characters,
+          {{pending.validation.counts.tasks}} tasks,
+          {{pending.validation.counts.completion}} completion entries
+        </p>
+        <ul *ngIf="!pending.validation.ok" class="import-errors">
+          <li *ngFor="let error of pending.validation.errors">{{error}}</li>
+        </ul>
+        <button *ngIf="pending.validation.data as data" nz-button nzType="primary" nzDanger
+                [nzLoading]="transferBusy"
+                nz-popconfirm
+                nzPopconfirmTitle="This replaces the roster, tasks, ticks, rest bonus and settings of this account. Continue?"
+                (nzOnConfirm)="confirmImport(data)">Import this file
+        </button>
+      </div>
+    </nz-card>
+  </div>
   <ng-container *ngIf="lazyTracking$ | async as tracking">
     <ng-container *ngIf="roster$ | async as roster">
       <ng-container *ngIf="lazyFlags$ | async as lazyFlags">
