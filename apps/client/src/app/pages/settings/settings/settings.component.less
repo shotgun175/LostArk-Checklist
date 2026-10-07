@@ -141,7 +141,19 @@
 
 .raid-menu-title {
   font-size: 11px;
-  cursor: default;
+}
+
+// On phones the menu opens beside a button near the middle of the screen, so it stays narrow enough to fit on either side
+@media (max-width: 575px) {
+  .raid-menu {
+    max-width: 200px;
+  }
+
+  .raid-menu-title {
+    height: auto;
+    line-height: 16px;
+    white-space: normal;
+  }
 }
 
 // Collapsible Older raids group at the bottom of the grid
@@ -152,7 +164,6 @@
 .older-raids-caret {
   display: inline-block;
   margin-right: 4px;
-  transition: transform .2s;
 
   &.open {
     transform: rotate(90deg);
