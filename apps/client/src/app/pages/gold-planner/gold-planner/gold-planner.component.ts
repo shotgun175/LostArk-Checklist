@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, startWith } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGoldTakingDisabled, getGoldCapWarning } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -26,6 +26,8 @@ interface chestsData {
     indeterminateTakingChest: boolean,
     takingGold: boolean,
     indeterminateTakingGold: boolean,
+    countsForGoldCap: boolean,
+    goldTakingDisabled: boolean,
     canRunHM: boolean,
     canRunNightmare: boolean,
     soloModeExists: boolean,
@@ -55,6 +57,7 @@ interface GoldPlannerDisplay {
   raidModesForGoldPlanner: Record<string, string>;
   total: { unboundGold: number, boundGold: number }[];
   grandTotal: { unboundGold: number, boundGold: number };
+  goldCapWarnings: (string | undefined)[];
   plannerLines: PlannerLine[]
 }
 
@@ -121,7 +124,7 @@ export class GoldPlannerComponent {
         }
       })
 
-      const chestsData = plannerLines
+      const allRows: chestsData[] = plannerLines
         .map(line => {
           let task: LostarkTask | undefined
           if (line.gate && line.gate.taskName) {
@@ -245,8 +248,10 @@ export class GoldPlannerComponent {
               })
             }
 
+            const hiddenByTracking = cantDoTask || !character.weeklyGold || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false)
+
             const goldDetail = {
-              hide: false || cantDoTask || !character.weeklyGold || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false) || hideAlreadyDoneRaidOrGate,
+              hide: false || hiddenByTracking || hideAlreadyDoneRaidOrGate,
               runningMode: this.settings.getRunningModeFlag(
                 raidModesForGoldPlanner,
                 character.name,
@@ -256,6 +261,9 @@ export class GoldPlannerComponent {
               indeterminateTakingChest,
               takingGold,
               indeterminateTakingGold,
+              // Gold cap counts gate cells shown by tracking, including ones already done this week
+              countsForGoldCap: !hiddenByTracking && !!line.gate && this.characterHasRequiredILvlForGate(line.gate, character, tasks, task),
+              goldTakingDisabled: false,
               canRunHM,
               canRunNightmare,
               soloModeExists: line.gTask.gates[0].modes.find(mode => mode.name === 'Solo') !== undefined,
@@ -275,7 +283,22 @@ export class GoldPlannerComponent {
             line,
             goldDetails
           };
-        })
+        });
+
+      // Gold cap: per character, the raids taking gold on a gate cell; counted before rows done this week are filtered out
+      const goldRaids = roster.map((_, i) => getGoldRaids(allRows
+        .filter(row => row.line.gate)
+        .map(row => ({
+          raidName: row.line.gTask.name,
+          takingGold: !!row.goldDetails[i].takingGold,
+          counted: row.goldDetails[i].countsForGoldCap
+        }))));
+      allRows.forEach(row => row.goldDetails.forEach((detail, i) => {
+        detail.goldTakingDisabled = isGoldTakingDisabled(goldRaids[i], row.line.gTask.name);
+      }));
+      const goldCapWarnings = goldRaids.map(raids => getGoldCapWarning(raids.size));
+
+      const chestsData = allRows
         .filter(({ goldDetails }) => {
           return goldDetails.some(f => !f.hide);
         });
@@ -335,6 +358,7 @@ export class GoldPlannerComponent {
         tracking,
         raidModesForGoldPlanner,
         grandTotal,
+        goldCapWarnings,
         chaos,
         other,
         plannerLines
@@ -405,7 +429,11 @@ export class GoldPlannerComponent {
     return `${characterName}:gold:taking:${gate.name}`;
   }
 
-  setGoldTakingFlag(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
+  setGoldTakingFlag(settingsKey: string, currentTracking: Record<string, boolean>, currentRaidModes: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
+    // Edit copies: mutating the emitted settings makes the next snapshot look unchanged to getOne's
+    // distinctUntilChanged, so the gold cap (disabled boxes, warning) would not refresh until reload
+    const tracking = { ...currentTracking };
+    const raidModesForGoldPlanner = { ...currentRaidModes };
     if (!line.gate) {
       line.gTask.gates.forEach(gate => {
         this.setGoldTakingFlagForGate(settingsKey, tracking, raidModesForGoldPlanner, gate, character, flag)

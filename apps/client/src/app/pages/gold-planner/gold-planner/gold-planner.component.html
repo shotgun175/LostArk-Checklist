@@ -36,8 +36,9 @@
             <thead>
               <tr>
                 <th nzLeft nzWidth="180px">Source</th>
-                <th nzWidth="400px" *ngFor="let character of roster">
+                <th nzWidth="400px" *ngFor="let character of roster; index as i">
                   {{ character.name }}[{{ character.ilvl }}] <i nz-icon nzType="message" nzTheme="outline" *ngIf="character.note" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></i>
+                  <div *ngIf="display.goldCapWarnings[i] as warning" class="gold-cap-warning"><i nz-icon nzType="warning" nzTheme="outline"></i> {{ warning }}</div>
                 </th>
               </tr>
             </thead>
@@ -77,14 +78,17 @@
                         </nz-radio-group>
                         <div class="gold-checkbox-container">
                           <div>
+                            <span nz-tooltip [nzTooltipTitle]="flag.goldTakingDisabled ? 'Already earning gold from 3 raids. Untick one to choose this raid.' : ''">
                             <label 
                               nz-checkbox 
                               [(ngModel)]="flag.takingGold"
+                              [nzDisabled]="flag.goldTakingDisabled"
                               nzIndeterminate={{flag.indeterminateTakingGold}}
                               (ngModelChange)="setGoldTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, roster[i], $event)"
                             >
                               Taking Gold ( {{ flag.unboundGoldReward + flag.boundGoldReward }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
                             </label>
+                            </span>
                             <i *ngIf="flag.unboundGoldReward !== 0 && flag.boundGoldReward !==0" nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipOverlayStyle]="{'max-width': '180px'}" nzTooltipTitle="{{ flag.unboundGoldReward | number }} Unbound Gold {{ flag.boundGoldReward | number }} Bound Gold" class="info-icon"></i>
                           </div>
                           <div>
