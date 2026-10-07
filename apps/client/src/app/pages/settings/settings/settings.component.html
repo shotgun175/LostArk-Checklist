@@ -141,17 +141,30 @@
         </ng-container>
 
         <ng-container *ngIf="rawRoster$ | async as rawRoster">
-          <nz-card nz-col nzMd="24" nzTitle="Task tracking" nzSize="small" *ngIf="taskTracking$ | async as taskTracking" class="lazy-matrix">
-            <div class="lazy-matrix">
-              <nz-table #tasksTable [nzData]="taskTracking"
+          <nz-card nz-col nzMd="24" nzTitle="Task tracking" [nzExtra]="trackingExtra" nzSize="small" *ngIf="taskTracking$ | async as taskTracking" class="lazy-matrix tracking-card">
+            <ng-template #trackingExtra>
+              <span class="set-count">{{taskTracking.setByYou}} set by you</span>
+              <button nz-button nzSize="small" [disabled]="taskTracking.setByYou === 0"
+                      nz-popconfirm
+                      [nzPopconfirmTitle]="'Reset ' + taskTracking.setByYou + (taskTracking.setByYou === 1 ? ' tracking choice' : ' tracking choices') + ' for all characters back to automatic?'"
+                      (nzOnConfirm)="resetAllTracking(rawRoster)">Reset all to auto
+              </button>
+            </ng-template>
+            <div class="lazy-matrix tracking-table">
+              <nz-table #tasksTable [nzData]="taskTracking.rows"
                         [nzPageSize]="999"
                         nzHideOnSinglePage
-                        [nzScroll]="{y: '300px'}"
-                        nzSize="middle">
+                        [nzScroll]="taskTracking.scroll"
+                        nzSize="small">
                 <thead>
                 <tr>
-                  <th>Task</th>
-                  <th *ngFor="let character of rawRoster.characters">{{character.name}}[{{character.ilvl}}]</th>
+                  <th [nzWidth]="taskTracking.taskColumnWidth">Task</th>
+                  <th *ngFor="let character of rawRoster.characters; index as i" [nzWidth]="taskTracking.characterColumnWidth" class="character-head">
+                    <span class="character-name">{{character.name}}</span>
+                    <span class="character-ilvl">{{character.ilvl}}</span>
+                    <a *ngIf="taskTracking.perCharacter[i] > 0" class="tracking-reset" nz-tooltip nzTooltipTitle="Send all of this character's choices back to automatic"
+                       (click)="resetCharacterTracking(rawRoster, character)">reset</a>
+                  </th>
                 </tr>
                 </thead>
                 <tbody>
@@ -161,16 +174,19 @@
                          class="task-icon">
                     {{row.task.label}}
                   </td>
-                  <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex">
-                    <nz-switch nzCheckedChildren="tracked" nzUnCheckedChildren="ignored" [class.auto-tracking]="flag.auto"
-                               [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
-                    <span *ngIf="flag.auto" class="tracking-source" nz-tooltip nzTooltipTitle="Automatic: tracks the 3 newest raids this character can enter, and every other task">auto</span>
-                    <a *ngIf="!flag.auto" class="tracking-source" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                  <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
+                    <ng-container *ngIf="flag.inIlvlRange; else ilvlTooLow">
+                      <nz-switch nzSize="small" [class.auto-tracking]="flag.auto"
+                                 [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
+                      <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                    </ng-container>
+                    <ng-template #ilvlTooLow><span class="ilvl-too-low">-</span></ng-template>
                   </td>
                 </tr>
                 </tbody>
               </nz-table>
             </div>
+            <div class="tracking-legend">Faded = auto, Solid = set by you, dash = item level too low</div>
           </nz-card>
         </ng-container>
       </ng-container>

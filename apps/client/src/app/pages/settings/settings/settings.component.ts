@@ -18,8 +18,18 @@ import { NzMessageService } from "ng-zorro-antd/message";
 import { DataTransferService } from "../../../core/import/data-transfer.service";
 import { ExportValidation, parseExportFile } from "../../../core/import/validate-export";
 import { LostarkExport } from "../../../core/import/lostark-export";
-import { getTrackedTaskOverride, isTaskTracked } from "../../../core/task-tracking";
+import {
+  getExplicitTrackingKeys,
+  getExplicitTrackingKeysForCharacter,
+  getTrackedTaskOverride,
+  isTaskInIlvlRange,
+  isTaskTracked
+} from "../../../core/task-tracking";
 import { deleteField } from "firebase/firestore";
+
+/** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
+const TRACKING_TASK_COLUMN_WIDTH = 150;
+const TRACKING_CHARACTER_COLUMN_WIDTH = 64;
 
 @Component({
   selector: "lostark-helper-settings",
@@ -95,17 +105,29 @@ export class SettingsComponent {
     this.rosterService.roster$
   ]).pipe(
     map(([tasks, roster]) => {
-      return tasks
+      const rows = tasks
         .filter(task => task.scope === TaskScope.CHARACTER)
         .map(task => {
           return {
             task,
             data: roster.characters.map(c => ({
               tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
-              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined
+              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined,
+              inIlvlRange: isTaskInIlvlRange(c, task)
             }))
           };
         });
+      return {
+        rows,
+        setByYou: getExplicitTrackingKeys(roster.trackedTasks).length,
+        perCharacter: roster.characters.map(c => getExplicitTrackingKeysForCharacter(roster.trackedTasks, c).length),
+        taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
+        characterColumnWidth: `${TRACKING_CHARACTER_COLUMN_WIDTH}px`,
+        scroll: {
+          x: `${TRACKING_TASK_COLUMN_WIDTH + TRACKING_CHARACTER_COLUMN_WIDTH * roster.characters.length}px`,
+          y: "300px"
+        }
+      };
     })
   );
 
@@ -175,6 +197,24 @@ export class SettingsComponent {
     this.rosterService.updateOne(roster.$key, {
       [`trackedTasks.${getCompletionEntryKey(character, task)}`]: deleteField()
     });
+  }
+
+  resetAllTracking(roster: Roster): void {
+    this.clearTrackingKeys(roster, getExplicitTrackingKeys(roster.trackedTasks));
+  }
+
+  resetCharacterTracking(roster: Roster, character: Character): void {
+    this.clearTrackingKeys(roster, getExplicitTrackingKeysForCharacter(roster.trackedTasks, character));
+  }
+
+  /** Removes the given explicit tracking choices in one write, so those cells follow the default again. */
+  private clearTrackingKeys(roster: Roster, keys: string[]): void {
+    if (keys.length === 0) {
+      return;
+    }
+    this.rosterService.updateOne(roster.$key, Object.fromEntries(
+      keys.map(key => [`trackedTasks.${key}`, deleteField()])
+    ));
   }
 
   resetBonuses(key: string): void {
