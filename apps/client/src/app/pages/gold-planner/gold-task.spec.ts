@@ -1,5 +1,5 @@
 import { goldTasks } from './gold-tasks';
-import { Gate, getGoldCapWarning, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
+import { earnsGold, Gate, getGoldCapWarning, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
 import { Character } from '../../model/character/character';
 
 const gate = (name: string): Gate => goldTasks.flatMap(t => t.gates).find(g => g.name === name) as Gate;
@@ -81,5 +81,68 @@ describe('gold raid cap', () => {
   it('warns only when more than 3 raids take gold', () => {
     expect(getGoldCapWarning(3)).toBeUndefined();
     expect(getGoldCapWarning(4)).toBe('Gold from 4 raids, max is 3');
+  });
+});
+
+describe('non-gold characters', () => {
+  const raids = (...names: string[]) => new Set(names);
+
+  it('earns gold only when Taking Gold is ticked on a weekly gold character', () => {
+    expect(earnsGold(true, true)).toBe(true);
+    expect(earnsGold(true, false)).toBe(false);
+    expect(earnsGold(false, true)).toBe(false);
+    expect(earnsGold(undefined, true)).toBe(false);
+  });
+
+  it('disables Taking Gold on a character without Weekly Gold, with the Roster page tooltip', () => {
+    expect(getGoldTakingDisabledReason(false, raids(), 'Serca')).toBe('Not a weekly gold character (6 per roster). Change on the Roster page.');
+  });
+
+  it('uses the gold cap tooltip on a weekly gold character at 3 raids, and none otherwise', () => {
+    expect(getGoldTakingDisabledReason(true, raids('Serca', 'Kazeros', 'Armoche'), 'Horizon Cathedral'))
+      .toBe('Already earning gold from 3 raids. Untick one to choose this raid.');
+    expect(getGoldTakingDisabledReason(true, raids('Serca', 'Kazeros', 'Armoche'), 'Serca')).toBeUndefined();
+    expect(getGoldTakingDisabledReason(true, raids('Serca'), 'Kazeros')).toBeUndefined();
+  });
+});
+
+describe('shouldAutoPickModeOnChest', () => {
+  it('picks a mode when a character without Weekly Gold ticks Taking Chest on a gate with no mode', () => {
+    expect(shouldAutoPickModeOnChest(false, true, undefined)).toBe(true);
+    expect(shouldAutoPickModeOnChest(false, true, '')).toBe(true);
+  });
+
+  it('never picks for weekly gold characters (they pick on Taking Gold), on untick, or over a set mode', () => {
+    expect(shouldAutoPickModeOnChest(true, true, undefined)).toBe(false);
+    expect(shouldAutoPickModeOnChest(false, false, undefined)).toBe(false);
+    expect(shouldAutoPickModeOnChest(false, true, 'Solo')).toBe(false);
+  });
+});
+
+describe('planner character list', () => {
+  const roster = [
+    { name: 'A', weeklyGold: false },
+    { name: 'B', weeklyGold: true },
+    { name: 'C', weeklyGold: false },
+    { name: 'D', weeklyGold: true }
+  ];
+
+  it('lists gold earners first and other characters after, each in roster order, by index', () => {
+    expect(groupPlannerCharacters(roster)).toEqual({ goldEarners: [1, 3], others: [0, 2] });
+  });
+
+  it('sums every character into the roster total and counts gold earners', () => {
+    const totals = [
+      { unboundGold: 0, boundGold: -300 },
+      { unboundGold: 1000, boundGold: 500 },
+      { unboundGold: 200, boundGold: 0 },
+      { unboundGold: 2000, boundGold: 100 }
+    ];
+    expect(getRosterSummary(totals, roster)).toEqual({ unboundGold: 3200, boundGold: 300, goldEarners: 2 });
+  });
+
+  it('takes bound below zero out of tradable in the roster total', () => {
+    const totals = [{ unboundGold: 1000, boundGold: -1500 }, { unboundGold: 500, boundGold: 200 }];
+    expect(getRosterSummary(totals, [{ weeklyGold: true }, { weeklyGold: true }])).toEqual({ unboundGold: 200, boundGold: 0, goldEarners: 2 });
   });
 });

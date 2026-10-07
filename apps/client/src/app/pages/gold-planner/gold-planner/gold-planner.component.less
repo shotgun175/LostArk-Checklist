@@ -1,6 +1,187 @@
-.task-cell {
+@gold: #faad14;
+@border: #303030;
+@row-border: #262626;
+@blue: #177ddc;
+
+.explanations {
+  margin-bottom: 12px;
+}
+
+// Character list on the left, selected character's panel on the right; stacked on narrow screens
+.planner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 12px;
+
+  @media screen and (max-width: 767px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.character-list {
+  width: 250px;
+  flex: none;
+  background: #141414;
+  border: 1px solid @border;
+
+  @media screen and (max-width: 767px) {
+    width: auto;
+  }
+}
+
+.roster-summary {
+  padding: 10px 12px;
+  border-bottom: 2px solid #303a48;
+  background: #0e1014;
+
+  .summary-label {
+    color: #999;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .summary-tradable {
+    color: @gold;
+    font-weight: 600;
+    font-size: 15px;
+    margin-top: 2px;
+  }
+
+  .summary-rest {
+    font-size: 12px;
+  }
+}
+
+.list-heading {
+  padding: 6px 12px;
+  color: #999;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid @row-border;
+}
+
+.character-item {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid @row-border;
+  border-left: 3px solid transparent;
+  background: none;
+  color: inherit;
   text-align: left;
-  line-height: 20px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.selected {
+    background: fade(@blue, 15%);
+    border-left-color: @blue;
+  }
+
+  .character-name {
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .character-ilvl {
+    margin-left: 6px;
+    color: #999;
+    font-size: 12px;
+  }
+
+  .character-sub {
+    display: block;
+    margin-top: 2px;
+    color: #aaa;
+    font-size: 12px;
+  }
+}
+
+.gold {
+  color: @gold;
+}
+
+.cost {
+  color: #e08080;
+}
+
+.gold-cap-warning {
+  display: block;
+  color: @gold;
+  font-size: 12px;
+}
+
+.character-panel {
+  flex: 1;
+  min-width: 0;
+  background: #141414;
+  border: 1px solid @border;
+}
+
+.panel-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid @border;
+
+  .panel-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .panel-raids {
+    color: #999;
+    font-size: 12px;
+  }
+}
+
+.raid-row {
+  display: grid;
+  grid-template-columns: 24px 150px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 9px 14px;
+  border-bottom: 1px solid @row-border;
+
+  // Raid name above its controls on narrow screens
+  @media screen and (max-width: 767px) {
+    grid-template-columns: 24px minmax(0, 1fr);
+
+    .raid-controls {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.expand-button {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid #555;
+  border-radius: 2px;
+  background: none;
+  color: #ccc;
+  line-height: 14px;
+  cursor: pointer;
+}
+
+.raid-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
 
   .task-icon {
     width: 24px;
@@ -8,53 +189,69 @@
   }
 }
 
-.task-name {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.task-label {
+.controls {
   display: flex;
   flex-direction: column;
-  margin-left: 3px;
-}
+  align-items: flex-start;
+  gap: 4px;
 
-.cell-container {
-  display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
-
-  > div {
-    margin-left: 5px;
+  nz-radio-group {
+    display: flex;
+    flex-wrap: wrap;
   }
 }
 
-.gold-checkbox-container {
-  margin-top: 5px
+.checkbox-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.gold-cap-warning {
-  color: #faad14;
-  font-weight: normal;
+.all-bound {
+  color: #888;
+  font-size: 11px;
 }
 
-.total-cell {
+.gate-block {
+  margin-top: 8px;
+  padding-left: 14px;
+  border-left: 2px solid #2a2a2a;
+
+  .gate-label {
+    color: #999;
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+}
+
+.manual-row {
+  display: grid;
+  grid-template-columns: 182px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 9px 14px;
+  border-bottom: 1px solid @row-border;
+
+  nz-input-group {
+    max-width: 200px;
+  }
+
+  @media screen and (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.character-total {
+  padding: 12px 14px;
   font-size: 14px;
   font-weight: bold;
-  background: #141414;
-  border-top: 1px solid #666;
+  background: #0e1014;
 }
 
 // Tradable and bound totals wrap between the two numbers, never inside one
 .gold-split {
   white-space: nowrap;
-}
-
-.total-row {
-  position:sticky;
-  bottom: 0;
-  z-index: 3;
 }
 
 .gold-icon {
@@ -66,8 +263,4 @@
   font-weight: bold;
   text-decoration: underline;
   color: rgba(255, 255, 255, 0.85);
-}
-
-.warning {
-  margin-bottom: 16px;
 }

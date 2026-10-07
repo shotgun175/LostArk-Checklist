@@ -160,16 +160,16 @@
                               [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
                             >
                               <ng-container *ngIf="row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl">
-                                <ng-container *ngIf="row.completionData[i].takingGold">
+                                <ng-container *ngIf="row.completionData[i].goldBadge.show">
                                   <span class="gold-badge">
                                     <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">{{ row.completionData[i].modeBadge }}</span>
-                                    <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
+                                    <img *ngIf="row.completionData[i].goldBadge.coin" src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
                                   </span>
                                   <span class="gold-badge-up" *ngIf="row.completionData[i].modeBadge && row.completionData[i].higherModeInfo" role="img" [attr.aria-label]="row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
                                     <i nz-icon nzType="arrow-up" nzTheme="outline"></i>
                                   </span>
                                 </ng-container>
-                                <div class="counter" [class.has-gold-badge]="row.completionData[i].takingGold">
+                                <div class="counter" [class.has-gold-badge]="row.completionData[i].goldBadge.show">
                                   <div>
                                     <button
                                       nz-button
