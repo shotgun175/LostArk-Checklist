@@ -15,22 +15,6 @@ const routes: Routes = [
     path: "party-planner",
     loadChildren: () => import("./pages/party-planner/party-planner.module").then(m => m.PartyPlannerModule)
   },
-  {
-    path: "mari-optimizer",
-    loadChildren: () => import("./pages/mari-optimizer/mari-optimizer.module").then(m => m.MariOptimizerModule)
-  },
-  {
-    path: "honing-cost-optimizer",
-    loadChildren: () => import("./pages/honing-cost-optimizer/honing-cost-optimizer.module").then(m => m.HoningCostOptimizerModule)
-  },
-  {
-    path: "gearsets",
-    loadChildren: () => import("./pages/gearsets/gear-manager.module").then(m => m.GearManagerModule)
-  },
-  {
-    path: "engraving-search",
-    loadChildren: () => import("./pages/engraving-search/engraving-search.module").then(m => m.EngravingSearchModule)
-  },
   // {
   //   path: "guild",
   //   loadChildren: () => import("./pages/guild/guild.module").then(m => m.GuildModule)
