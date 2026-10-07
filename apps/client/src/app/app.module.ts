@@ -44,7 +44,7 @@ registerLocaleData(en);
     provideFirestore(() => {
       const firestore = getFirestore();
       if (environment.useEmulators) {
-        connectFirestoreEmulator(firestore, "localhost", 8080);
+        connectFirestoreEmulator(firestore, "localhost", 8085);
       }
       return firestore;
     }),
