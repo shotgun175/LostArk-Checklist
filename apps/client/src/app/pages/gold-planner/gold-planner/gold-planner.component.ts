@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, startWith } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -405,21 +405,28 @@ export class GoldPlannerComponent {
     return `${characterName}:gold:taking:${gate.name}`;
   }
 
-  setGoldTakingFlag(settingsKey: string, tracking: Record<string, boolean>, line: PlannerLine, character: Character, flag: boolean): void {
+  setGoldTakingFlag(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
     if (!line.gate) {
       line.gTask.gates.forEach(gate => {
-        this.setGoldTakingFlagForGate(settingsKey, tracking, gate, character, flag)
+        this.setGoldTakingFlagForGate(settingsKey, tracking, raidModesForGoldPlanner, gate, character, flag)
       })
     } else {
-      this.setGoldTakingFlagForGate(settingsKey, tracking, line.gate, character, flag)
+      this.setGoldTakingFlagForGate(settingsKey, tracking, raidModesForGoldPlanner, line.gate, character, flag)
     }
   }
 
-  setGoldTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, gate: Gate, character: Character, flag: boolean): void {
+  // Ticking gold on a gate with no running mode yet also sets the highest mode the character can run
+  setGoldTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
     tracking[this.getGoldTakingFlagNameForGate(character.name, gate)] = flag;
+    const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
+    const pickedMode = shouldAutoPickRunningMode(flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
+    if (pickedMode) {
+      raidModesForGoldPlanner[modeKey] = pickedMode;
+    }
     this.settings.patch({
       $key: settingsKey,
-      goldPlannerConfiguration: tracking
+      goldPlannerConfiguration: tracking,
+      ...(pickedMode ? { raidModesForGoldPlanner } : {})
     });
   }
 
