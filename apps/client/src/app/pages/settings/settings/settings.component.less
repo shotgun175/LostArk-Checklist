@@ -121,9 +121,25 @@
   opacity: 0.65;
 }
 
+// Icon, name and menu button of a grid row: the name wraps so the button stays inside the pinned column
+.task-name-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .task-icon {
+    flex-shrink: 0;
+  }
+
+  .task-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
 // Per-task "set for all" menu button next to the task name
 .task-menu-button {
-  margin-left: 4px;
+  flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid #434343;
   border-radius: 2px;
