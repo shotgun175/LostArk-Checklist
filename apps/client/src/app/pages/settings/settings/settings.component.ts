@@ -135,7 +135,9 @@ export class SettingsComponent {
           };
         });
       const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, rows.map(row => row.task)));
-      const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, roster.characters, row.task, tasks);
+      // Visible characters decide the grouping (user choice): raids only hidden alts would run fold into Older raids.
+      const visibleCharacters = roster.characters.filter(c => !c.isHide);
+      const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, visibleCharacters, row.task, tasks);
       return {
         rows,
         mainRows: rows.filter(row => !isOlder(row)),
