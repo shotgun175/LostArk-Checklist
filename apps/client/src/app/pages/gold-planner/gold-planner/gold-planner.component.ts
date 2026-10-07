@@ -15,6 +15,7 @@ import { getCompletionEntry } from '../../../core/get-completion-entry-key';
 import { Completion } from "../../../model/completion";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
 import { filterGoldPlannerCharacters } from "../../../core/visible-characters";
+import { isTaskTracked } from "../../../core/task-tracking";
 
 interface chestsData {
   task?: LostarkTask,
@@ -245,7 +246,7 @@ export class GoldPlannerComponent {
             }
 
             const goldDetail = {
-              hide: false || cantDoTask || !character.weeklyGold || (task ? getCompletionEntry(rawRoster.trackedTasks, character, task, true) === false : false) || hideAlreadyDoneRaidOrGate,
+              hide: false || cantDoTask || !character.weeklyGold || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false) || hideAlreadyDoneRaidOrGate,
               runningMode: this.settings.getRunningModeFlag(
                 raidModesForGoldPlanner,
                 character.name,

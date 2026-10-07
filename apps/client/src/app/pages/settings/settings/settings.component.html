@@ -161,9 +161,11 @@
                          class="task-icon">
                     {{row.task.label}}
                   </td>
-                  <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex">
-                    <nz-switch nzCheckedChildren="tracked" nzUnCheckedChildren="ignored"
-                               [ngModel]="flag" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
+                  <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
+                    <nz-switch nzCheckedChildren="tracked" nzUnCheckedChildren="ignored" [class.auto-tracking]="flag.auto"
+                               [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
+                    <span *ngIf="flag.auto" class="tracking-source" nz-tooltip nzTooltipTitle="Automatic: tracks the 3 newest raids this character can enter, and every other task">auto</span>
+                    <a *ngIf="!flag.auto" class="tracking-source" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
                   </td>
                 </tr>
                 </tbody>

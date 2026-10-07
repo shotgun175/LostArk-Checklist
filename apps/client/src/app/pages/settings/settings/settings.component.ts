@@ -18,6 +18,8 @@ import { NzMessageService } from "ng-zorro-antd/message";
 import { DataTransferService } from "../../../core/import/data-transfer.service";
 import { ExportValidation, parseExportFile } from "../../../core/import/validate-export";
 import { LostarkExport } from "../../../core/import/lostark-export";
+import { getTrackedTaskOverride, isTaskTracked } from "../../../core/task-tracking";
+import { deleteField } from "firebase/firestore";
 
 @Component({
   selector: "lostark-helper-settings",
@@ -98,13 +100,10 @@ export class SettingsComponent {
         .map(task => {
           return {
             task,
-            data: roster.characters.map(c => {
-              const entry = getCompletionEntry(roster.trackedTasks, c, task, true);
-              if (entry === undefined) {
-                return true;
-              }
-              return entry;
-            })
+            data: roster.characters.map(c => ({
+              tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
+              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined
+            }))
           };
         });
     })
@@ -169,6 +168,12 @@ export class SettingsComponent {
   setTrackedTask(roster: Roster, task: LostarkTask, character: Character, value: boolean): void {
     this.rosterService.updateOne(roster.$key, {
       [`trackedTasks.${getCompletionEntryKey(character, task)}`]: value
+    });
+  }
+
+  resetTrackedTask(roster: Roster, task: LostarkTask, character: Character): void {
+    this.rosterService.updateOne(roster.$key, {
+      [`trackedTasks.${getCompletionEntryKey(character, task)}`]: deleteField()
     });
   }
 

@@ -178,6 +178,44 @@ export const tasks = [
   createTask(`Chaos Purchases`, 302, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 9999, "chaos-dungeon.webp")
 ];
 
+/**
+ * Raids in release order, newest first. Each entry is one raid and lists all of its task labels
+ * from the list above. A character tracks the 3 newest raids it can enter by default
+ * (see core/task-tracking.ts). Add a new raid at the top when its task is added.
+ */
+export const raidReleaseOrder: string[][] = [
+  [`Horizon Cathedral`],
+  [`Serca`],
+  [`Kazeros`],
+  [`Armoche`],
+  [`Mordum`],
+  [`Brelshaza Chapter 2`],
+  [`Aegir`],
+  [`Behemoth`],
+  [`Echidna`],
+  [`Thaemine`, `Thaemine G4`],
+  [`Ivory Tower`],
+  [`Akkan`],
+  [`Kayangel`],
+  [`Brelshaza Gate 1-2`, `Brelshaza Gate 3`, `Brelshaza Gate 4`],
+  [`Kakul-Saydon`],
+  [`Vykas`],
+  [`Valtan`],
+  [`Argos`],
+  // Abyssal dungeons, newest tier first
+  [`Oreha Preveza`],
+  [`Aira's Oculus`],
+  [`Alaric's Sanctuary`],
+  [`Tranquil Karkosa`],
+  [`Sea of Indolence`],
+  [`Forge of Fallen Pride`],
+  [`Road of Lament`],
+  [`Hildebrandt Palace`],
+  [`Hall of the Twisted Warlord`],
+  [`Necromancer's Origin`],
+  [`Demon Beast Canyon`]
+];
+
 
 export const oldTaskNames = [
   "South Vern Dungeon",
