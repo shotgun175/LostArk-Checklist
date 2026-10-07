@@ -6,3 +6,8 @@
 export function filterVisibleCharacters<T extends { isHide?: boolean }>(characters: T[], showHidden: boolean): T[] {
   return showHidden ? characters : characters.filter(character => !character.isHide);
 }
+
+/** Gold planner columns: visible characters (see filterVisibleCharacters) with Weekly Gold on. */
+export function filterGoldPlannerCharacters<T extends { isHide?: boolean; weeklyGold: boolean }>(characters: T[], showHidden: boolean): T[] {
+  return filterVisibleCharacters(characters, showHidden).filter(character => character.weeklyGold);
+}

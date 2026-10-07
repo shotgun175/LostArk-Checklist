@@ -13,6 +13,8 @@ import { ManualWeeklyGoldEntry, Settings } from "../../../model/settings";
 import { UpdateData } from "@angular/fire/firestore";
 import { getCompletionEntry } from '../../../core/get-completion-entry-key';
 import { Completion } from "../../../model/completion";
+import { LayoutStateService } from "../../../core/services/layout-state.service";
+import { filterGoldPlannerCharacters } from "../../../core/visible-characters";
 
 interface chestsData {
   task?: LostarkTask,
@@ -62,8 +64,8 @@ interface GoldPlannerDisplay {
 })
 export class GoldPlannerComponent {
   public rawRoster$ = this.rosterService.roster$;
-  public roster$ = this.rosterService.roster$.pipe(
-    map(roster => roster.characters)
+  public roster$ = combineLatest([this.rosterService.roster$, this.layoutState.showHiddenCharacters$]).pipe(
+    map(([roster, showHidden]) => filterGoldPlannerCharacters(roster.characters, showHidden))
   );
 
   public settings$ = this.settings.settings$;
@@ -533,6 +535,7 @@ export class GoldPlannerComponent {
     private tasksService: TasksService,
     private settings: SettingsService,
     private timeService: TimeService,
-    private completionService: CompletionService) {
+    private completionService: CompletionService,
+    private layoutState: LayoutStateService) {
   }
 }
