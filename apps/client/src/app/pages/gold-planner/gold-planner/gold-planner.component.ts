@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, startWith } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGoldTakingDisabled, getGoldCapWarning } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGoldTakingDisabled, getGoldCapWarning, isGateCountedForGoldCap } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -262,7 +262,11 @@ export class GoldPlannerComponent {
               takingGold,
               indeterminateTakingGold,
               // Gold cap counts gate cells shown by tracking, including ones already done this week
-              countsForGoldCap: !hiddenByTracking && !!line.gate && this.characterHasRequiredILvlForGate(line.gate, character, tasks, task),
+              countsForGoldCap: isGateCountedForGoldCap({
+                hiddenByTracking,
+                isGateLine: !!line.gate,
+                meetsGateIlvl: !!line.gate && this.characterHasRequiredILvlForGate(line.gate, character, tasks, task)
+              }),
               goldTakingDisabled: false,
               canRunHM,
               canRunNightmare,

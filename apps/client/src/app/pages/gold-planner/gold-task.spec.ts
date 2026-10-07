@@ -1,5 +1,5 @@
 import { goldTasks } from './gold-tasks';
-import { Gate, getGoldCapWarning, getGoldRaids, GoldGateState, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
+import { Gate, getGoldCapWarning, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
 import { Character } from '../../model/character/character';
 
 const gate = (name: string): Gate => goldTasks.flatMap(t => t.gates).find(g => g.name === name) as Gate;
@@ -69,6 +69,13 @@ describe('gold raid cap', () => {
   it('disables nothing under 3 raids', () => {
     const raids = getGoldRaids([gold('Serca'), gold('Kazeros'), gold('Armoche', true, false)]);
     expect(isGoldTakingDisabled(raids, 'Horizon Cathedral')).toBe(false);
+  });
+
+  it('counts a cell only when it is a gate shown by tracking and the character meets the gate item level', () => {
+    expect(isGateCountedForGoldCap({ hiddenByTracking: false, isGateLine: true, meetsGateIlvl: true })).toBe(true);
+    expect(isGateCountedForGoldCap({ hiddenByTracking: true, isGateLine: true, meetsGateIlvl: true })).toBe(false);
+    expect(isGateCountedForGoldCap({ hiddenByTracking: false, isGateLine: false, meetsGateIlvl: true })).toBe(false);
+    expect(isGateCountedForGoldCap({ hiddenByTracking: false, isGateLine: true, meetsGateIlvl: false })).toBe(false);
   });
 
   it('warns only when more than 3 raids take gold', () => {

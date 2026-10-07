@@ -76,6 +76,14 @@ export interface GoldGateState {
   counted: boolean;
 }
 
+/**
+ * Whether a character's cell counts toward the gold cap: a gate line, shown by tracking, that the character's item level allows.
+ * Gates already done this week still count, matching the game's weekly gold limit.
+ */
+export function isGateCountedForGoldCap(cell: { hiddenByTracking: boolean; isGateLine: boolean; meetsGateIlvl: boolean }): boolean {
+  return !cell.hiddenByTracking && cell.isGateLine && cell.meetsGateIlvl;
+}
+
 /** Raids the character takes gold from: gold ticked on at least one counted gate. A raid counts once. */
 export function getGoldRaids(gates: GoldGateState[]): Set<string> {
   return new Set(gates.filter(gate => gate.takingGold && gate.counted).map(gate => gate.raidName));
