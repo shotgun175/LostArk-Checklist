@@ -1,5 +1,6 @@
-import { Injectable } from "@angular/core";
-import { doc, Firestore, where } from "@angular/fire/firestore";
+import { Inject, Injectable } from "@angular/core";
+import { doc, Firestore, where } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
@@ -113,7 +114,7 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     shareReplay(1)
   );
 
-  constructor(firestore: Firestore, private auth: AuthService, private settings: SettingsService) {
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService, private settings: SettingsService) {
     super(firestore);
     this.baseData$.pipe(
       pluck("toCreate"),

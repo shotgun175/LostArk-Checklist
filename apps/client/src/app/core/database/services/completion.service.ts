@@ -1,7 +1,8 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
 import { Completion } from "../../../model/completion";
-import { Firestore } from "@angular/fire/firestore";
+import { Firestore } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { map, Observable, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 
@@ -28,7 +29,7 @@ export class CompletionService extends FirestoreStorage<Completion> {
     shareReplay(1)
   );
 
-  constructor(firestore: Firestore, private auth: AuthService) {
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
     super(firestore);
   }
 

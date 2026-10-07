@@ -1,6 +1,7 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
-import { Firestore } from "@angular/fire/firestore";
+import { Firestore } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { combineLatest, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 import { Energy } from "../../../model/energy";
@@ -79,7 +80,7 @@ export class EnergyService extends FirestoreStorage<Energy> {
     shareReplay(1)
   );
 
-  constructor(firestore: Firestore, private auth: AuthService,
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService,
               private rosterService: RosterService, private timeService: TimeService,
               private tasksService: TasksService, private completionService: CompletionService) {
     super(firestore);

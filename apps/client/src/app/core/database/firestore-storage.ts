@@ -3,10 +3,8 @@ import { catchError, distinctUntilChanged, EMPTY, finalize, first, from, map, me
 import {
   addDoc,
   collection,
-  collectionData,
   deleteDoc,
   doc,
-  docData,
   DocumentData,
   DocumentReference,
   Firestore,
@@ -20,9 +18,10 @@ import {
   updateDoc,
   WithFieldValue,
   WriteBatch,
+  QueryConstraint,
   writeBatch
-} from "@angular/fire/firestore";
-import { QueryConstraint } from "@firebase/firestore";
+} from "firebase/firestore";
+import { collectionData$, docData$ } from "../firebase/rx";
 import { environment } from "../../../environments/environment";
 import { startWith, switchMap } from "rxjs/operators";
 
@@ -102,7 +101,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public query(...filterQuery: QueryConstraint[]): Observable<T[]> {
-    return collectionData(query(this.collection, ...filterQuery).withConverter(this.converter)).pipe(
+    return collectionData$(query(this.collection, ...filterQuery).withConverter(this.converter)).pipe(
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       catchError(err => this.endListener(err))
     );
@@ -117,7 +116,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   public getOne(key: string, isForCurrentUser = false): Observable<T> {
     if (!this.cache[key]) {
-      const source$ = docData(this.docRef(key)).pipe(
+      const source$ = docData$(this.docRef(key)).pipe(
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
         tap(() => this.recordOperation("read", "wtf")),
         map(res => {

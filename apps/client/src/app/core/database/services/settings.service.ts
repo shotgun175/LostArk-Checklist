@@ -1,6 +1,7 @@
-import { Injectable } from "@angular/core";
+import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
-import { Firestore, UpdateData } from "@angular/fire/firestore";
+import { Firestore, UpdateData } from "firebase/firestore";
+import { FIRESTORE } from "../../firebase/firebase.providers";
 import { Settings } from "../../../model/settings";
 import { mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
@@ -60,7 +61,7 @@ export class SettingsService extends FirestoreStorage<Settings> {
     shareReplay(1)
   );
 
-  constructor(firestore: Firestore, private auth: AuthService) {
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
     super(firestore);
   }
 

@@ -8,7 +8,7 @@ import { NzModalService } from "ng-zorro-antd/modal";
 import { CdkDragDrop, moveItemInArray } from "@angular/cdk/drag-drop";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { Roster } from "../../../model/roster";
-import { arrayRemove } from "@angular/fire/firestore";
+import { arrayRemove } from "firebase/firestore";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { CompletionService } from "../../../core/database/services/completion.service";
 import { EnergyService } from "../../../core/database/services/energy.service";
