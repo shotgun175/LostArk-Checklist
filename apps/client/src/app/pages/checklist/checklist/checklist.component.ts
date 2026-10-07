@@ -21,6 +21,7 @@ import { addWeeks, getWeek } from 'date-fns';
 import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
+import { LayoutStateService } from '../../../core/services/layout-state.service';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -37,7 +38,7 @@ export class ChecklistComponent {
   public TaskScope = TaskScope;
 
   public rawRoster$ = this.rosterService.roster$;
-  public forceShowHiddenCharacter$ = new BehaviorSubject(false);
+  public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
 
   public categoriesDisplay$ = new LocalStorageBehaviorSubject<{
     dailyCharacter: boolean,
@@ -128,7 +129,7 @@ export class ChecklistComponent {
       }))
     ),
     this.energy$,
-    this.forceShowHiddenCharacter$,
+    this.showHiddenCharacters$,
     this.settings.settings$.pipe(pluck("goldPlannerConfiguration")),
     this.settings.settings$.pipe(pluck("raidModesForGoldPlanner"))
   ]).pipe(
@@ -251,31 +252,18 @@ export class ChecklistComponent {
     startWith({ x: null, y: null })
   );
 
-  public characters$ = combineLatest([this.roster$, this.forceShowHiddenCharacter$]).pipe(
-    map(([roster, forceShowHiddenCharacter]) => {
-      if (forceShowHiddenCharacter) {
-        return roster;
-      }
-      return roster.filter((character) => {
-        return !character.isHide;
-      });
-    })
+  public characters$ = combineLatest([this.roster$, this.showHiddenCharacters$]).pipe(
+    map(([roster, showHidden]) => filterVisibleCharacters(roster, showHidden))
   );
 
-  public charactersDisplay$ = combineLatest([this.tableDisplay$, this.forceShowHiddenCharacter$]).pipe(
-    map(([display, forceShowHiddenCharacter]) => {
-      if (forceShowHiddenCharacter) {
-        return display.roster;
-      }
-      return display.roster.filter((character) => {
-        return !character.isHide;
-      });
-    })
+  public charactersDisplay$ = combineLatest([this.tableDisplay$, this.showHiddenCharacters$]).pipe(
+    map(([display, showHidden]) => filterVisibleCharacters(display.roster, showHidden))
   );
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
     private settings: SettingsService, private energyService: EnergyService,
-    private timeService: TimeService, private completionService: CompletionService) {
+    private timeService: TimeService, private completionService: CompletionService,
+    private layoutState: LayoutStateService) {
     this.setTableHeight();
   }
 
