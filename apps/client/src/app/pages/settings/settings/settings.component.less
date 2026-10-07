@@ -28,13 +28,144 @@
   margin: 0 0 10px;
 }
 
-.auto-tracking {
-  opacity: 0.6;
+// Task tracking grid: scrolls sideways with the Task column pinned on the left (same approach as the checklist)
+:host ::ng-deep .tracking-table {
+  .ant-table-body {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 100%;
+  }
+
+  .ant-table-thead > tr > th:first-child,
+  td.task-name {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+  }
+
+  .ant-table-thead > tr > th:first-child {
+    background-color: #1d1d1d;
+  }
+
+  td.task-name {
+    background-color: #141414;
+  }
+
+  // nz-table sets ant-table-ping-left once the body is scrolled away from its left edge (ng-zorro internal class)
+  .ant-table-ping-left {
+    .ant-table-thead > tr > th:first-child,
+    td.task-name {
+      box-shadow: 4px 0 6px -2px rgba(0, 0, 0, .8);
+    }
+  }
 }
 
-.tracking-source {
+// On narrow screens the "set by you" count and Reset all move under the title instead of squeezing it
+:host ::ng-deep .tracking-card {
+  .ant-card-head-wrapper {
+    flex-wrap: wrap;
+  }
+
+  .ant-card-head-title {
+    flex: 1 0 auto;
+  }
+}
+
+.character-head {
+  text-align: center;
+  vertical-align: bottom;
+  font-size: 11px;
+  line-height: 1.2;
+
+  .character-name {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .character-ilvl {
+    display: block;
+    font-size: 10px;
+    opacity: 0.6;
+  }
+}
+
+.tracking-cell {
+  text-align: center;
+}
+
+.auto-tracking {
+  opacity: 0.45;
+}
+
+.tracking-reset {
   display: block;
-  margin-top: 2px;
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.ilvl-too-low {
+  opacity: 0.35;
+}
+
+.set-count {
+  margin-right: 8px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.tracking-legend {
+  margin-top: 6px;
   font-size: 11px;
   opacity: 0.65;
+}
+
+// Per-raid "set for all" menu button next to the raid name
+.raid-menu-button {
+  margin-left: 4px;
+  padding: 0 4px;
+  border: 1px solid #434343;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(255, 255, 255, .55);
+  font-size: 12px;
+  line-height: 14px;
+  cursor: pointer;
+
+  &:hover, &.ant-dropdown-open {
+    color: #177ddc;
+    border-color: #177ddc;
+  }
+}
+
+.raid-menu-title {
+  font-size: 11px;
+}
+
+// On phones the menu opens beside a button near the middle of the screen, so it stays narrow enough to fit on either side
+@media (max-width: 575px) {
+  .raid-menu {
+    max-width: 200px;
+  }
+
+  .raid-menu-title {
+    height: auto;
+    line-height: 16px;
+    white-space: normal;
+  }
+}
+
+// Collapsible Older raids group at the bottom of the grid
+.older-raids-toggle td {
+  font-size: 12px;
+}
+
+.older-raids-caret {
+  display: inline-block;
+  margin-right: 4px;
+
+  &.open {
+    transform: rotate(90deg);
+  }
 }

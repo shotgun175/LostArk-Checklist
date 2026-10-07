@@ -18,8 +18,33 @@ import { NzMessageService } from "ng-zorro-antd/message";
 import { DataTransferService } from "../../../core/import/data-transfer.service";
 import { ExportValidation, parseExportFile } from "../../../core/import/validate-export";
 import { LostarkExport } from "../../../core/import/lostark-export";
-import { getTrackedTaskOverride, isTaskTracked } from "../../../core/task-tracking";
+import {
+  countGridTrackingChoices,
+  getExplicitTrackingKeys,
+  getExplicitTrackingKeysForCharacter,
+  getSetForAllKeys,
+  getTrackedTaskOverride,
+  isRaidInMainList,
+  isRaidTask,
+  isTaskInIlvlRange,
+  isTaskTracked
+} from "../../../core/task-tracking";
 import { deleteField } from "firebase/firestore";
+
+/** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
+const TRACKING_TASK_COLUMN_WIDTH = 150;
+const TRACKING_CHARACTER_COLUMN_WIDTH = 64;
+
+/** localStorage key that remembers whether the Older raids group of the Task tracking grid is expanded. */
+const OLDER_RAIDS_OPEN_KEY = "settings:olderRaidsOpen";
+
+function readOlderRaidsOpen(): boolean {
+  try {
+    return localStorage.getItem(OLDER_RAIDS_OPEN_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 @Component({
   selector: "lostark-helper-settings",
@@ -95,17 +120,37 @@ export class SettingsComponent {
     this.rosterService.roster$
   ]).pipe(
     map(([tasks, roster]) => {
-      return tasks
+      const rows = tasks
         .filter(task => task.scope === TaskScope.CHARACTER)
         .map(task => {
           return {
             task,
+            isRaid: isRaidTask(task),
+            eligibleCount: getSetForAllKeys(roster.characters, task).length,
             data: roster.characters.map(c => ({
               tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
-              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined
+              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined,
+              inIlvlRange: isTaskInIlvlRange(c, task)
             }))
           };
         });
+      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, rows.map(row => row.task)));
+      // Visible characters decide the grouping (user choice): raids only hidden alts would run fold into Older raids.
+      const visibleCharacters = roster.characters.filter(c => !c.isHide);
+      const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, visibleCharacters, row.task, tasks);
+      return {
+        rows,
+        mainRows: rows.filter(row => !isOlder(row)),
+        olderRows: rows.filter(isOlder),
+        setByYou: perCharacter.reduce((sum, count) => sum + count, 0),
+        perCharacter,
+        taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
+        characterColumnWidth: `${TRACKING_CHARACTER_COLUMN_WIDTH}px`,
+        scroll: {
+          x: `${TRACKING_TASK_COLUMN_WIDTH + TRACKING_CHARACTER_COLUMN_WIDTH * roster.characters.length}px`,
+          y: "300px"
+        }
+      };
     })
   );
 
@@ -118,6 +163,8 @@ export class SettingsComponent {
   public pendingImport: { fileName: string; validation: ExportValidation } | null = null;
 
   public transferBusy = false;
+
+  public olderRaidsOpen = readOlderRaidsOpen();
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
@@ -175,6 +222,51 @@ export class SettingsComponent {
     this.rosterService.updateOne(roster.$key, {
       [`trackedTasks.${getCompletionEntryKey(character, task)}`]: deleteField()
     });
+  }
+
+  resetAllTracking(roster: Roster): void {
+    this.clearTrackingKeys(roster, getExplicitTrackingKeys(roster.trackedTasks));
+  }
+
+  resetCharacterTracking(roster: Roster, character: Character): void {
+    this.clearTrackingKeys(roster, getExplicitTrackingKeysForCharacter(roster.trackedTasks, character));
+  }
+
+  /** Removes the given explicit tracking choices in one write, so those cells follow the default again. */
+  private clearTrackingKeys(roster: Roster, keys: string[]): void {
+    if (keys.length === 0) {
+      return;
+    }
+    this.rosterService.updateOne(roster.$key, Object.fromEntries(
+      keys.map(key => [`trackedTasks.${key}`, deleteField()])
+    ));
+  }
+
+  /**
+   * Sets one raid for every grid character whose item level fits it, in one write:
+   * true or false saves that choice, null sends those cells back to automatic.
+   */
+  setRaidForAll(roster: Roster, task: LostarkTask, value: boolean | null): void {
+    const keys = getSetForAllKeys(roster.characters, task);
+    if (value === null) {
+      this.clearTrackingKeys(roster, keys.filter(key => typeof roster.trackedTasks?.[key] === "boolean"));
+      return;
+    }
+    if (keys.length === 0) {
+      return;
+    }
+    this.rosterService.updateOne(roster.$key, Object.fromEntries(
+      keys.map(key => [`trackedTasks.${key}`, value])
+    ));
+  }
+
+  toggleOlderRaids(): void {
+    this.olderRaidsOpen = !this.olderRaidsOpen;
+    try {
+      localStorage.setItem(OLDER_RAIDS_OPEN_KEY, String(this.olderRaidsOpen));
+    } catch {
+      // Storage can be blocked (private mode, site data off); the group then just opens for this visit.
+    }
   }
 
   resetBonuses(key: string): void {

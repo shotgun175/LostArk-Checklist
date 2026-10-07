@@ -1,7 +1,7 @@
 import { LostarkTask } from "../model/lostark-task";
 import { Character } from "../model/character/character";
 import { raidReleaseOrder } from "./tasks";
-import { getCompletionEntry } from "./get-completion-entry-key";
+import { getCompletionEntry, getCompletionEntryKey } from "./get-completion-entry-key";
 
 /** How many of the newest enterable raids a character tracks by default. */
 export const DEFAULT_TRACKED_RAIDS = 3;
@@ -22,8 +22,7 @@ export function getDefaultTrackedRaidLabels(character: Pick<Character, "ilvl">, 
   const enterable = new Set<number>();
   tasks.forEach(task => {
     const index = raidIndex(task);
-    if (index !== undefined && task.enabled
-      && character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity)) {
+    if (index !== undefined && task.enabled && isTaskInIlvlRange(character, task)) {
       enterable.add(index);
     }
   });
@@ -56,4 +55,66 @@ export function isTaskTracked(trackedTasks: Record<string, boolean | undefined> 
     return true;
   }
   return getDefaultTrackedRaidLabels(character, tasks).has(task.label.toLowerCase());
+}
+
+/** Whether the character's item level lets it do the task: at least minIlvl and below maxIlvl. */
+export function isTaskInIlvlRange(character: Pick<Character, "ilvl">, task: Pick<LostarkTask, "minIlvl" | "maxIlvl">): boolean {
+  return character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity);
+}
+
+/** Every key of roster.trackedTasks that holds an explicit choice (a boolean). */
+export function getExplicitTrackingKeys(trackedTasks: Record<string, boolean | undefined> | undefined): string[] {
+  return Object.keys(trackedTasks || {}).filter(key => typeof trackedTasks?.[key] === "boolean");
+}
+
+/**
+ * The explicit-choice keys of one character that the grid reads: keys under its id, or under its
+ * name when it has no id. Legacy name keys of a character with an id are left to Reset all.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   character: the character whose keys to list.
+ */
+export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">): string[] {
+  const prefix = character.id ? `${character.id}:` : `${character.name}:`;
+  return getExplicitTrackingKeys(trackedTasks).filter(key => key.startsWith(prefix));
+}
+
+/**
+ * How many explicit choices one character has among the tasks the grid shows. Keys left behind by
+ * deleted tasks or tasks moved to roster scope are not counted, since no switch shows them.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   character: the character whose choices to count.
+ *   gridTasks: the tasks shown in the grid.
+ */
+export function countGridTrackingChoices(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">, gridTasks: LostarkTask[]): number {
+  return gridTasks.filter(task => typeof trackedTasks?.[getCompletionEntryKey(character, task)] === "boolean").length;
+}
+
+/** Whether the task is a raid or abyssal dungeon listed in raidReleaseOrder (custom tasks never are). */
+export function isRaidTask(task: LostarkTask): boolean {
+  return raidIndex(task) !== undefined;
+}
+
+/**
+ * Whether a raid task stays in the main Task tracking list instead of the Older raids group:
+ * it is among the default newest raids of at least one grid character, or one of them has an explicit true for it.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   characters: the characters shown in the grid.
+ *   task: the raid task.
+ *   tasks: the full task list, used to find each character's newest raids.
+ */
+export function isRaidInMainList(trackedTasks: Record<string, boolean | undefined> | undefined, characters: Character[], task: LostarkTask, tasks: LostarkTask[]): boolean {
+  const label = task.label.toLowerCase();
+  return characters.some(c => getTrackedTaskOverride(trackedTasks, c, task) === true
+    || getDefaultTrackedRaidLabels(c, tasks).has(label));
+}
+
+/** The tracking keys a "set for all" action writes: one per grid character whose item level fits the task. */
+export function getSetForAllKeys(characters: Character[], task: LostarkTask): string[] {
+  return characters.filter(c => isTaskInIlvlRange(c, task)).map(c => getCompletionEntryKey(c, task));
 }
