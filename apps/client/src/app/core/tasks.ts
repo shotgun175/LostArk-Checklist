@@ -31,7 +31,7 @@ export const tasks = [
   // Weekly Character
   createTask(`Weekly Mission`, 302, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 3, 9999, "weekly.webp"),
   createTask(`Paradise`, 1580, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 5, 9999, "weekly.webp"),
-  createTask(`Howl's Hourglass`, 1730, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 9999, "weekly.webp"),
+  createTask(`Haal's Hourglass`, 1730, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 9999, "weekly.webp"),
   createTask(`Demon Beast Canyon`, 340, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 840, "abyssal-dungeon.webp", {
     shared: true,
     partySize: 4
@@ -220,6 +220,12 @@ export const retiredTaskLabels = [
   "Kalthertz Slaves",
   "Una's Task"
 ];
+
+// Built-in tasks whose label changed: old label to new label. Existing copies are renamed in place, keeping their key,
+// so checkmarks and tracking choices carry over and no duplicate task is created.
+export const renamedTaskLabels: Record<string, string> = {
+  "Howl's Hourglass": "Haal's Hourglass"
+};
 
 export const oldTaskNames = [
   "South Vern Dungeon",

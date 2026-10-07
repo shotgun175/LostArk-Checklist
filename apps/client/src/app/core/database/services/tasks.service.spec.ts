@@ -1,4 +1,4 @@
-import { upgradeUserTask } from "./tasks.service";
+import { renameUserTask, upgradeUserTask } from "./tasks.service";
 import { retiredTaskLabels, tasks } from "../../tasks";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 
@@ -44,5 +44,25 @@ describe("upgradeUserTask", () => {
   it("leaves custom and current tasks alone", () => {
     expect(upgradeUserTask({ ...userCopy("Mine"), custom: true }, defaultTasks, "uid")).toBeNull();
     expect(upgradeUserTask({ ...userCopy("Una's Task"), version: TASKS_VERSION }, defaultTasks, "uid")).toBeNull();
+  });
+});
+
+describe("renameUserTask", () => {
+  it("renames a built-in copy of Howl's Hourglass to Haal's Hourglass, keeping its key and everything else", () => {
+    const old = userCopy("Howl's Hourglass");
+    expect(renameUserTask(old)).toEqual({ ...old, label: "Haal's Hourglass" });
+  });
+
+  it("matches the new default task, so no duplicate is created", () => {
+    const renamed = renameUserTask(userCopy("Howl's Hourglass"));
+    expect(defaultTasks.some(t => t.label === renamed.label)).toBe(true);
+    expect(defaultTasks.some(t => t.label === "Howl's Hourglass")).toBe(false);
+  });
+
+  it("leaves custom tasks and other labels as the same object", () => {
+    const custom = { ...userCopy("Howl's Hourglass"), custom: true };
+    const other = userCopy("Guardian");
+    expect(renameUserTask(custom)).toBe(custom);
+    expect(renameUserTask(other)).toBe(other);
   });
 });

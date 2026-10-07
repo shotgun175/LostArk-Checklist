@@ -50,6 +50,7 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - A character saved without a Weekly Gold setting now gets it only while fewer than 6 characters have it, not by its place in the roster. A roster with more than 6 shows a warning on the Roster page; nothing is unticked.
 - A character with **Taking Gold** on more than 3 raids gets the lowest-paying extras unticked the next time you open the Gold Planner, with a message naming them. Characters with 3 or fewer are not touched.
 - **Kalthertz Slaves** and **Una's Task** are no longer added for new accounts. If you have them, they stay; switch them off in Tasks Manager to hide them everywhere, Task tracking included.
+- **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 
 
 ## Contributing

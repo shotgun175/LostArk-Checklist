@@ -5,7 +5,7 @@ import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
 import { combineLatest, debounceTime, from, map, mapTo, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
-import { tasks, oldTaskNames, retiredTaskLabels } from "../../tasks";
+import { tasks, oldTaskNames, renamedTaskLabels, retiredTaskLabels } from "../../tasks";
 import { catchError, filter } from "rxjs/operators";
 import { SettingsService } from "./settings.service";
 import { subHours } from "date-fns";
@@ -48,6 +48,12 @@ export function upgradeUserTask(t: LostarkTask, defaultTasks: LostarkTask[], uid
   };
 }
 
+/** A user's copy of a built-in task with its new label when that label changed (see renamedTaskLabels), otherwise the same object. */
+export function renameUserTask(t: LostarkTask): LostarkTask {
+  const newLabel = t.custom ? undefined : renamedTaskLabels[t.label];
+  return newLabel ? { ...t, label: newLabel } : t;
+}
+
 @Injectable({
   providedIn: "root"
 })
@@ -64,7 +70,8 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     switchMap(uid => {
       return this.getUserTasks(uid).pipe(
         debounceTime(100),
-        map(userTasks => {
+        map(storedTasks => {
+          const userTasks = storedTasks.map(renameUserTask);
           const toCreate = this.sortedTasks
             .filter(defaultTask => {
               return !userTasks.some(t => t.label?.toLowerCase() === defaultTask.label?.toLowerCase() && t.frequency === defaultTask.frequency && !t.custom);
@@ -78,11 +85,14 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
           const result = [
             ...toCreate,
             ...userTasks
-              .map((t) => {
+              .map((t, i) => {
                 const upgraded = upgradeUserTask(t, this.sortedTasks, uid);
                 if (upgraded) {
                   toUpdate.push(upgraded);
                   return upgraded;
+                }
+                if (t !== storedTasks[i]) {
+                  toUpdate.push(t);
                 }
                 return { ...t };
               })
