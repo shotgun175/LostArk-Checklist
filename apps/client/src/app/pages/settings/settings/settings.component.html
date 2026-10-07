@@ -173,7 +173,8 @@
                 </tr>
                 <tr *ngIf="taskTracking.olderRows.length > 0" class="older-raids-toggle">
                   <td class="task-name">
-                    <a (click)="toggleOlderRaids()" [attr.aria-expanded]="olderRaidsOpen">
+                    <a tabindex="0" role="button" (click)="toggleOlderRaids()" (keydown.enter)="toggleOlderRaids()"
+                       (keydown.space)="$event.preventDefault(); toggleOlderRaids()" [attr.aria-expanded]="olderRaidsOpen">
                       <span class="older-raids-caret" [class.open]="olderRaidsOpen">&#9656;</span>
                       Older raids ({{taskTracking.olderRows.length}})
                     </a>
