@@ -23,12 +23,21 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - Raids that none of your visible characters tracks by default and that you have not switched on for any of them sit in a collapsed **Older raids** group at the bottom of the grid. Click it to open or close it; the browser remembers which. A raid moves in and out of the group by itself as item levels change.
 - The **&#8942;** button next to a raid name opens **Track for all**, **Ignore for all** and **Back to auto for all**. Each one changes that raid for every character whose item level fits it, in one step, and counts as your own choice like a single switch.
 
-### Gold Planner running mode
+### Gold Planner
 
+- The page lists your characters on the left: a **Roster this week** total (tradable, bound and how many gold earners), then **Gold earners** (characters with Weekly Gold) with their gold raids and totals, then **Other characters** with their box costs. Hidden characters follow **Show your hidden characters**.
+- Click a character to plan its raids in the panel on the right. The browser remembers the last character you picked. On narrow screens the list sits above the panel.
+- A character without Weekly Gold can still pick a difficulty and tick **Taking Chest** (ticking a chest on a gate with no difficulty picks the highest one it can run), but **Taking Gold** is disabled; its box costs count against that character's own total and the roster total.
 - The first time you tick **Taking Gold** on a raid or a gate that has no running mode yet, the Gold Planner picks the highest mode the character's item level allows: Nightmare, then Hard, then Normal. It never picks Solo.
 - A mode that is already set (Solo included) is never changed, and unticking then ticking again keeps it.
-- A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one, and a character already over 3 shows a warning in its column header.
-- The totals row shows each character's gold and the grand total as two numbers, tradable and bound. Taking Chest costs come out of bound gold (a character's bound can go below zero; in the grand total, bound below zero is taken from tradable instead), and Chaos Dungeons and Other sources count as tradable.
+- A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one, and a character already over 3 shows a warning in the character list.
+- Each character's total and the roster total show two numbers, tradable and bound. Taking Chest costs come out of bound gold (a character's bound can go below zero; in the roster total, bound below zero is taken from tradable instead), and Chaos Dungeons and Other sources count as tradable.
+
+### Roster
+
+- At most 6 characters can have **Weekly Gold**, as in the game. Once 6 have it, the box is disabled on the others until you untick one.
+- A new character gets Weekly Gold only while fewer than 6 characters have it.
+- A roster that already has more than 6 (for example from an import) shows a warning on the Roster page; nothing is unticked for you.
 
 ### Heads-up for existing users
 
