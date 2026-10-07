@@ -206,11 +206,11 @@
                 <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
                      class="task-icon">
                 {{row.task.label}}
-                <button class="raid-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="raidMenu" nzPlacement="bottomLeft"
+                <button class="task-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="taskMenu" nzPlacement="bottomLeft"
                         [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
-                <nz-dropdown-menu #raidMenu="nzDropdownMenu">
-                  <ul nz-menu class="raid-menu">
-                    <li nz-menu-item nzDisabled class="raid-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
+                <nz-dropdown-menu #taskMenu="nzDropdownMenu">
+                  <ul nz-menu class="task-menu">
+                    <li nz-menu-item nzDisabled class="task-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
                     <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)">Track for all</li>
                     <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)">Ignore for all</li>
                     <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)">Back to auto for all</li>
