@@ -59,6 +59,20 @@
           "extractLicenses": false,
           "sourceMap": true,
           "namedChunks": true
+        },
+        "emulator": {
+          "buildOptimizer": false,
+          "optimization": false,
+          "vendorChunk": true,
+          "extractLicenses": false,
+          "sourceMap": true,
+          "namedChunks": true,
+          "fileReplacements": [
+            {
+              "replace": "apps/client/src/environments/environment.ts",
+              "with": "apps/client/src/environments/environment.emulator.ts"
+            }
+          ]
         }
       },
       "defaultConfiguration": "production"
@@ -71,6 +85,9 @@
         },
         "development": {
           "browserTarget": "client:build:development"
+        },
+        "emulator": {
+          "browserTarget": "client:build:emulator"
         }
       },
       "defaultConfiguration": "development"
