@@ -8,34 +8,58 @@ export type ImportWrite =
   | { op: "delete"; collection: "tasks"; id: string }
   | { op: "set"; collection: "tasks" | "roster" | "settings" | "completion" | "energy"; id: string; data: Record<string, unknown> };
 
-export function importedCompletion(data: LostarkExport): StoredDoc<Completion> {
-  return data.completion ?? { data: {} };
+export interface ImportPlan {
+  writes: ImportWrite[];
+  /** The completion document the plan writes, with task keys already remapped. */
+  completion: StoredDoc<Completion>;
+}
+
+/**
+ * Rewrites the task id at the end of a key ("taskId", "charId:taskId" or "charName:taskId").
+ * Keys that do not end with an imported task id are returned unchanged.
+ */
+function remapKey(key: string, newIds: Map<string, string>): string {
+  const separator = key.lastIndexOf(":");
+  const newId = newIds.get(key.slice(separator + 1));
+  return newId === undefined ? key : key.slice(0, separator + 1) + newId;
+}
+
+function remapKeys<T>(map: Record<string, T> | undefined, newIds: Map<string, string>): Record<string, T> | undefined {
+  if (!map) {
+    return map;
+  }
+  return Object.fromEntries(Object.entries(map).map(([key, value]) => [remapKey(key, newIds), value]));
 }
 
 /**
  * Lists the writes that replace the current user's data with an export.
  *
- * The current user's tasks that the file does not contain are deleted: the app creates
- * default tasks with fresh ids on first load, and its duplicate cleanup would otherwise
- * delete imported originals at random. Tasks keep their original ids so completion, energy,
- * tracking and lazy-flag keys stay valid.
+ * Every task the current user has is deleted, and each imported task gets a fresh id from
+ * `newTaskId`. Task documents live in one shared collection, so reusing the file's ids would
+ * fail whenever the same file was already imported into another account. Completion, rest
+ * bonus, tracking and lazy-flag keys are rewritten to the fresh ids.
  */
-export function planImportWrites(uid: string, existingTaskIds: string[], data: LostarkExport): ImportWrite[] {
-  const importedIds = new Set(data.tasks.map(task => task.$key));
-  const deletes: ImportWrite[] = existingTaskIds
-    .filter(id => !importedIds.has(id))
-    .map(id => ({ op: "delete", collection: "tasks", id }));
+export function planImportWrites(uid: string, existingTaskIds: string[], data: LostarkExport, newTaskId: () => string): ImportPlan {
+  const newIds = new Map(data.tasks.map(task => [task.$key, newTaskId()]));
+  const deletes: ImportWrite[] = existingTaskIds.map(id => ({ op: "delete", collection: "tasks", id }));
   const taskSets: ImportWrite[] = data.tasks.map(({ $key, ...task }) => ({
     op: "set",
     collection: "tasks",
-    id: $key,
+    id: newIds.get($key) as string,
     data: { ...task, authorId: uid }
   }));
+  const sourceCompletion = data.completion ?? { data: {} };
+  const completion = { ...sourceCompletion, data: remapKeys(sourceCompletion.data, newIds) ?? {} };
+  const sourceEnergy = data.energy ?? { data: {}, updated: 0 };
+  const settings: Record<string, unknown> = { ...data.settings };
+  if (data.settings.lazytracking) {
+    settings["lazytracking"] = remapKeys(data.settings.lazytracking, newIds);
+  }
   const docSets: ImportWrite[] = [
-    { op: "set", collection: "roster", id: uid, data: { ...data.roster } },
-    { op: "set", collection: "settings", id: uid, data: { ...data.settings } },
-    { op: "set", collection: "completion", id: uid, data: { ...importedCompletion(data) } },
-    { op: "set", collection: "energy", id: uid, data: { ...(data.energy ?? { data: {}, updated: 0 }) } }
+    { op: "set", collection: "roster", id: uid, data: { ...data.roster, trackedTasks: remapKeys(data.roster.trackedTasks, newIds) ?? {} } },
+    { op: "set", collection: "settings", id: uid, data: settings },
+    { op: "set", collection: "completion", id: uid, data: { ...completion } },
+    { op: "set", collection: "energy", id: uid, data: { ...sourceEnergy, data: remapKeys(sourceEnergy.data, newIds) ?? {} } }
   ];
-  return [...deletes, ...taskSets, ...docSets];
+  return { writes: [...deletes, ...taskSets, ...docSets], completion };
 }

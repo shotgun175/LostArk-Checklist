@@ -21,10 +21,13 @@ describe("synthetic lostark-helper export", () => {
     if (!validation.data) {
       throw new Error("fixture did not validate");
     }
-    const writes = planImportWrites("me", freshIds, validation.data);
+    let next = 0;
+    const { writes } = planImportWrites("me", freshIds, validation.data, () => `new${++next}`);
     expect(writes.filter(w => w.op === "delete")).toHaveLength(51);
     expect(writes.filter(w => w.op === "set" && w.collection === "tasks")).toHaveLength(53);
     expect(writes).toHaveLength(108);
     expect(writes.length).toBeLessThanOrEqual(FIRESTORE_BATCH_LIMIT);
+    const written = JSON.stringify(writes);
+    validation.data.tasks.forEach(task => expect(written).not.toContain(task.$key));
   });
 });

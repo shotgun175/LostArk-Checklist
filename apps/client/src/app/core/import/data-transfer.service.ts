@@ -4,7 +4,7 @@ import { firstValueFrom } from "rxjs";
 import { AuthService } from "../database/services/auth.service";
 import { CompletionService } from "../database/services/completion.service";
 import { EXPORT_FORMAT, LostarkExport } from "./lostark-export";
-import { FIRESTORE_BATCH_LIMIT, importedCompletion, planImportWrites } from "./plan-import-writes";
+import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
 
 @Injectable({
   providedIn: "root"
@@ -23,7 +23,8 @@ export class DataTransferService {
   public async importExport(data: LostarkExport): Promise<void> {
     const uid = await firstValueFrom(this.auth.uid$);
     const existingTasks = await getDocs(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
-    const writes = planImportWrites(uid, existingTasks.docs.map(task => task.id), data);
+    const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), data,
+      () => doc(collection(this.firestore, "tasks")).id);
     if (writes.length > FIRESTORE_BATCH_LIMIT) {
       throw new Error(`This import needs ${writes.length} writes, more than the ${FIRESTORE_BATCH_LIMIT} Firestore allows in one batch. Nothing was changed.`);
     }
@@ -38,7 +39,7 @@ export class DataTransferService {
     });
     // Give the in-memory completion the imported ticks before the energy document changes,
     // so the rest bonus update in EnergyService cannot write the old ticks back.
-    this.completionService.setLocal(uid, { ...JSON.parse(JSON.stringify(importedCompletion(data))), $key: uid });
+    this.completionService.setLocal(uid, { ...JSON.parse(JSON.stringify(completion)), $key: uid });
     await batch.commit();
   }
 

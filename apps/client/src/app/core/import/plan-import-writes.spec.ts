@@ -1,5 +1,5 @@
 import { LostarkExport } from "./lostark-export";
-import { planImportWrites } from "./plan-import-writes";
+import { ImportWrite, planImportWrites } from "./plan-import-writes";
 
 function sampleExport(): LostarkExport {
   return {
@@ -17,47 +17,82 @@ function sampleExport(): LostarkExport {
   };
 }
 
+function counter(): () => string {
+  let next = 0;
+  return () => `new${++next}`;
+}
+
+function plan(existingTaskIds: string[], file: LostarkExport = sampleExport()): ImportWrite[] {
+  return planImportWrites("me", existingTaskIds, file, counter()).writes;
+}
+
+function dataOf(writes: ImportWrite[], collection: ImportWrite["collection"]): Record<string, unknown> | undefined {
+  const write = writes.find(w => w.op === "set" && w.collection === collection);
+  return write && write.op === "set" ? write.data : undefined;
+}
+
 describe("planImportWrites", () => {
-  it("deletes the current user's tasks that are not in the file", () => {
-    const writes = planImportWrites("me", ["fresh1", "fresh2"], sampleExport());
-    expect(writes.filter(w => w.op === "delete")).toEqual([
+  it("deletes every task the current user has", () => {
+    expect(plan(["fresh1", "t1"]).filter(w => w.op === "delete")).toEqual([
       { op: "delete", collection: "tasks", id: "fresh1" },
-      { op: "delete", collection: "tasks", id: "fresh2" }
+      { op: "delete", collection: "tasks", id: "t1" }
     ]);
   });
 
-  it("does not delete a task id that the file writes again (restore)", () => {
-    const writes = planImportWrites("me", ["t1", "fresh1"], sampleExport());
-    expect(writes.filter(w => w.op === "delete").map(w => w.id)).toEqual(["fresh1"]);
-  });
-
-  it("writes each task with its original id, authorId set to the current user and no $key", () => {
-    const tasks = planImportWrites("me", [], sampleExport()).filter(w => w.op === "set" && w.collection === "tasks");
+  it("writes each task with a fresh id, authorId set to the current user and no $key", () => {
+    const tasks = plan([]).filter(w => w.op === "set" && w.collection === "tasks");
     expect(tasks).toEqual([
-      { op: "set", collection: "tasks", id: "t1", data: { authorId: "me", label: "Chaos Dungeon" } },
-      { op: "set", collection: "tasks", id: "t2", data: { authorId: "me", label: "Ghost Ship" } }
+      { op: "set", collection: "tasks", id: "new1", data: { authorId: "me", label: "Chaos Dungeon" } },
+      { op: "set", collection: "tasks", id: "new2", data: { authorId: "me", label: "Ghost Ship" } }
     ]);
+  });
+
+  it("never writes a source task id, so the same file can be imported into several accounts", () => {
+    const file = {
+      ...sampleExport(),
+      roster: { characters: [], showAllTasks: false, trackedTasks: { "42:t1": false } },
+      settings: { lazytracking: { "Alice:t2": true } },
+      completion: { data: { t1: { amount: 1, updated: 1 }, "42:t2": { amount: 2, updated: 2 } } },
+      energy: { data: { "42:t2": { amount: 40 } }, updated: 5 }
+    };
+    const writes = plan(["t1"], file).filter(w => w.op === "set");
+    const written = JSON.stringify(writes);
+    expect(written).not.toMatch(/"t1"|:t1"|"t2"|:t2"/);
+    expect(dataOf(writes, "completion")).toEqual({ data: { new1: { amount: 1, updated: 1 }, "42:new2": { amount: 2, updated: 2 } } });
+    expect(dataOf(writes, "energy")).toEqual({ data: { "42:new2": { amount: 40 } }, updated: 5 });
+    expect(dataOf(writes, "roster")).toEqual({ characters: [], showAllTasks: false, trackedTasks: { "42:new1": false } });
+    expect(dataOf(writes, "settings")).toEqual({ lazytracking: { "Alice:new2": true } });
+  });
+
+  it("keeps keys that do not end with an imported task id", () => {
+    const file = { ...sampleExport(), completion: { data: { "42:gone": { amount: 1, updated: 1 } } } };
+    expect(dataOf(plan([], file), "completion")).toEqual({ data: { "42:gone": { amount: 1, updated: 1 } } });
+  });
+
+  it("returns the completion it writes, for the in-memory store", () => {
+    const result = planImportWrites("me", [], sampleExport(), counter());
+    expect(result.completion).toEqual({ data: { new1: { amount: 1, updated: 1 } } });
+    expect(dataOf(result.writes, "completion")).toEqual(result.completion);
   });
 
   it("writes roster, settings, completion and energy under the current uid", () => {
-    const docs = planImportWrites("me", [], sampleExport()).filter(w => w.collection !== "tasks");
+    const docs = plan([]).filter(w => w.collection !== "tasks");
     expect(docs).toEqual([
       { op: "set", collection: "roster", id: "me", data: { characters: [], showAllTasks: false, trackedTasks: {} } },
       { op: "set", collection: "settings", id: "me", data: { crystallineAura: true } },
-      { op: "set", collection: "completion", id: "me", data: { data: { t1: { amount: 1, updated: 1 } } } },
+      { op: "set", collection: "completion", id: "me", data: { data: { new1: { amount: 1, updated: 1 } } } },
       { op: "set", collection: "energy", id: "me", data: { data: {}, updated: 5 } }
     ]);
   });
 
   it("writes empty defaults for null completion and energy", () => {
     const file = { ...sampleExport(), completion: null, energy: null };
-    const docs = planImportWrites("me", [], file).filter(w => w.collection === "completion" || w.collection === "energy");
+    const docs = plan([], file).filter(w => w.collection === "completion" || w.collection === "energy");
     expect(docs.map(w => w.op === "set" ? w.data : null)).toEqual([{ data: {} }, { data: {}, updated: 0 }]);
   });
 
   it("orders deletes first, then tasks, then the four documents", () => {
-    const writes = planImportWrites("me", ["fresh1"], sampleExport());
-    expect(writes.map(w => `${w.op}:${w.collection}`)).toEqual([
+    expect(plan(["fresh1"]).map(w => `${w.op}:${w.collection}`)).toEqual([
       "delete:tasks", "set:tasks", "set:tasks", "set:roster", "set:settings", "set:completion", "set:energy"
     ]);
   });

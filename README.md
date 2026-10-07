@@ -44,7 +44,7 @@ To start the project locally:
 2. Press F12, open the Console tab, paste the whole content of `tools/export-from-lostark-helper.js` and press Enter. If Chrome shows a warning about pasting instead of running it, type `allow pasting`, press Enter, then paste again and press Enter. Chrome downloads `lostark-helper-export-<date>.json`, and the console shows `Export done: N characters, N tasks, N completion entries`.
 3. On this site, open **Settings**, **Bring data over**, **Import from Lostark-helper**, and pick the file. Check the counts, then click **Import this file** and confirm. The page reloads when the import is done.
 
-The import replaces this account's roster, tasks, ticks, rest bonus and settings. Task ids are kept, so ticks, tracking and lazy flags carry over. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
+The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
 
 ## Backups
 
