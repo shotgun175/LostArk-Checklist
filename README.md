@@ -44,6 +44,10 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - Cells for raids older than a character's 3 newest now disappear from the checklist and the Gold Planner, unless you switched them on yourself in Settings, Task tracking.
 - Gold ticked on such an older raid no longer counts in the weekly totals. To keep it, open Settings, Task tracking and switch that cell on.
 - Cells you already switched on or off keep your choice.
+- If 6 or fewer characters have Weekly Gold and every character has it, the Gold Planner totals and the Roster page work as before.
+- Characters without Weekly Gold now appear in the Gold Planner. Their box costs and their Chaos Dungeons and Other sources entries now count in the roster total.
+- On the checklist, a raid of a character without Weekly Gold now shows its mode in the corner badge (no gold coin).
+- A character saved without a Weekly Gold setting now gets it only while fewer than 6 characters have it, not by its place in the roster. A roster with more than 6 shows a warning on the Roster page; nothing is unticked.
 
 
 ## Contributing
