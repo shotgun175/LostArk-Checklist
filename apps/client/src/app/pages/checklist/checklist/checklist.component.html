@@ -2,7 +2,7 @@
   <ng-template #subtitle>
     Track your daily and weekly tasks with automated resets and rest bonus support <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Ctrl + Click a task to mark it as entirely done in a single click"></i>
     <br />
-    <label nz-checkbox [ngModel]="forceShowHiddenCharacter$ | async" (ngModelChange)="forceShowHiddenCharacter$.next($event)"></label>
+    <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
     Show your hidden characters
     <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></i>
   </ng-template>
@@ -61,6 +61,7 @@
     <ng-container *ngIf="completion$ | async as completion">
       <ng-container *ngIf="energy$ | async as energy">
         <ng-container *ngIf="scrolling$ | async as scrolling">
+        <ng-container *ngIf="taskColumnWidth$ | async as taskColumnWidth">
           <nz-table *ngIf="tableDisplay$ | async as display" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
             <ng-template #empty></ng-template>
             <table>
@@ -117,9 +118,11 @@
                           [class.one-time]="row.task.frequency === TaskFrequency.ONE_TIME"
                           [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
                         >
-                          <td [style.width.px]="250" class="task-name">
-                            <img *ngIf="row.task.iconPath" src="./assets/icons/{{ row.task.iconPath }}" alt="" class="task-icon" />
-                            {{ row.task.label }}
+                          <td [style.width.px]="taskColumnWidth" class="task-name" [attr.title]="row.task.label">
+                            <div class="task-name-content" [style.width.px]="taskColumnWidth - 17">
+                              <img *ngIf="row.task.iconPath" src="./assets/icons/{{ row.task.iconPath }}" alt="" class="task-icon" />
+                              <span class="task-label">{{ row.task.label }}</span>
+                            </div>
                           </td>
                           <ng-container *ngIf="row.task.scope === TaskScope.ROSTER">
                             <td colspan="99">
@@ -152,26 +155,28 @@
                               [class.daily]="row.task.frequency === TaskFrequency.DAILY"
                               [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
                             >
-                              <ng-container *ngIf="row.completionData[i].tracked && roster[i].ilvl >= row.task.minIlvl && roster[i].ilvl < row.task.maxIlvl">
-                                <div class="counter">
-                                  <span class="gold-mode" *ngIf="row.completionData[i].takingGold">
-                                    <img *ngIf="row.completionData[i].takingGold" src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
-                                    <small *ngIf="row.completionData[i].takingGold && row.completionData[i].runningMode">{{ row.completionData[i].runningMode }}</small>
-                                    <i *ngIf="row.completionData[i].higherModeInfo" nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo"></i>
+                              <ng-container *ngIf="row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl">
+                                <span class="gold-badge" *ngIf="row.completionData[i].takingGold">
+                                  <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">
+                                    {{ row.completionData[i].modeBadge }}
+                                    <i *ngIf="row.completionData[i].higherModeInfo" nz-icon nzType="arrow-up" nzTheme="outline" class="gold-badge-up" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo"></i>
                                   </span>
+                                  <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
+                                </span>
+                                <div class="counter">
                                   <div>
                                     <button
                                       nz-button
                                       nzSize="small"
                                       nzType="primary"
                                       [disabled]="col >= row.task.amount"
-                                      (click)="markAsDone(completion, energy, roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                      (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
                                     >
                                       {{ col }} / {{ row.task.amount }}
                                     </button>
                                   </div>
                                   <div *ngIf="col > 0" class="reset-button">
-                                    <button nz-button nzSize="small" *ngIf="col > 0" (click)="markAsDone(completion, energy, roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                    <button nz-button nzSize="small" *ngIf="col > 0" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
                                       <i nz-icon nzType="reload" nzTheme="outline"></i>
                                     </button>
                                   </div>
@@ -195,6 +200,7 @@
               </tbody>
             </table>
           </nz-table>
+        </ng-container>
         </ng-container>
       </ng-container>
     </ng-container>

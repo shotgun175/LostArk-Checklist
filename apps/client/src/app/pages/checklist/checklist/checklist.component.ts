@@ -20,6 +20,9 @@ import { tickets } from '../../../data/tickets';
 import { addWeeks, getWeek } from 'date-fns';
 import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
+import { filterVisibleCharacters } from '../../../core/visible-characters';
+import { LayoutStateService } from '../../../core/services/layout-state.service';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge } from './checklist-layout';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -36,7 +39,7 @@ export class ChecklistComponent {
   public TaskScope = TaskScope;
 
   public rawRoster$ = this.rosterService.roster$;
-  public forceShowHiddenCharacter$ = new BehaviorSubject(false);
+  public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
 
   public categoriesDisplay$ = new LocalStorageBehaviorSubject<{
     dailyCharacter: boolean,
@@ -127,7 +130,7 @@ export class ChecklistComponent {
       }))
     ),
     this.energy$,
-    this.forceShowHiddenCharacter$,
+    this.showHiddenCharacters$,
     this.settings.settings$.pipe(pluck("goldPlannerConfiguration")),
     this.settings.settings$.pipe(pluck("raidModesForGoldPlanner"))
   ]).pipe(
@@ -139,13 +142,13 @@ export class ChecklistComponent {
           const editDisabled = !task.canEditDaysFilter;
           const visible = available || editDisabled; // We always display tasks that can't be edited with "Not available today" flag
           const forceDone = (!available && visible); // If task is not available but is visible, we marked it as done
-          const completionData = roster.characters
-            .filter(c => showHidden || !c.isHide)
+          const completionData = filterVisibleCharacters(roster.characters, showHidden)
             .map(character => {
               let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character.name, task.label);
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
               return {
                 runningMode,
+                modeBadge: formatModeBadge(runningMode),
                 higherModeInfo: this.getHigherModeInfoForTask(raidModesForGoldPlanner, character, task.label),
                 done: Math.min(isTaskDone(
                   task,
@@ -216,8 +219,7 @@ export class ChecklistComponent {
         });
 
       return {
-        roster: roster.characters
-          .filter(c => showHidden || !c.isHide)
+        roster: filterVisibleCharacters(roster.characters, showHidden)
           .map((c, i) => {
             const done = [...data.dailyCharacter.data, ...data.weeklyCharacter.data].every(
               (row: { completionData: { doable: boolean, done: number, tracked: boolean }[], task: LostarkTask }) => {
@@ -239,44 +241,32 @@ export class ChecklistComponent {
 
   private windowResize$ = new BehaviorSubject<void>(void 0);
 
-  public scrolling$ = combineLatest([this.roster$, this.windowResize$]).pipe(
-    map(([roster]) => {
-      const y = window.innerHeight - 400;
-      const scrolling: { x?: string | null, y: string | null } = { y: `${y}px` };
-      const widthPerCharacter = window.innerWidth < 992 ? 80 : 120;
-      if (window.innerWidth < widthPerCharacter * roster.length + 200) {
-        scrolling.x = `${window.innerWidth - 64 - 48 - 210 - 20}px`;
-      }
-      return scrolling;
-    }),
+  public characters$ = combineLatest([this.roster$, this.showHiddenCharacters$]).pipe(
+    map(([roster, showHidden]) => filterVisibleCharacters(roster, showHidden))
+  );
+
+  public charactersDisplay$ = combineLatest([this.tableDisplay$, this.showHiddenCharacters$]).pipe(
+    map(([display, showHidden]) => filterVisibleCharacters(display.roster, showHidden))
+  );
+
+  public taskColumnWidth$ = this.layoutState.sidebarCollapsed$.pipe(
+    map(sidebarCollapsed => checklistTaskColumnWidth(sidebarCollapsed))
+  );
+
+  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$]).pipe(
+    map(([characters, sidebarCollapsed]) => computeChecklistScroll({
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visibleCharacterCount: characters.length,
+      sidebarCollapsed
+    })),
     startWith({ x: null, y: null })
-  );
-
-  public characters$ = combineLatest([this.roster$, this.forceShowHiddenCharacter$]).pipe(
-    map(([roster, forceShowHiddenCharacter]) => {
-      if (forceShowHiddenCharacter) {
-        return roster;
-      }
-      return roster.filter((character) => {
-        return !character.isHide;
-      });
-    })
-  );
-
-  public charactersDisplay$ = combineLatest([this.tableDisplay$, this.forceShowHiddenCharacter$]).pipe(
-    map(([display, forceShowHiddenCharacter]) => {
-      if (forceShowHiddenCharacter) {
-        return display.roster;
-      }
-      return display.roster.filter((character) => {
-        return !character.isHide;
-      });
-    })
   );
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
     private settings: SettingsService, private energyService: EnergyService,
-    private timeService: TimeService, private completionService: CompletionService) {
+    private timeService: TimeService, private completionService: CompletionService,
+    private layoutState: LayoutStateService) {
     this.setTableHeight();
   }
 

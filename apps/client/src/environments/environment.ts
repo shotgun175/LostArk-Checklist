@@ -4,6 +4,7 @@
 
 export const environment = {
   verboseOperations: false,
+  useEmulators: false,
   firebase: {
     projectId: 'lostark-helper-8dfb0',
     appId: '1:149724175977:web:07f4bb26bb508e98a18cf8',
