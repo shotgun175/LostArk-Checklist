@@ -1,7 +1,7 @@
 import { LostarkTask } from "../model/lostark-task";
 import { Character } from "../model/character/character";
 import { raidReleaseOrder } from "./tasks";
-import { getCompletionEntry } from "./get-completion-entry-key";
+import { getCompletionEntry, getCompletionEntryKey } from "./get-completion-entry-key";
 
 /** How many of the newest enterable raids a character tracks by default. */
 export const DEFAULT_TRACKED_RAIDS = 3;
@@ -78,4 +78,30 @@ export function getExplicitTrackingKeys(trackedTasks: Record<string, boolean | u
 export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">): string[] {
   const prefix = character.id ? `${character.id}:` : `${character.name}:`;
   return getExplicitTrackingKeys(trackedTasks).filter(key => key.startsWith(prefix));
+}
+
+/** Whether the task is a raid or abyssal dungeon listed in raidReleaseOrder (custom tasks never are). */
+export function isRaidTask(task: LostarkTask): boolean {
+  return raidIndex(task) !== undefined;
+}
+
+/**
+ * Whether a raid task stays in the main Task tracking list instead of the Older raids group:
+ * it is among the default newest raids of at least one grid character, or one of them has an explicit true for it.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   characters: the characters shown in the grid.
+ *   task: the raid task.
+ *   tasks: the full task list, used to find each character's newest raids.
+ */
+export function isRaidInMainList(trackedTasks: Record<string, boolean | undefined> | undefined, characters: Character[], task: LostarkTask, tasks: LostarkTask[]): boolean {
+  const label = task.label.toLowerCase();
+  return characters.some(c => getTrackedTaskOverride(trackedTasks, c, task) === true
+    || getDefaultTrackedRaidLabels(c, tasks).has(label));
+}
+
+/** The tracking keys a "set for all" action writes: one per grid character whose item level fits the task. */
+export function getSetForAllKeys(characters: Character[], task: LostarkTask): string[] {
+  return characters.filter(c => isTaskInIlvlRange(c, task)).map(c => getCompletionEntryKey(c, task));
 }
