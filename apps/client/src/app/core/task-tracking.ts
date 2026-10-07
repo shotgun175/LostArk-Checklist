@@ -22,8 +22,7 @@ export function getDefaultTrackedRaidLabels(character: Pick<Character, "ilvl">, 
   const enterable = new Set<number>();
   tasks.forEach(task => {
     const index = raidIndex(task);
-    if (index !== undefined && task.enabled
-      && character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity)) {
+    if (index !== undefined && task.enabled && isTaskInIlvlRange(character, task)) {
       enterable.add(index);
     }
   });
