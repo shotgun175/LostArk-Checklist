@@ -433,6 +433,28 @@ table {
     height: 13px;
     margin-top: 1px;
   }
+
+  // Narrow cells (66px) have no room left of the counter button, so the badge
+  // becomes one small row in the cell's 12px top padding, above the button
+  @media screen and (max-width: 992px) {
+    bottom: auto;
+    right: 0;
+    left: 0;
+    height: 12px;
+    flex-direction: row;
+    gap: 2px;
+
+    .gold-badge-mode {
+      font-size: 9px;
+      line-height: 12px;
+    }
+
+    .gold-badge-coin {
+      width: 9px;
+      height: 9px;
+      margin-top: 0;
+    }
+  }
 }
 
 .counter.has-gold-badge > div:first-child button {
