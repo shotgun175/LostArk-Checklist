@@ -99,11 +99,6 @@ export function isGoldTakingDisabled(goldRaids: Set<string>, raidName: string): 
   return goldRaids.size >= MAX_GOLD_RAIDS && !goldRaids.has(raidName);
 }
 
-/** Warning for data already over the cap (for example imported); ticks are never removed automatically. */
-export function getGoldCapWarning(goldRaidCount: number): string | undefined {
-  return goldRaidCount > MAX_GOLD_RAIDS ? `Gold from ${goldRaidCount} raids, max is ${MAX_GOLD_RAIDS}` : undefined;
-}
-
 /** Gold counts only when Taking Gold is ticked and the character is one of the roster's weekly gold characters. */
 export function earnsGold(takingGold: boolean | undefined, weeklyGold: boolean | undefined): boolean {
   return !!takingGold && !!weeklyGold;

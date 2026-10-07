@@ -1,5 +1,5 @@
 import { goldTasks } from './gold-tasks';
-import { earnsGold, Gate, getGoldCapWarning, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
+import { earnsGold, Gate, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
 import { Character } from '../../model/character/character';
 
 const gate = (name: string): Gate => goldTasks.flatMap(t => t.gates).find(g => g.name === name) as Gate;
@@ -76,11 +76,6 @@ describe('gold raid cap', () => {
     expect(isGateCountedForGoldCap({ hiddenByTracking: true, isGateLine: true, meetsGateIlvl: true })).toBe(false);
     expect(isGateCountedForGoldCap({ hiddenByTracking: false, isGateLine: false, meetsGateIlvl: true })).toBe(false);
     expect(isGateCountedForGoldCap({ hiddenByTracking: false, isGateLine: true, meetsGateIlvl: false })).toBe(false);
-  });
-
-  it('warns only when more than 3 raids take gold', () => {
-    expect(getGoldCapWarning(3)).toBeUndefined();
-    expect(getGoldCapWarning(4)).toBe('Gold from 4 raids, max is 3');
   });
 });
 
