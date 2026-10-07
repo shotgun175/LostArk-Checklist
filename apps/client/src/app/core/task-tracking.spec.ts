@@ -1,5 +1,12 @@
 import { raidReleaseOrder, tasks as defaultTasks } from './tasks';
-import { getDefaultTrackedRaidLabels, getTrackedTaskOverride, isTaskTracked } from './task-tracking';
+import {
+  getDefaultTrackedRaidLabels,
+  getExplicitTrackingKeys,
+  getExplicitTrackingKeysForCharacter,
+  getTrackedTaskOverride,
+  isTaskInIlvlRange,
+  isTaskTracked
+} from './task-tracking';
 import { LostarkTask } from '../model/lostark-task';
 import { Character } from '../model/character/character';
 
@@ -103,5 +110,66 @@ describe('isTaskTracked', () => {
   it('copes with a missing trackedTasks map', () => {
     expect(isTaskTracked(undefined, c, task('Serca'), tasks)).toBe(true);
     expect(isTaskTracked(undefined, c, task('Armoche'), tasks)).toBe(false);
+  });
+});
+
+describe('getExplicitTrackingKeys', () => {
+  it('lists every key that holds an explicit choice', () => {
+    expect(getExplicitTrackingKeys({ '1:a': true, '2:b': false, 'Old:c': true })).toEqual(['1:a', '2:b', 'Old:c']);
+  });
+
+  it('skips undefined and non-boolean entries', () => {
+    const odd = { '1:a': undefined, '1:b': { pending: true } as unknown as boolean, '1:c': false };
+    expect(getExplicitTrackingKeys(odd)).toEqual(['1:c']);
+  });
+
+  it('copes with a missing map', () => {
+    expect(getExplicitTrackingKeys(undefined)).toEqual([]);
+  });
+});
+
+describe('getExplicitTrackingKeysForCharacter', () => {
+  const trackedTasks = {
+    '42:Serca': false,
+    '42:Armoche': true,
+    'Char42:Mordum': true,
+    '7:Serca': true,
+    '421:Serca': true,
+    'Char7:Serca': false,
+    '42:Kazeros': undefined
+  };
+
+  it('lists the id keys and the legacy name keys of one character only', () => {
+    expect(getExplicitTrackingKeysForCharacter(trackedTasks, character(1700, 42)))
+      .toEqual(['42:Serca', '42:Armoche', 'Char42:Mordum']);
+  });
+
+  it('matches name keys for a character without an id', () => {
+    const noId = { name: 'Char7', ilvl: 1700 } as Character;
+    expect(getExplicitTrackingKeysForCharacter(trackedTasks, noId)).toEqual(['Char7:Serca']);
+  });
+
+  it('returns nothing for a character without choices or a missing map', () => {
+    expect(getExplicitTrackingKeysForCharacter(trackedTasks, character(1700, 99))).toEqual([]);
+    expect(getExplicitTrackingKeysForCharacter(undefined, character(1700, 42))).toEqual([]);
+  });
+});
+
+describe('isTaskInIlvlRange', () => {
+  const raid = { ...task('Serca'), minIlvl: 1710, maxIlvl: 1730 };
+
+  it('is true from the min item level up to just below the max', () => {
+    expect(isTaskInIlvlRange(character(1710), raid)).toBe(true);
+    expect(isTaskInIlvlRange(character(1729), raid)).toBe(true);
+  });
+
+  it('is false below the min or at the max item level', () => {
+    expect(isTaskInIlvlRange(character(1709), raid)).toBe(false);
+    expect(isTaskInIlvlRange(character(1730), raid)).toBe(false);
+  });
+
+  it('treats a missing min or max as no limit', () => {
+    const open = { ...raid, minIlvl: undefined as unknown as number, maxIlvl: undefined };
+    expect(isTaskInIlvlRange(character(1), open)).toBe(true);
   });
 });

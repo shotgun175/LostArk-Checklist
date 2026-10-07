@@ -57,3 +57,28 @@ export function isTaskTracked(trackedTasks: Record<string, boolean | undefined> 
   }
   return getDefaultTrackedRaidLabels(character, tasks).has(task.label.toLowerCase());
 }
+
+/** Whether the character's item level lets it do the task: at least minIlvl and below maxIlvl. */
+export function isTaskInIlvlRange(character: Pick<Character, "ilvl">, task: Pick<LostarkTask, "minIlvl" | "maxIlvl">): boolean {
+  return character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity);
+}
+
+/** Every key of roster.trackedTasks that holds an explicit choice (a boolean). */
+export function getExplicitTrackingKeys(trackedTasks: Record<string, boolean | undefined> | undefined): string[] {
+  return Object.keys(trackedTasks || {}).filter(key => typeof trackedTasks?.[key] === "boolean");
+}
+
+/**
+ * The explicit-choice keys of one character: keys stored under its id and legacy keys stored under its name.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   character: the character whose keys to list.
+ */
+export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">): string[] {
+  const prefixes = [`${character.name}:`];
+  if (character.id) {
+    prefixes.push(`${character.id}:`);
+  }
+  return getExplicitTrackingKeys(trackedTasks).filter(key => prefixes.some(prefix => key.startsWith(prefix)));
+}
