@@ -1,3 +1,4 @@
+import { NgZone } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
 import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE, provideFirebase } from "./firebase.providers";
 
@@ -57,5 +58,22 @@ describe("provideFirebase", () => {
     TestBed.inject(FIRESTORE);
     expect(mockConnectAuthEmulator).toHaveBeenCalledWith(mockAuth, "http://localhost:9099");
     expect(mockConnectFirestoreEmulator).toHaveBeenCalledWith(mockFirestore, "localhost", 8085);
+  });
+
+  it("creates the app, Auth and Firestore outside the Angular zone, as AngularFire did", () => {
+    const inAngularZone: boolean[] = [];
+    const record = (result: unknown) => () => {
+      inAngularZone.push(NgZone.isInAngularZone());
+      return result;
+    };
+    mockInitializeApp.mockImplementation(record(mockApp));
+    mockGetAuth.mockImplementation(record(mockAuth));
+    mockGetFirestore.mockImplementation(record(mockFirestore));
+    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false }) });
+    TestBed.inject(NgZone).run(() => {
+      TestBed.inject(FIREBASE_AUTH);
+      TestBed.inject(FIRESTORE);
+    });
+    expect(inAngularZone).toEqual([false, false, false]);
   });
 });
