@@ -38,9 +38,16 @@ export class DataTransferService {
       }
     });
     // Give the in-memory completion the imported ticks before the energy document changes,
-    // so the rest bonus update in EnergyService cannot write the old ticks back.
+    // so the rest bonus update in EnergyService cannot write the old ticks back. If the batch
+    // fails, put the previous ticks back so the next checklist tick cannot write the file's.
+    const previous = JSON.parse(JSON.stringify(await firstValueFrom(this.completionService.completion$)));
     this.completionService.setLocal(uid, { ...JSON.parse(JSON.stringify(completion)), $key: uid });
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (error) {
+      this.completionService.setLocal(uid, previous);
+      throw error;
+    }
   }
 
   public async buildBackup(): Promise<LostarkExport> {
