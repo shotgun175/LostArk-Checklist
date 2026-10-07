@@ -20,6 +20,7 @@ import { tickets } from '../../../data/tickets';
 import { addWeeks, getWeek } from 'date-fns';
 import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
+import { filterVisibleCharacters } from '../../../core/visible-characters';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -139,8 +140,7 @@ export class ChecklistComponent {
           const editDisabled = !task.canEditDaysFilter;
           const visible = available || editDisabled; // We always display tasks that can't be edited with "Not available today" flag
           const forceDone = (!available && visible); // If task is not available but is visible, we marked it as done
-          const completionData = roster.characters
-            .filter(c => showHidden || !c.isHide)
+          const completionData = filterVisibleCharacters(roster.characters, showHidden)
             .map(character => {
               let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character.name, task.label);
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
@@ -216,8 +216,7 @@ export class ChecklistComponent {
         });
 
       return {
-        roster: roster.characters
-          .filter(c => showHidden || !c.isHide)
+        roster: filterVisibleCharacters(roster.characters, showHidden)
           .map((c, i) => {
             const done = [...data.dailyCharacter.data, ...data.weeklyCharacter.data].every(
               (row: { completionData: { doable: boolean, done: number, tracked: boolean }[], task: LostarkTask }) => {

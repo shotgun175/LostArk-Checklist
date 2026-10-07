@@ -152,7 +152,7 @@
                               [class.daily]="row.task.frequency === TaskFrequency.DAILY"
                               [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
                             >
-                              <ng-container *ngIf="row.completionData[i].tracked && roster[i].ilvl >= row.task.minIlvl && roster[i].ilvl < row.task.maxIlvl">
+                              <ng-container *ngIf="row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl">
                                 <div class="counter">
                                   <span class="gold-mode" *ngIf="row.completionData[i].takingGold">
                                     <img *ngIf="row.completionData[i].takingGold" src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
@@ -165,13 +165,13 @@
                                       nzSize="small"
                                       nzType="primary"
                                       [disabled]="col >= row.task.amount"
-                                      (click)="markAsDone(completion, energy, roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                      (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
                                     >
                                       {{ col }} / {{ row.task.amount }}
                                     </button>
                                   </div>
                                   <div *ngIf="col > 0" class="reset-button">
-                                    <button nz-button nzSize="small" *ngIf="col > 0" (click)="markAsDone(completion, energy, roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                    <button nz-button nzSize="small" *ngIf="col > 0" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
                                       <i nz-icon nzType="reload" nzTheme="outline"></i>
                                     </button>
                                   </div>
