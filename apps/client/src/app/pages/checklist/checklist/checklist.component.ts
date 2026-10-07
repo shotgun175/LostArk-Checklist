@@ -13,6 +13,7 @@ import { TimeService } from '../../../core/time.service';
 import { CompletionService } from '../../../core/database/services/completion.service';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { isTaskAvailable, isTaskDone } from '../../../core/is-task-done';
+import { isTaskTracked } from '../../../core/task-tracking';
 import { Roster } from '../../../model/roster';
 import { LocalStorageBehaviorSubject } from '../../../core/local-storage-behavior-subject';
 import { Character } from '../../../model/character/character';
@@ -105,12 +106,15 @@ export class ChecklistComponent {
 
   public tasks$: Observable<LostarkTask[]> = combineLatest([
     this.rawRoster$,
-    this.tasksService.tasks$
+    this.tasksService.tasks$,
+    this.showHiddenCharacters$
   ]).pipe(
-    map(([roster, tasks]) => {
+    map(([roster, tasks, showHidden]) => {
+      // Rows follow the characters the table shows, so a hidden character does not keep blank rows.
+      const visibleCharacters = filterVisibleCharacters(roster.characters, showHidden);
       return tasks.filter(task => {
         return task.enabled &&
-          (!task.maxIlvl || roster.characters.some(c => c.ilvl < (task.maxIlvl || Infinity) && c.ilvl >= (task.minIlvl || 0) && getCompletionEntry(roster.trackedTasks, c, task, true) !== false));
+          (!task.maxIlvl || visibleCharacters.some(c => c.ilvl < (task.maxIlvl || Infinity) && c.ilvl >= (task.minIlvl || 0) && isTaskTracked(roster.trackedTasks, c, task, tasks)));
       });
     })
   );
@@ -132,9 +136,10 @@ export class ChecklistComponent {
     this.energy$,
     this.showHiddenCharacters$,
     this.settings.settings$.pipe(pluck("goldPlannerConfiguration")),
-    this.settings.settings$.pipe(pluck("raidModesForGoldPlanner"))
+    this.settings.settings$.pipe(pluck("raidModesForGoldPlanner")),
+    this.tasksService.tasks$
   ]).pipe(
-    map(([roster, tasks, completion, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset, settings, energy, showHidden, goldTracking, raidModesForGoldPlanner]) => {
+    map(([roster, tasks, completion, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset, settings, energy, showHidden, goldTracking, raidModesForGoldPlanner, allTasks]) => {
       const data = tasks
         .map(task => {
           const lazyTracking = settings.lazytracking;
@@ -160,7 +165,7 @@ export class ChecklistComponent {
                   biWeeklyOffsetReset,
                   lazyTracking
                 ), task.amount),
-                tracked: getCompletionEntry(roster.trackedTasks, character, task, true) !== false,
+                tracked: isTaskTracked(roster.trackedTasks, character, task, allTasks),
                 doable: character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity),
                 energy: getCompletionEntry(energy.data, character, task) || 0,
                 takingGold: this.getGoldTakingInfoForTask(character.name, task.label, goldTracking) && character.weeklyGold

@@ -1519,6 +1519,14 @@ export const goldTasks: GoldTask[] = [
         name: 'Serca Gate 1',
         completionId: 'T4.SR1.G1',
         modes: [
+          // Solo bonus chest cost is not in the release notes; inferred from Normal, as for every other raid's Solo.
+          {
+            name: 'Solo',
+            unboundGoldReward: 6500,
+            boundGoldReward: 6500,
+            chestPrice: 4160,
+            goldILvlLimit: Infinity,
+          },
           {
             name: 'NM',
             unboundGoldReward: 6500,
@@ -1548,6 +1556,14 @@ export const goldTasks: GoldTask[] = [
         name: 'Serca Gate 2',
         completionId: 'T4.SR1.G2',
         modes: [
+          // Solo bonus chest cost is not in the release notes; inferred from Normal, as for every other raid's Solo.
+          {
+            name: 'Solo',
+            unboundGoldReward: 9500,
+            boundGoldReward: 9500,
+            chestPrice: 6080,
+            goldILvlLimit: Infinity,
+          },
           {
             name: 'NM',
             unboundGoldReward: 9500,

@@ -14,6 +14,23 @@ The checklist page provides you with tasks checkboxes, so you can mark what's do
 
 All you have to do is configure your roster, manage the tasks you want to track, and you're good to go !
 
+### Which raids are tracked
+
+- Each character tracks the 3 newest raids it can enter (by item level) by default. Older raids are not tracked for that character. Every task that is not a raid stays tracked by default.
+- The default follows the character's item level, so it moves to newer raids as the character levels up.
+- **Settings, Task tracking** shows each cell's state. Cells marked **auto** follow the default. Switching a cell on or off saves your choice, which always wins over the default. Click **reset** under a cell to send it back to automatic.
+
+### Gold Planner running mode
+
+- The first time you tick **Taking Gold** on a raid or a gate that has no running mode yet, the Gold Planner picks the highest mode the character's item level allows: Nightmare, then Hard, then Normal. It never picks Solo.
+- A mode that is already set (Solo included) is never changed, and unticking then ticking again keeps it.
+
+### Heads-up for existing users
+
+- Cells for raids older than a character's 3 newest now disappear from the checklist and the Gold Planner, unless you switched them on yourself in Settings, Task tracking.
+- Gold ticked on such an older raid no longer counts in the weekly totals. To keep it, open Settings, Task tracking and switch that cell on.
+- Cells you already switched on or off keep your choice.
+
 
 ## Contributing
 

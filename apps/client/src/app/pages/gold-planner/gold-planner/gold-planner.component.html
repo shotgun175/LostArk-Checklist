@@ -81,7 +81,7 @@
                               nz-checkbox 
                               [(ngModel)]="flag.takingGold"
                               nzIndeterminate={{flag.indeterminateTakingGold}}
-                              (ngModelChange)="setGoldTakingFlag(settings.$key, display.tracking, row.line, roster[i], $event)"
+                              (ngModelChange)="setGoldTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, roster[i], $event)"
                             >
                               Taking Gold ( {{ flag.unboundGoldReward + flag.boundGoldReward }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
                             </label>

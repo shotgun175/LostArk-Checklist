@@ -54,3 +54,14 @@ export function getHigherModeForGate(gate: Gate, selectedMode: string, character
 
   return undefined;
 }
+
+/** Mode set when gold is first ticked for a gate: the highest of Nightmare, Hard and Normal the character can run, never Solo. */
+export function pickDefaultRunningMode(gate: Gate, character: Character): string | undefined {
+  return getHigherModeForGate(gate, 'NM', character)
+    ?? (gate.modes.some(mode => mode.name === 'NM') ? 'NM' : undefined)
+}
+
+/** Auto-pick only when gold is being ticked and the gate has no running mode yet (any set mode, Solo included, is kept). */
+export function shouldAutoPickRunningMode(takingGold: boolean, currentMode: string | undefined): boolean {
+  return takingGold && !currentMode
+}
