@@ -20,6 +20,8 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - The default follows the character's item level, so it moves to newer raids as the character levels up.
 - **Settings, Task tracking** shows every character with a small switch per task: faded switches follow the default, solid ones are your own choice, which always wins over the default, and a dash means the character's item level does not fit that task. The grid scrolls sideways with the Task column pinned.
 - Click **reset** under a cell to send it back to automatic, **reset** under a character's name to do that for all of its cells, or **Reset all to auto** (it asks first) to clear every choice. The card header counts how many choices you have set.
+- Raids that no character tracks by default and that you have not switched on for anyone sit in a collapsed **Older raids** group at the bottom of the grid. Click it to open or close it; the browser remembers which. A raid moves in and out of the group by itself as item levels change.
+- The **&#8942;** button next to a raid name opens **Track for all**, **Ignore for all** and **Back to auto for all**. Each one changes that raid for every character whose item level fits it, in one step, and counts as your own choice like a single switch.
 
 ### Gold Planner running mode
 
