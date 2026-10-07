@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
-import { BehaviorSubject, combineLatest, map, Observable, of, pluck } from "rxjs";
+import { BehaviorSubject, combineLatest, map, Observable, of, pluck, tap } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, getGoldCapWarning, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -16,6 +16,8 @@ import { Completion } from "../../../model/completion";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
 import { filterVisibleCharacters } from "../../../core/visible-characters";
 import { isTaskTracked } from "../../../core/task-tracking";
+import { capGoldTracking, formatGoldCapMessage, GoldCapUntick } from "../gold-cap";
+import { NzMessageService } from "ng-zorro-antd/message";
 
 interface chestsData {
   task?: LostarkTask,
@@ -61,7 +63,8 @@ interface GoldPlannerDisplay {
   grandTotal: GoldTotal & { goldEarners: number };
   goldRaidCounts: number[];
   chestCosts: number[];
-  goldCapWarnings: (string | undefined)[];
+  settingsKey: string;
+  goldCapUnticked: GoldCapUntick[];
   groups: { goldEarners: number[], others: number[] };
   plannerLines: PlannerLine[]
 }
@@ -83,14 +86,13 @@ export class GoldPlannerComponent {
   public tasks$ = this.tasksService.tasks$;
   public completion$ = this.completionService.completion$;
 
-  public tracking$ = this.settings.settings$.pipe(pluck("goldPlannerConfiguration"));
   public manualGoldEntries$ = this.settings.settings$.pipe(pluck("manualGoldEntries"));
   public raidModesForGoldPlanner$ = this.settings.settings$.pipe(pluck("raidModesForGoldPlanner"))
 
   public display$: Observable<GoldPlannerDisplay> = combineLatest([
     this.roster$,
     this.tasks$,
-    this.tracking$,
+    this.settings$,
     of(goldTasks),
     this.manualGoldEntries$,
     this.raidModesForGoldPlanner$,
@@ -100,7 +102,10 @@ export class GoldPlannerComponent {
     this.rawRoster$,
     this.completion$
   ]).pipe(
-    map(([roster, tasks, tracking, gTasks, manualGoldEntries, raidModesForGoldPlanner, lastWeeklyReset, lastBiWeeklyReset, lastBiWeeklyOffsetReset, rawRoster, completion]) => {
+    map(([roster, tasks, settings, gTasks, manualGoldEntries, raidModesForGoldPlanner, lastWeeklyReset, lastBiWeeklyReset, lastBiWeeklyOffsetReset, rawRoster, completion]) => {
+      // At most 3 gold raids per character, applied before anything is counted; the write follows in saveGoldCap
+      const goldCap = capGoldTracking(rawRoster.characters, settings.goldPlannerConfiguration, raidModesForGoldPlanner, tasks, rawRoster.trackedTasks, gTasks);
+      const tracking = goldCap.tracking;
       const plannerLines: PlannerLine[] = [];
       gTasks.forEach(gTask => {
 
@@ -313,7 +318,6 @@ export class GoldPlannerComponent {
       allRows.forEach(row => row.goldDetails.forEach((detail, i) => {
         detail.goldTakingDisabledReason = getGoldTakingDisabledReason(roster[i].weeklyGold, goldRaids[i], row.line.gTask.name);
       }));
-      const goldCapWarnings = goldRaids.map((raids, i) => roster[i].weeklyGold ? getGoldCapWarning(raids.size) : undefined);
 
       const chestsData = allRows
         .filter(({ goldDetails }) => {
@@ -375,14 +379,36 @@ export class GoldPlannerComponent {
         grandTotal,
         goldRaidCounts: goldRaids.map(raids => raids.size),
         chestCosts,
-        goldCapWarnings,
+        settingsKey: settings.$key,
+        goldCapUnticked: goldCap.unticked,
         groups: groupPlannerCharacters(roster),
         chaos,
         other,
         plannerLines
       };
-    })
+    }),
+    tap(display => this.saveGoldCap(display))
   );
+
+  // Gold cap writes already sent, by the raids they untick, so an emission before the write lands does not send it again
+  private sentGoldCaps = new Set<string>();
+
+  /** Saves the gold cap's unticks in one settings write and says which raids were unticked; does nothing when under the cap. */
+  private saveGoldCap(display: GoldPlannerDisplay): void {
+    if (display.goldCapUnticked.length === 0) {
+      return;
+    }
+    const signature = JSON.stringify(display.goldCapUnticked);
+    if (this.sentGoldCaps.has(signature)) {
+      return;
+    }
+    this.sentGoldCaps.add(signature);
+    this.settings.patch({
+      $key: display.settingsKey,
+      goldPlannerConfiguration: display.tracking
+    });
+    this.message.info(formatGoldCapMessage(display.goldCapUnticked));
+  }
 
   public readonly maxGoldRaids = MAX_GOLD_RAIDS;
 
@@ -469,7 +495,7 @@ export class GoldPlannerComponent {
 
   setGoldTakingFlag(settingsKey: string, currentTracking: Record<string, boolean>, currentRaidModes: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
     // Edit copies: mutating the emitted settings makes the next snapshot look unchanged to getOne's
-    // distinctUntilChanged, so the gold cap (disabled boxes, warning) would not refresh until reload
+    // distinctUntilChanged, so the gold cap (disabled boxes) would not refresh until reload
     const tracking = { ...currentTracking };
     const raidModesForGoldPlanner = { ...currentRaidModes };
     if (!line.gate) {
@@ -619,6 +645,7 @@ export class GoldPlannerComponent {
     private settings: SettingsService,
     private timeService: TimeService,
     private completionService: CompletionService,
-    private layoutState: LayoutStateService) {
+    private layoutState: LayoutStateService,
+    private message: NzMessageService) {
   }
 }

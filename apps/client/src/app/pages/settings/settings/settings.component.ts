@@ -24,8 +24,7 @@ import {
   getExplicitTrackingKeysForCharacter,
   getSetForAllKeys,
   getTrackedTaskOverride,
-  isRaidInMainList,
-  isRaidTask,
+  groupTrackingGridTasks,
   isTaskInIlvlRange,
   isTaskTracked
 } from "../../../core/task-tracking";
@@ -120,28 +119,29 @@ export class SettingsComponent {
     this.rosterService.roster$
   ]).pipe(
     map(([tasks, roster]) => {
-      const rows = tasks
-        .filter(task => task.scope === TaskScope.CHARACTER)
-        .map(task => {
-          return {
-            task,
-            isRaid: isRaidTask(task),
-            eligibleCount: getSetForAllKeys(roster.characters, task).length,
-            data: roster.characters.map(c => ({
-              tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
-              auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined,
-              inIlvlRange: isTaskInIlvlRange(c, task)
-            }))
-          };
-        });
-      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, rows.map(row => row.task)));
       // Visible characters decide the grouping (user choice): raids only hidden alts would run fold into Older raids.
       const visibleCharacters = roster.characters.filter(c => !c.isHide);
-      const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, visibleCharacters, row.task, tasks);
+      const groups = groupTrackingGridTasks(roster.trackedTasks, visibleCharacters, tasks);
+      const toRow = (task: LostarkTask) => ({
+        task,
+        eligibleCount: getSetForAllKeys(roster.characters, task).length,
+        data: roster.characters.map(c => ({
+          tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
+          auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined,
+          inIlvlRange: isTaskInIlvlRange(c, task)
+        }))
+      });
+      // Tasks switched off in Tasks Manager have no row but still count, since the resets clear their choices too
+      const countedTasks = tasks.filter(task => task.scope === TaskScope.CHARACTER);
+      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, countedTasks));
+      const raidRows = groups.raids.map(toRow);
+      const olderRows = groups.olderRaids.map(toRow);
+      const otherRows = groups.others.map(toRow);
       return {
-        rows,
-        mainRows: rows.filter(row => !isOlder(row)),
-        olderRows: rows.filter(isOlder),
+        rows: [...raidRows, ...olderRows, ...otherRows],
+        raidRows,
+        olderRows,
+        otherRows,
         setByYou: perCharacter.reduce((sum, count) => sum + count, 0),
         perCharacter,
         taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
@@ -160,7 +160,10 @@ export class SettingsComponent {
 
   public hasLocalstorageData = false;
 
-  public pendingImport: { fileName: string; validation: ExportValidation } | null = null;
+  public pendingImport: { fileName: string; validation: ExportValidation; fromLostarkHelper: boolean } | null = null;
+
+  /** Which button opened the file picker: Import from Lostark-helper (true) or Restore backup (false). */
+  public importFromLostarkHelper = false;
 
   public transferBusy = false;
 
@@ -243,10 +246,10 @@ export class SettingsComponent {
   }
 
   /**
-   * Sets one raid for every grid character whose item level fits it, in one write:
+   * Sets one task for every grid character whose item level fits it, in one write:
    * true or false saves that choice, null sends those cells back to automatic.
    */
-  setRaidForAll(roster: Roster, task: LostarkTask, value: boolean | null): void {
+  setTaskForAll(roster: Roster, task: LostarkTask, value: boolean | null): void {
     const keys = getSetForAllKeys(roster.characters, task);
     if (value === null) {
       this.clearTrackingKeys(roster, keys.filter(key => typeof roster.trackedTasks?.[key] === "boolean"));
@@ -281,13 +284,14 @@ export class SettingsComponent {
     }
     this.pendingImport = {
       fileName: file.name,
-      validation: parseExportFile(await file.text())
+      validation: parseExportFile(await file.text()),
+      fromLostarkHelper: this.importFromLostarkHelper
     };
   }
 
-  confirmImport(data: LostarkExport): void {
+  confirmImport(data: LostarkExport, fromLostarkHelper: boolean): void {
     this.transferBusy = true;
-    this.dataTransfer.importExport(data).then(() => {
+    this.dataTransfer.importExport(data, fromLostarkHelper).then(() => {
       this.message.success("Import done, reloading");
       window.location.reload();
     }, (error: Error) => {

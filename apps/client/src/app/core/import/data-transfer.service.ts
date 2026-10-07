@@ -19,13 +19,14 @@ export class DataTransferService {
   /**
    * Replaces the current user's roster, settings, completion, energy and tasks with an
    * export, in one atomic batch. The page must be reloaded afterwards because roster and
-   * completion streams keep their first snapshot in memory.
+   * completion streams keep their first snapshot in memory. A Lostark-helper file
+   * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic.
    */
-  public async importExport(data: LostarkExport): Promise<void> {
+  public async importExport(data: LostarkExport, fromLostarkHelper = false): Promise<void> {
     const uid = await firstValueFrom(this.auth.uid$);
     const existingTasks = await getDocs(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
     const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), data,
-      () => doc(collection(this.firestore, "tasks")).id);
+      () => doc(collection(this.firestore, "tasks")).id, fromLostarkHelper);
     if (writes.length > FIRESTORE_BATCH_LIMIT) {
       throw new Error(`This import needs ${writes.length} writes, more than the ${FIRESTORE_BATCH_LIMIT} Firestore allows in one batch. Nothing was changed.`);
     }

@@ -24,6 +24,7 @@ import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
 import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
+import { capGoldTracking } from "../../gold-planner/gold-cap";
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -139,7 +140,9 @@ export class ChecklistComponent {
     this.settings.settings$.pipe(pluck("raidModesForGoldPlanner")),
     this.tasksService.tasks$
   ]).pipe(
-    map(([roster, tasks, completion, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset, settings, energy, showHidden, goldTracking, raidModesForGoldPlanner, allTasks]) => {
+    map(([roster, tasks, completion, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset, settings, energy, showHidden, savedGoldTracking, raidModesForGoldPlanner, allTasks]) => {
+      // Same 3 gold raid cap as the Gold Planner, so no coin shows on a raid the planner unticks
+      const goldTracking = capGoldTracking(roster.characters, savedGoldTracking, raidModesForGoldPlanner, allTasks, roster.trackedTasks).tracking;
       const data = tasks
         .map(task => {
           const lazyTracking = settings.lazytracking;

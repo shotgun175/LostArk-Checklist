@@ -18,10 +18,10 @@ All you have to do is configure your roster, manage the tasks you want to track,
 
 - Each character tracks the 3 newest raids it can enter (by item level) by default. Older raids are not tracked for that character. Every task that is not a raid stays tracked by default.
 - The default follows the character's item level, so it moves to newer raids as the character levels up.
-- **Settings, Task tracking** shows every character with a small switch per task: faded switches follow the default, solid ones are your own choice, which always wins over the default, and a dash means the character's item level does not fit that task. The grid scrolls sideways with the Task column pinned.
-- Click **reset** under a cell to send it back to automatic, **reset** under a character's name to do that for all of its cells, or **Reset all to auto** (it asks first) to clear every choice. The card header counts how many choices you have set.
-- Raids that none of your visible characters tracks by default and that you have not switched on for any of them sit in a collapsed **Older raids** group at the bottom of the grid. Click it to open or close it; the browser remembers which. A raid moves in and out of the group by itself as item levels change.
-- The **&#8942;** button next to a raid name opens **Track for all**, **Ignore for all** and **Back to auto for all**. Each one changes that raid for every character whose item level fits it, in one step, and counts as your own choice like a single switch.
+- **Settings, Task tracking** shows every character with a small switch per task, in two sections: **Raids** first, then **Other tasks** (every other character task, your own Tasks Manager tasks included). Tasks switched off in Tasks Manager are not listed. Faded switches follow the default, solid ones are your own choice, which always wins over the default, and a dash means the character's item level does not fit that task. The grid scrolls sideways with the Task column pinned.
+- Click **reset** under a cell to send it back to automatic, **reset** under a character's name to do that for all of its cells, or **Reset all to auto** (it asks first) to clear every choice. The card header counts how many choices you have set, including choices for tasks switched off in Tasks Manager, which the resets clear too.
+- Raids that none of your visible characters tracks by default and that you have not switched on for any of them sit in a collapsed **Older raids** group right under the other raids. A choice saved for a character whose item level no longer fits the raid does not keep it out of that group. Click the group to open or close it; the browser remembers which. A raid moves in and out of the group by itself as item levels change.
+- The **&#8942;** button next to every task name opens **Track for all**, **Ignore for all** and **Back to auto for all**. Each one changes that task for every character whose item level fits it, in one step, and counts as your own choice like a single switch.
 
 ### Gold Planner
 
@@ -30,7 +30,7 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - A character without Weekly Gold can still pick a difficulty and tick **Taking Chest** (ticking a chest on a gate with no difficulty picks the highest one it can run), but **Taking Gold** is disabled; its box costs count against that character's own total and the roster total.
 - The first time you tick **Taking Gold** on a raid or a gate that has no running mode yet, the Gold Planner picks the highest mode the character's item level allows: Nightmare, then Hard, then Normal. It never picks Solo.
 - A mode that is already set (Solo included) is never changed, and unticking then ticking again keeps it.
-- A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one, and a character already over 3 shows a warning in the character list.
+- A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one. If a character ever has more than 3 (for example from imported data), the Gold Planner keeps the 3 raids that pay the most gold for the selected modes (on a tie, the newer raid), unticks **Taking Gold** on the others, saves that and shows a short message such as "Valtist: gold limit is 3 raids, unticked Echidna". Totals and the checklist gold coin never count more than 3 raids per character.
 - Each character's total and the roster total show two numbers, tradable and bound. Taking Chest costs come out of bound gold (a character's bound can go below zero; in the roster total, bound below zero is taken from tradable instead), and Chaos Dungeons and Other sources count as tradable.
 
 ### Roster
@@ -48,6 +48,9 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - Characters without Weekly Gold now appear in the Gold Planner. Their box costs and their Chaos Dungeons and Other sources entries now count in the roster total.
 - On the checklist, a raid of a character without Weekly Gold now shows its mode in the corner badge (no gold coin).
 - A character saved without a Weekly Gold setting now gets it only while fewer than 6 characters have it, not by its place in the roster. A roster with more than 6 shows a warning on the Roster page; nothing is unticked.
+- A character with **Taking Gold** on more than 3 raids gets the lowest-paying extras unticked the next time you open the Gold Planner, with a message naming them. Characters with 3 or fewer are not touched.
+- **Kalthertz Slaves** and **Una's Task** are no longer added for new accounts. If you have them, they stay; switch them off in Tasks Manager to hide them everywhere, Task tracking included.
+- **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 
 
 ## Contributing
@@ -79,9 +82,9 @@ To start the project locally:
 2. Press F12, open the Console tab, paste the whole content of `tools/export-from-lostark-helper.js` and press Enter. If Chrome shows a warning about pasting instead of running it, type `allow pasting`, press Enter, then paste again and press Enter. Chrome downloads `lostark-helper-export-<date>.json`, and the console shows `Export done: N characters, N tasks, N completion entries`.
 3. On this site, open **Settings**, **Bring data over**, **Import from Lostark-helper**, and pick the file. Check the counts, then click **Import this file** and confirm. The page reloads when the import is done.
 
-The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
+The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. Raid tracking choices from lostark-helper.com are not brought over, so every character starts on its 3 newest raids; daily and weekly choices are kept. Choices for tasks that are not in the file are dropped. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
 
 ## Backups
 
 - **Download backup** (Settings, Bring data over) saves this account's data as a JSON file.
-- **Restore backup** imports such a file. It uses the same format as the lostark-helper.com export and replaces the same data.
+- **Restore backup** imports such a file. It uses the same format as the lostark-helper.com export and replaces the same data. Unlike **Import from Lostark-helper**, it keeps your raid tracking choices.

@@ -121,9 +121,25 @@
   opacity: 0.65;
 }
 
-// Per-raid "set for all" menu button next to the raid name
-.raid-menu-button {
-  margin-left: 4px;
+// Icon, name and menu button of a grid row: the name wraps so the button stays inside the pinned column
+.task-name-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .task-icon {
+    flex-shrink: 0;
+  }
+
+  .task-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+// Per-task "set for all" menu button next to the task name
+.task-menu-button {
+  flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid #434343;
   border-radius: 2px;
@@ -139,24 +155,33 @@
   }
 }
 
-.raid-menu-title {
+.task-menu-title {
   font-size: 11px;
 }
 
 // On phones the menu opens beside a button near the middle of the screen, so it stays narrow enough to fit on either side
 @media (max-width: 575px) {
-  .raid-menu {
+  .task-menu {
     max-width: 200px;
   }
 
-  .raid-menu-title {
+  .task-menu-title {
     height: auto;
     line-height: 16px;
     white-space: normal;
   }
 }
 
-// Collapsible Older raids group at the bottom of the grid
+// Section header rows of the grid: Raids and Other tasks
+.tracking-section td {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .75;
+}
+
+// Collapsible Older raids group, right under the current raids
 .older-raids-toggle td {
   font-size: 12px;
 }

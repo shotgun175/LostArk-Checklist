@@ -6,6 +6,7 @@ import {
   getExplicitTrackingKeysForCharacter,
   getSetForAllKeys,
   getTrackedTaskOverride,
+  groupTrackingGridTasks,
   isRaidInMainList,
   isRaidTask,
   isTaskInIlvlRange,
@@ -251,6 +252,43 @@ describe('isRaidInMainList', () => {
 
   it('sends every raid to Older raids when the grid has no characters', () => {
     expect(isRaidInMainList({}, [], task('Serca'), tasks)).toBe(false);
+  });
+
+  it('ignores an explicit true from a character whose item level no longer fits the raid', () => {
+    // Imported from Lostark-helper: a 1780 character still says true for an old abyssal dungeon (max 840)
+    expect(isRaidInMainList({ '1:Demon Beast Canyon': true }, grid, task('Demon Beast Canyon'), tasks)).toBe(false);
+    expect(isRaidInMainList({ '3:Demon Beast Canyon': true }, [...grid, character(500, 3)], task('Demon Beast Canyon'), tasks)).toBe(true);
+  });
+});
+
+describe('groupTrackingGridTasks', () => {
+  const grid = [character(1780, 1), character(1705, 2)];
+  const labels = (list: LostarkTask[]) => list.map(t => t.label);
+
+  it('splits character tasks into current raids, older raids and other tasks, leaving roster tasks out', () => {
+    const groups = groupTrackingGridTasks({}, grid, tasks);
+    expect(labels(groups.raids).sort()).toEqual(['Armoche', 'Horizon Cathedral', 'Kazeros', 'Mordum', 'Serca']);
+    expect(labels(groups.olderRaids)).toContain('Aegir');
+    expect(labels(groups.olderRaids)).toContain('Demon Beast Canyon');
+    expect(labels(groups.others)).toContain('Guild Support');
+    expect(labels(groups.others)).not.toContain('Chaos Gate');
+    expect([...groups.raids, ...groups.olderRaids].every(isRaidTask)).toBe(true);
+    expect(groups.others.some(isRaidTask)).toBe(false);
+  });
+
+  it('puts custom tasks under other tasks, even when named like a raid', () => {
+    const custom = { ...task('Serca'), $key: 'my-serca', custom: true };
+    expect(labels(groupTrackingGridTasks({}, grid, [...tasks, custom]).others)).toContain('Serca');
+  });
+
+  it('leaves out tasks switched off in Tasks Manager', () => {
+    const off = tasks.map(t => ['Serca', 'Aegir', 'Guild Support'].includes(t.label) ? { ...t, enabled: false } : t);
+    const groups = groupTrackingGridTasks({ '1:Serca': true }, grid, off);
+    const all = labels([...groups.raids, ...groups.olderRaids, ...groups.others]);
+    expect(all).not.toContain('Serca');
+    expect(all).not.toContain('Aegir');
+    expect(all).not.toContain('Guild Support');
+    expect(all).toContain('Kazeros');
   });
 });
 

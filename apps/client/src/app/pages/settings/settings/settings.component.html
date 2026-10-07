@@ -29,13 +29,13 @@
              (change)="onImportFileSelected(importFile)">
       <div nz-row [nzGutter]="[10, 10]">
         <div nz-col>
-          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFile.click()">Import from Lostark-helper</button>
+          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFromLostarkHelper = true; importFile.click()">Import from Lostark-helper</button>
         </div>
         <div nz-col>
           <button nz-button [nzLoading]="transferBusy" (click)="downloadBackup()">Download backup</button>
         </div>
         <div nz-col>
-          <button nz-button [disabled]="transferBusy" (click)="importFile.click()">Restore backup</button>
+          <button nz-button [disabled]="transferBusy" (click)="importFromLostarkHelper = false; importFile.click()">Restore backup</button>
         </div>
       </div>
       <div *ngIf="pendingImport as pending" class="import-summary">
@@ -51,7 +51,7 @@
                 [nzLoading]="transferBusy"
                 nz-popconfirm
                 nzPopconfirmTitle="This replaces the roster, tasks, ticks, rest bonus and settings of this account. Continue?"
-                (nzOnConfirm)="confirmImport(data)">Import this file
+                (nzOnConfirm)="confirmImport(data, pending.fromLostarkHelper)">Import this file
         </button>
       </div>
     </nz-card>
@@ -168,7 +168,11 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr *ngFor="let row of taskTracking.mainRows; trackBy: trackByTask">
+                <tr *ngIf="taskTracking.raidRows.length > 0 || taskTracking.olderRows.length > 0" class="tracking-section">
+                  <td class="task-name">Raids</td>
+                  <td [attr.colspan]="rawRoster.characters.length"></td>
+                </tr>
+                <tr *ngFor="let row of taskTracking.raidRows; trackBy: trackByTask">
                   <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
                 </tr>
                 <tr *ngIf="taskTracking.olderRows.length > 0" class="older-raids-toggle">
@@ -186,27 +190,34 @@
                     <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
                   </tr>
                 </ng-container>
+                <tr *ngIf="taskTracking.otherRows.length > 0" class="tracking-section">
+                  <td class="task-name">Other tasks</td>
+                  <td [attr.colspan]="rawRoster.characters.length"></td>
+                </tr>
+                <tr *ngFor="let row of taskTracking.otherRows; trackBy: trackByTask">
+                  <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
+                </tr>
                 </tbody>
               </nz-table>
             </div>
             <div class="tracking-legend">Faded = auto, Solid = set by you, dash = item level too low</div>
             <ng-template #trackingRow let-row>
               <td class="task-name">
-                <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
-                     class="task-icon">
-                {{row.task.label}}
-                <ng-container *ngIf="row.isRaid">
-                  <button class="raid-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="raidMenu" nzPlacement="bottomLeft"
+                <div class="task-name-line">
+                  <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
+                       class="task-icon">
+                  <span class="task-label">{{row.task.label}}</span>
+                  <button class="task-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="taskMenu" nzPlacement="bottomLeft"
                           [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
-                  <nz-dropdown-menu #raidMenu="nzDropdownMenu">
-                    <ul nz-menu class="raid-menu">
-                      <li nz-menu-item nzDisabled class="raid-menu-title">{{row.task.label}}: all characters who can enter it ({{row.eligibleCount}})</li>
-                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, true)">Track for all</li>
-                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, false)">Ignore for all</li>
-                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, null)">Back to auto for all</li>
-                    </ul>
-                  </nz-dropdown-menu>
-                </ng-container>
+                </div>
+                <nz-dropdown-menu #taskMenu="nzDropdownMenu">
+                  <ul nz-menu class="task-menu">
+                    <li nz-menu-item nzDisabled class="task-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
+                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)">Track for all</li>
+                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)">Ignore for all</li>
+                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)">Back to auto for all</li>
+                  </ul>
+                </nz-dropdown-menu>
               </td>
               <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
                 <ng-container *ngIf="flag.inIlvlRange; else ilvlTooLow">
