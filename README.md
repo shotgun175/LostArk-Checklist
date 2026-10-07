@@ -37,3 +37,16 @@ To start the project locally:
   2. On the phone, open the user menu, choose **Sign in** and use the same email and password.
 - **Trap: Sign in is not Register.** On a browser that already has anonymous data, **Sign in** switches to the other account and leaves the anonymous data behind, so it no longer shows. Use **Register** the first time on the browser that holds your data. This behavior comes from the original app and is kept as is. The original code also tries to delete the previous anonymous account's tasks during that switch. On this site the database rules block that, so nothing is deleted and the app ignores the refusal.
 - **Log out** starts a fresh, empty anonymous account in that browser. Your registered account's data is untouched. Sign in again to get it back.
+
+## Bringing data over from lostark-helper.com
+
+1. In Chrome, in the same browser profile where you use lostark-helper.com, open https://lostark-helper.com/checklist (signed in as you, if you use an account there) and wait for the checklist to load. Opening the checklist first also brings the rest bonus up to date.
+2. Press F12, open the Console tab, paste the whole content of `tools/export-from-lostark-helper.js` and press Enter. If Chrome shows a warning about pasting instead of running it, type `allow pasting`, press Enter, then paste again and press Enter. Chrome downloads `lostark-helper-export-<date>.json`, and the console shows `Export done: N characters, N tasks, N completion entries`.
+3. On this site, open **Settings**, **Bring data over**, **Import from Lostark-helper**, and pick the file. Check the counts, then click **Import this file** and confirm. The page reloads when the import is done.
+
+The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
+
+## Backups
+
+- **Download backup** (Settings, Bring data over) saves this account's data as a JSON file.
+- **Restore backup** imports such a file. It uses the same format as the lostark-helper.com export and replaces the same data.
