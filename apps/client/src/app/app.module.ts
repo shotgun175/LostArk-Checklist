@@ -5,7 +5,6 @@ import { AppComponent } from "./app.component";
 import { en_US, NZ_I18N } from "ng-zorro-antd/i18n";
 import { registerLocaleData } from "@angular/common";
 import en from "@angular/common/locales/en";
-import { FormsModule } from "@angular/forms";
 import { HttpClientModule } from "@angular/common/http";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { AppRoutingModule } from "./app-routing.module";
@@ -22,8 +21,6 @@ import { NzDropDownModule } from "ng-zorro-antd/dropdown";
 import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { NzMessageModule } from "ng-zorro-antd/message";
-import { NzInputModule } from "ng-zorro-antd/input";
-import { NzSelectModule } from "ng-zorro-antd/select";
 
 registerLocaleData(en);
 
@@ -31,7 +28,6 @@ registerLocaleData(en);
   declarations: [AppComponent],
   imports: [
     BrowserModule,
-    FormsModule,
     HttpClientModule,
     BrowserAnimationsModule,
     AppRoutingModule,
@@ -45,9 +41,7 @@ registerLocaleData(en);
     NzDropDownModule,
     AuthPopupsModule,
     NzModalModule,
-    NzMessageModule,
-    NzInputModule,
-    NzSelectModule
+    NzMessageModule
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },

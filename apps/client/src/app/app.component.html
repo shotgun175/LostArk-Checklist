@@ -68,11 +68,6 @@
   </nz-sider>
   <nz-layout>
     <nz-header>
-      <nz-input-group nzAddOnBefore="Region" *ngIf="user$ | async as user">
-        <nz-select [ngModel]="user.region" (ngModelChange)="setUserRegion(user, $event, user.notFound)" class="region-selector">
-          <nz-option *ngFor="let region of allRegions" [nzLabel]="region.label" [nzValue]="region.value"></nz-option>
-        </nz-select>
-      </nz-input-group>
       <div class="user-menu" [class.anonymous]="anonymous$ | async" nz-dropdown [nzDropdownMenu]="menu"
            nzOverlayClassName="user-menu">
         <i nz-icon nzType="user" nzTheme="outline"></i>

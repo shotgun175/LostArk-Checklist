@@ -7,7 +7,6 @@ import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-
 import { LocalStorageService } from "./core/database/services/local-storage.service";
 import { distinctUntilChanged } from "rxjs";
 import { NzMessageService } from "ng-zorro-antd/message";
-import { LostarkRegion } from "./model/lostark-region";
 import { LAHUser } from "./model/lah-user";
 import { NavigationEnd, Router } from "@angular/router";
 import { Pirsch } from "pirsch-sdk/web";
@@ -19,17 +18,6 @@ import { Pirsch } from "pirsch-sdk/web";
 })
 export class AppComponent implements OnInit {
   isCollapsed = localStorage.getItem("sidebar:collapsed") === "true";
-
-  public allRegions = Object.keys(LostarkRegion)
-    .filter((k, i, array) => array.indexOf(k) === i)
-    .map(key => {
-      return {
-        value: key,
-        label: key.split("_")
-          .map(word => `${word[0]}${word.slice(1).toLowerCase()}`)
-          .join(" ")
-      };
-    });
 
   public user$ = this.userService.user$;
 
@@ -89,20 +77,6 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     if (localStorage.getItem("tasks:default") !== null && localStorage.getItem("imported") !== "true") {
       this.localStorageService.migrate();
-    }
-  }
-
-  setUserRegion(user: LAHUser, region: LostarkRegion, anonymous?: boolean): void {
-    if (anonymous) {
-      this.userService.setOne(user.$key, {
-        name: "Anonymous",
-        region: region,
-        friends: []
-      });
-    } else {
-      this.userService.updateOne(user.$key, {
-        region: region
-      });
     }
   }
 
