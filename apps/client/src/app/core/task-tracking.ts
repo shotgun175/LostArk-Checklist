@@ -1,5 +1,6 @@
 import { LostarkTask } from "../model/lostark-task";
 import { Character } from "../model/character/character";
+import { TaskScope } from "../model/task-scope";
 import { raidReleaseOrder } from "./tasks";
 import { getCompletionEntry, getCompletionEntryKey } from "./get-completion-entry-key";
 
@@ -100,7 +101,8 @@ export function isRaidTask(task: LostarkTask): boolean {
 
 /**
  * Whether a raid task stays in the main Task tracking list instead of the Older raids group:
- * it is among the default newest raids of at least one grid character, or one of them has an explicit true for it.
+ * for at least one grid character whose item level fits it, it is among the default newest raids
+ * or has an explicit true. An explicit true on a character outside the item level range does not count.
  *
  * Args:
  *   trackedTasks: roster.trackedTasks (explicit choices).
@@ -110,8 +112,29 @@ export function isRaidTask(task: LostarkTask): boolean {
  */
 export function isRaidInMainList(trackedTasks: Record<string, boolean | undefined> | undefined, characters: Character[], task: LostarkTask, tasks: LostarkTask[]): boolean {
   const label = task.label.toLowerCase();
-  return characters.some(c => getTrackedTaskOverride(trackedTasks, c, task) === true
-    || getDefaultTrackedRaidLabels(c, tasks).has(label));
+  return characters.some(c => isTaskInIlvlRange(c, task)
+    && (getTrackedTaskOverride(trackedTasks, c, task) === true || getDefaultTrackedRaidLabels(c, tasks).has(label)));
+}
+
+/**
+ * The tasks of the Settings > Task tracking grid, in task order, split into its sections:
+ * current raids, Older raids, and every other character task. Tasks switched off in
+ * Tasks Manager and roster tasks are left out.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   visibleCharacters: the characters that decide whether a raid is current (not hidden).
+ *   tasks: the full task list.
+ */
+export function groupTrackingGridTasks(trackedTasks: Record<string, boolean | undefined> | undefined, visibleCharacters: Character[], tasks: LostarkTask[]): { raids: LostarkTask[], olderRaids: LostarkTask[], others: LostarkTask[] } {
+  const gridTasks = tasks.filter(task => task.scope === TaskScope.CHARACTER && task.enabled !== false);
+  const raidTasks = gridTasks.filter(isRaidTask);
+  const isCurrent = (task: LostarkTask) => isRaidInMainList(trackedTasks, visibleCharacters, task, tasks);
+  return {
+    raids: raidTasks.filter(isCurrent),
+    olderRaids: raidTasks.filter(task => !isCurrent(task)),
+    others: gridTasks.filter(task => !isRaidTask(task))
+  };
 }
 
 /** The tracking keys a "set for all" action writes: one per grid character whose item level fits the task. */
