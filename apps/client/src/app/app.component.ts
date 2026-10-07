@@ -1,6 +1,7 @@
 import { Component, OnInit } from "@angular/core";
 import { AuthService } from "./core/database/services/auth.service";
 import { UserService } from "./core/database/services/user.service";
+import { LayoutStateService } from "./core/services/layout-state.service";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { RegisterPopupComponent } from "./components/auth-popups/register-popup/register-popup.component";
 import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-popup.component";
@@ -20,7 +21,8 @@ export class AppComponent implements OnInit {
 
   public anonymous$ = this.auth.isAnonymous$;
 
-  constructor(private userService: UserService,
+  constructor(private layoutState: LayoutStateService,
+              private userService: UserService,
               private auth: AuthService,
               private modalService: NzModalService,
               private localStorageService: LocalStorageService,
@@ -29,7 +31,7 @@ export class AppComponent implements OnInit {
   }
 
   saveCollapsed(collapsed: boolean): void {
-    localStorage.setItem("sidebar:collapsed", collapsed.toString());
+    this.layoutState.setSidebarCollapsed(collapsed);
   }
 
   signIn(): void {
