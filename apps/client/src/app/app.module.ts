@@ -13,7 +13,6 @@ import { NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMenuModule } from "ng-zorro-antd/menu";
 import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
 import { environment } from "../environments/environment";
-import { getAnalytics, provideAnalytics, ScreenTrackingService, UserTrackingService } from "@angular/fire/analytics";
 import { getAuth, provideAuth } from "@angular/fire/auth";
 import { getFirestore, provideFirestore } from "@angular/fire/firestore";
 import { USE_DEVICE_LANGUAGE } from "@angular/fire/compat/auth";
@@ -36,7 +35,6 @@ registerLocaleData(en);
     NzMenuModule,
     provideAuth(() => getAuth()),
     provideFirebaseApp(() => initializeApp(environment.firebase)),
-    provideAnalytics(() => getAnalytics()),
     provideFirestore(() => getFirestore()),
     NzDropDownModule,
     AuthPopupsModule,
@@ -45,8 +43,6 @@ registerLocaleData(en);
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },
-    ScreenTrackingService,
-    UserTrackingService,
     { provide: USE_DEVICE_LANGUAGE, useValue: true }
   ],
   bootstrap: [AppComponent]

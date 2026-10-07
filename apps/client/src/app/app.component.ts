@@ -5,11 +5,8 @@ import { NzModalService } from "ng-zorro-antd/modal";
 import { RegisterPopupComponent } from "./components/auth-popups/register-popup/register-popup.component";
 import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-popup.component";
 import { LocalStorageService } from "./core/database/services/local-storage.service";
-import { distinctUntilChanged } from "rxjs";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { LAHUser } from "./model/lah-user";
-import { NavigationEnd, Router } from "@angular/router";
-import { Pirsch } from "pirsch-sdk/web";
 
 @Component({
   selector: "lostark-helper-root",
@@ -27,27 +24,8 @@ export class AppComponent implements OnInit {
               private auth: AuthService,
               private modalService: NzModalService,
               private localStorageService: LocalStorageService,
-              private message: NzMessageService,
-              router: Router
+              private message: NzMessageService
   ) {
-
-    const pirsch = new Pirsch({
-      identificationCode: "m0n4FeGzHPMNNQNJQJ5YAORKsY71AyaY",
-      hostname: "lostark-helper.com"
-    });
-
-    router.events
-      .pipe(
-        distinctUntilChanged((previous: unknown, current: unknown) => {
-          if (current instanceof NavigationEnd) {
-            return (previous as NavigationEnd).url === current.url;
-          }
-          return true;
-        })
-      )
-      .subscribe(() => {
-        pirsch.hit();
-      });
   }
 
   saveCollapsed(collapsed: boolean): void {
