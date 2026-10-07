@@ -82,13 +82,13 @@ export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string,
 }
 
 /**
- * How many explicit choices one character has among the tasks the grid shows. Keys left behind by
- * deleted tasks or tasks moved to roster scope are not counted, since no switch shows them.
+ * How many explicit choices one character has among the given tasks. Keys left behind by
+ * deleted tasks or tasks moved to roster scope are not counted.
  *
  * Args:
  *   trackedTasks: roster.trackedTasks (explicit choices).
  *   character: the character whose choices to count.
- *   gridTasks: the tasks shown in the grid.
+ *   gridTasks: the tasks to count, every character task (switched off ones included).
  */
 export function countGridTrackingChoices(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">, gridTasks: LostarkTask[]): number {
   return gridTasks.filter(task => typeof trackedTasks?.[getCompletionEntryKey(character, task)] === "boolean").length;

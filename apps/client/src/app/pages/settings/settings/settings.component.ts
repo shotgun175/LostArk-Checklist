@@ -131,8 +131,9 @@ export class SettingsComponent {
           inIlvlRange: isTaskInIlvlRange(c, task)
         }))
       });
-      const gridTasks = [...groups.raids, ...groups.olderRaids, ...groups.others];
-      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, gridTasks));
+      // Tasks switched off in Tasks Manager have no row but still count, since the resets clear their choices too
+      const countedTasks = tasks.filter(task => task.scope === TaskScope.CHARACTER);
+      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, countedTasks));
       const raidRows = groups.raids.map(toRow);
       const olderRows = groups.olderRaids.map(toRow);
       const otherRows = groups.others.map(toRow);
