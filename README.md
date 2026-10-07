@@ -26,7 +26,7 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - The first time you tick **Taking Gold** on a raid or a gate that has no running mode yet, the Gold Planner picks the highest mode the character's item level allows: Nightmare, then Hard, then Normal. It never picks Solo.
 - A mode that is already set (Solo included) is never changed, and unticking then ticking again keeps it.
 - A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one, and a character already over 3 shows a warning in its column header.
-- The totals row shows each character's gold and the grand total as two numbers, tradable and bound. Taking Chest costs come out of bound gold, and Chaos Dungeons and Other sources count as tradable.
+- The totals row shows each character's gold and the grand total as two numbers, tradable and bound. Taking Chest costs come out of bound gold (a character's bound can go below zero; in the grand total, bound below zero is taken from tradable instead), and Chaos Dungeons and Other sources count as tradable.
 
 ### Heads-up for existing users
 
