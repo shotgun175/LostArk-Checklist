@@ -313,42 +313,51 @@ table {
     }
   }
 
+  // Row tints, shared by the row rules and the pinned task cell below
+  @row-even: #222;
+  @tint-weekly: rgba(84, 58, 94, .5);
+  @tint-daily: rgba(55, 105, 60, .5);
+  @tint-one-time: rgba(102, 105, 55, 0.5);
+  @tint-weekly-even: rgba(84, 58, 94, .7);
+  @tint-daily-even: rgba(55, 105, 60, .7);
+  @tint-one-time-even: rgba(102, 105, 55, 0.7);
+
   // The pinned task cell repeats its row's background (set by the tr rules below)
   // on an opaque base: --pinned-base is what the row shows through, --pinned-tint
   // the row's translucent tint. Row hover still wins, as in the other cells.
   tr {
     &.even {
-      --pinned-base: #222;
+      --pinned-base: @row-even;
     }
 
     &.completed {
       &.weekly {
-        --pinned-tint: rgba(84, 58, 94, .5);
+        --pinned-tint: @tint-weekly;
       }
 
       &.daily {
-        --pinned-tint: rgba(55, 105, 60, .5);
+        --pinned-tint: @tint-daily;
       }
 
       &.one-time {
-        --pinned-tint: rgba(102, 105, 55, 0.5);
+        --pinned-tint: @tint-one-time;
       }
 
       // A tinted even row replaces the zebra color, so its base is the table again
       &.even {
         &.weekly {
           --pinned-base: #141414;
-          --pinned-tint: rgba(84, 58, 94, .7);
+          --pinned-tint: @tint-weekly-even;
         }
 
         &.daily {
           --pinned-base: #141414;
-          --pinned-tint: rgba(55, 105, 60, .7);
+          --pinned-tint: @tint-daily-even;
         }
 
         &.one-time {
           --pinned-base: #141414;
-          --pinned-tint: rgba(102, 105, 55, 0.7);
+          --pinned-tint: @tint-one-time-even;
         }
       }
     }
@@ -357,32 +366,32 @@ table {
   tr, td {
     &.completed {
       &.weekly {
-        background-color: rgba(84, 58, 94, .5);
+        background-color: @tint-weekly;
       }
 
       &.daily {
-        background-color: rgba(55, 105, 60, .5);
+        background-color: @tint-daily;
       }
 
       &.one-time {
-        background-color: rgba(102, 105, 55, 0.5);
+        background-color: @tint-one-time;
       }
     }
 
     &.even {
-      background-color: #222;
+      background-color: @row-even;
 
       &.completed {
         &.weekly {
-          background-color: rgba(84, 58, 94, .7);
+          background-color: @tint-weekly-even;
         }
 
         &.daily {
-          background-color: rgba(55, 105, 60, .7);
+          background-color: @tint-daily-even;
         }
 
         &.one-time {
-          background-color: rgba(102, 105, 55, 0.7);
+          background-color: @tint-one-time-even;
         }
       }
     }
