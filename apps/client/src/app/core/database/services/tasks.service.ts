@@ -5,7 +5,7 @@ import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
 import { combineLatest, debounceTime, from, map, mapTo, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
 import { tasks, oldTaskNames } from "../../tasks";
-import { filter } from "rxjs/operators";
+import { catchError, filter } from "rxjs/operators";
 import { SettingsService } from "./settings.service";
 import { subHours } from "date-fns";
 
@@ -222,8 +222,10 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
           tasks.forEach(task => {
             batch.delete(this.docRef(task.$key));
           });
+          // The rules only let a user delete their own tasks, so after the switch this delete is denied.
           return from(batch.commit()).pipe(
-            mapTo(tasks.length)
+            mapTo(tasks.length),
+            catchError(() => of(0))
           );
         }
         return of(0);
