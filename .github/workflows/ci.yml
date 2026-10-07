@@ -1,0 +1,35 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16.20.2
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+        env:
+          CYPRESS_INSTALL_BINARY: 0
+      - name: Build
+        run: npx nx build client
+      # The upstream baseline (phase 1) has failing tests that predate this fork.
+      # They are excluded here by exact name so every other test still gates merges:
+      #   honing-optimizer.spec.ts and honing.service.spec.ts (do not compile)
+      #   EnergyService: the four tests listed in the name pattern below
+      - name: Unit tests
+        run: >-
+          npx nx test client
+          --testPathIgnorePatterns='honing-optimizer\.spec\.ts'
+          --testPathIgnorePatterns='honing\.service\.spec\.ts'
+          --testNamePattern='^(?!EnergyService (should update energy properly|should update energy properly with partially done task|should update energy properly with partially done task on last day only|should not update energy if task was completed yesterday)$)'

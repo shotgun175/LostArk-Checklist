@@ -44,3 +44,14 @@ Thumbs.db
 .firebase
 *-debug.log
 .runtimeconfig.json
+
+# Local tooling, session artifacts and the upstream reference copy
+.claude/
+.superpowers/
+.playwright-mcp/
+docs/superpowers/
+Lostark-helper-master/
+
+# upstream-sync: previous reference copy and saved reports
+Lostark-helper-master.prev/
+docs/upstream-sync/
