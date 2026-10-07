@@ -1,5 +1,5 @@
 import { Component } from "@angular/core";
-import { BehaviorSubject, combineLatest, map, Observable, pluck } from "rxjs";
+import { combineLatest, map, Observable, pluck } from "rxjs";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
 import { LostarkTask } from "../../../model/lostark-task";
@@ -10,7 +10,6 @@ import { Settings } from "../../../model/settings";
 import { SettingsService } from "../../../core/database/services/settings.service";
 import { EnergyService } from "../../../core/database/services/energy.service";
 import { TasksService } from "../../../core/database/services/tasks.service";
-import { LocalStorageService } from "../../../core/database/services/local-storage.service";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { Roster } from "../../../model/roster";
 import { Character } from "../../../model/character/character";
@@ -51,8 +50,6 @@ function readOlderRaidsOpen(): boolean {
   styleUrls: ["./settings.component.less"]
 })
 export class SettingsComponent {
-  public energyReloader$ = new BehaviorSubject<void>(void 0);
-
   public uid$ = this.auth.uid$;
 
   public anonymous$ = this.auth.isAnonymous$;
@@ -158,8 +155,6 @@ export class SettingsComponent {
     map(roster => roster.some(c => c.lazy))
   );
 
-  public hasLocalstorageData = false;
-
   public pendingImport: { fileName: string; validation: ExportValidation; fromLostarkHelper: boolean } | null = null;
 
   /** Which button opened the file picker: Import from Lostark-helper (true) or Restore backup (false). */
@@ -171,26 +166,12 @@ export class SettingsComponent {
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
-              private localStorageService: LocalStorageService, private auth: AuthService,
+              private auth: AuthService,
               private dataTransfer: DataTransferService, private message: NzMessageService) {
-    this.updateHasLocalStorageData();
-  }
-
-  private updateHasLocalStorageData(): void {
-    this.hasLocalstorageData = this.localStorageService.canMigrateEverything();
   }
 
   saveSettings(settings: Settings): void {
     this.settings.save(settings);
-  }
-
-  migrate(): void {
-    this.localStorageService.migrate();
-  }
-
-  clearLocalstorageData(): void {
-    this.localStorageService.clear();
-    this.updateHasLocalStorageData();
   }
 
   trackByTask(index: number, row: { task: LostarkTask }): string | undefined {

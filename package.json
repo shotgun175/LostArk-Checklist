@@ -1,17 +1,13 @@
 {
   "name": "lostark-helper",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "license": "MIT",
   "scripts": {
     "ng": "nx",
     "postinstall": "node ./decorate-angular-cli.js && ngcc --properties es2015 browser module main",
     "start": "nx serve",
     "build": "nx build",
-    "test": "nx test",
-    "standard-version": "standard-version",
-    "standard-version:patch": "git fetch origin && standard-version --release-as patch && npm run standard-version:after",
-    "standard-version:minor": "git fetch origin && standard-version --release-as minor && npm run standard-version:after",
-    "standard-version:dry": "standard-version --dry-run"
+    "test": "nx test"
   },
   "private": true,
   "dependencies": {
@@ -24,6 +20,7 @@
     "@angular/platform-browser": "~13.3.0",
     "@angular/platform-browser-dynamic": "~13.3.0",
     "@angular/router": "~13.3.0",
+    "@ant-design/icons-angular": "13.1.0",
     "@nrwl/angular": "14.0.5",
     "date-fns": "^2.28.0",
     "firebase": "^10.14.1",
@@ -50,7 +47,6 @@
     "@types/node": "16.11.7",
     "@typescript-eslint/eslint-plugin": "~5.18.0",
     "@typescript-eslint/parser": "~5.18.0",
-    "autoprefixer": "^10.4.7",
     "cypress": "^9.1.0",
     "eslint": "~8.12.0",
     "eslint-config-prettier": "8.1.0",
@@ -58,10 +54,7 @@
     "jest": "27.5.1",
     "jest-preset-angular": "11.1.1",
     "nx": "14.0.5",
-    "postcss": "^8.4.14",
     "prettier": "^2.5.1",
-    "standard-version": "^9.3.2",
-    "tailwindcss": "^3.0.24",
     "ts-jest": "27.1.4",
     "ts-node": "9.1.1",
     "typescript": "~4.6.2"

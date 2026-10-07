@@ -14,14 +14,6 @@
         Hide on completion <i nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide task when it has been completed, instead of mark it only visually completed"></i>
       </label>
     </div>
-    <div nz-col *ngIf="hasLocalstorageData">
-      <button nz-button nzType="primary" (click)="migrate()">Import everything from LocalStorage</button>
-    </div>
-    <div nz-col *ngIf="hasLocalstorageData">
-      <button nzDanger nz-button nzType="primary" nz-popconfirm nzPopconfirmTitle="Are you sure? This cannot be undone"
-              (nzOnConfirm)="clearLocalstorageData()">Clear LocalStorage data
-      </button>
-    </div>
   </div>
   <div nz-row class="lazy-matrix">
     <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">

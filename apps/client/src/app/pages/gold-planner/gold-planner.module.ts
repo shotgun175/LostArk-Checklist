@@ -2,7 +2,6 @@ import { NgModule } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { GoldPlannerComponent } from "./gold-planner/gold-planner.component";
 import { RouterModule, Routes } from "@angular/router";
-import { NzCardModule } from "ng-zorro-antd/card";
 import { NzSwitchModule } from "ng-zorro-antd/switch";
 import { NzRadioModule } from "ng-zorro-antd/radio";
 import { FormsModule } from "@angular/forms";
@@ -13,7 +12,6 @@ import { NzToolTipModule } from "ng-zorro-antd/tooltip";
 import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzButtonModule } from "ng-zorro-antd/button";
-import { NzAlertModule } from "ng-zorro-antd/alert";
 import { NzMessageModule } from "ng-zorro-antd/message";
 
 const routes: Routes = [{
@@ -26,7 +24,6 @@ const routes: Routes = [{
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    NzCardModule,
     NzSwitchModule,
     NzRadioModule,
     FormsModule,
@@ -37,7 +34,6 @@ const routes: Routes = [{
     NzInputModule,
     NzInputNumberModule,
     NzButtonModule,
-    NzAlertModule,
     NzMessageModule
   ]
 })

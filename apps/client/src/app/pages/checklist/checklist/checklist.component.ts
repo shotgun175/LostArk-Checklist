@@ -26,10 +26,6 @@ import { LayoutStateService } from '../../../core/services/layout-state.service'
 import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
 
-export interface TaskCharacter extends Character {
-  done?: boolean;
-}
-
 @Component({
   selector: 'lostark-helper-checklist',
   templateUrl: './checklist.component.html',
@@ -281,10 +277,6 @@ export class ChecklistComponent {
   @HostListener('window:resize')
   setTableHeight(): void {
     this.windowResize$.next();
-  }
-
-  public toggleAccordion(friend: any): void {
-    friend.showCharacters = !friend.showCharacters;
   }
 
   public ticketsTrackingOpenedChange(opened: boolean): void {

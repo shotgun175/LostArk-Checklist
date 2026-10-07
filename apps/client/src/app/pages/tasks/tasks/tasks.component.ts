@@ -152,10 +152,6 @@ export class TasksComponent {
     this.tasksService.removeTask(task);
   }
 
-  saveTask(task: LostarkTask): void {
-    this.tasksService.removeTask(task);
-  }
-
   exportTasks(tasks: LostarkTask[]): void {
     this.clipboard.copy(JSON.stringify(tasks.filter(t => t.custom)));
     this.message.success("Custom tasks copied to your clipboard");
