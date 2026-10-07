@@ -32,6 +32,15 @@ export class CompletionService extends FirestoreStorage<Completion> {
     super(firestore);
   }
 
+  /**
+   * Replaces the in-memory completion without writing it. completion$ keeps only its first
+   * server snapshot, so a write made outside this service (the data import batch) would
+   * otherwise stay invisible, and stale ticks could be written back over it.
+   */
+  public setLocal(key: string, completion: Completion): void {
+    this.setSources[key]?.next(completion);
+  }
+
   protected getCollectionName(): string {
     return "completion";
   }
