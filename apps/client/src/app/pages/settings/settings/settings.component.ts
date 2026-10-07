@@ -21,7 +21,10 @@ import { LostarkExport } from "../../../core/import/lostark-export";
 import {
   getExplicitTrackingKeys,
   getExplicitTrackingKeysForCharacter,
+  getSetForAllKeys,
   getTrackedTaskOverride,
+  isRaidInMainList,
+  isRaidTask,
   isTaskInIlvlRange,
   isTaskTracked
 } from "../../../core/task-tracking";
@@ -30,6 +33,17 @@ import { deleteField } from "firebase/firestore";
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
 const TRACKING_CHARACTER_COLUMN_WIDTH = 64;
+
+/** localStorage key that remembers whether the Older raids group of the Task tracking grid is expanded. */
+const OLDER_RAIDS_OPEN_KEY = "settings:olderRaidsOpen";
+
+function readOlderRaidsOpen(): boolean {
+  try {
+    return localStorage.getItem(OLDER_RAIDS_OPEN_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 @Component({
   selector: "lostark-helper-settings",
@@ -110,6 +124,8 @@ export class SettingsComponent {
         .map(task => {
           return {
             task,
+            isRaid: isRaidTask(task),
+            eligibleCount: getSetForAllKeys(roster.characters, task).length,
             data: roster.characters.map(c => ({
               tracked: isTaskTracked(roster.trackedTasks, c, task, tasks),
               auto: getTrackedTaskOverride(roster.trackedTasks, c, task) === undefined,
@@ -118,8 +134,11 @@ export class SettingsComponent {
           };
         });
       const perCharacter = roster.characters.map(c => getExplicitTrackingKeysForCharacter(roster.trackedTasks, c).length);
+      const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, roster.characters, row.task, tasks);
       return {
         rows,
+        mainRows: rows.filter(row => !isOlder(row)),
+        olderRows: rows.filter(isOlder),
         setByYou: perCharacter.reduce((sum, count) => sum + count, 0),
         perCharacter,
         taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
@@ -141,6 +160,8 @@ export class SettingsComponent {
   public pendingImport: { fileName: string; validation: ExportValidation } | null = null;
 
   public transferBusy = false;
+
+  public olderRaidsOpen = readOlderRaidsOpen();
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
@@ -216,6 +237,33 @@ export class SettingsComponent {
     this.rosterService.updateOne(roster.$key, Object.fromEntries(
       keys.map(key => [`trackedTasks.${key}`, deleteField()])
     ));
+  }
+
+  /**
+   * Sets one raid for every grid character whose item level fits it, in one write:
+   * true or false saves that choice, null sends those cells back to automatic.
+   */
+  setRaidForAll(roster: Roster, task: LostarkTask, value: boolean | null): void {
+    const keys = getSetForAllKeys(roster.characters, task);
+    if (value === null) {
+      this.clearTrackingKeys(roster, keys.filter(key => typeof roster.trackedTasks?.[key] === "boolean"));
+      return;
+    }
+    if (keys.length === 0) {
+      return;
+    }
+    this.rosterService.updateOne(roster.$key, Object.fromEntries(
+      keys.map(key => [`trackedTasks.${key}`, value])
+    ));
+  }
+
+  toggleOlderRaids(): void {
+    this.olderRaidsOpen = !this.olderRaidsOpen;
+    try {
+      localStorage.setItem(OLDER_RAIDS_OPEN_KEY, String(this.olderRaidsOpen));
+    } catch {
+      // Storage can be blocked (private mode, site data off); the group then just opens for this visit.
+    }
   }
 
   resetBonuses(key: string): void {

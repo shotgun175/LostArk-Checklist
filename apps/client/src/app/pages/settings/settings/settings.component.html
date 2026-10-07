@@ -168,28 +168,57 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr *ngFor="let row of tasksTable.data; trackBy: trackByTask">
-                  <td class="task-name">
-                    <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
-                         class="task-icon">
-                    {{row.task.label}}
-                  </td>
-                  <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
-                    <ng-container *ngIf="flag.inIlvlRange; else ilvlTooLow">
-                      <nz-switch nzSize="small" [class.auto-tracking]="flag.auto"
-                                 [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
-                      <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
-                    </ng-container>
-                    <ng-template #ilvlTooLow>
-                      <span class="ilvl-too-low">-</span>
-                      <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you before the item level stopped fitting. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
-                    </ng-template>
-                  </td>
+                <tr *ngFor="let row of taskTracking.mainRows; trackBy: trackByTask">
+                  <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
                 </tr>
+                <tr *ngIf="taskTracking.olderRows.length > 0" class="older-raids-toggle">
+                  <td class="task-name">
+                    <a (click)="toggleOlderRaids()" [attr.aria-expanded]="olderRaidsOpen">
+                      <span class="older-raids-caret" [class.open]="olderRaidsOpen">&#9656;</span>
+                      Older raids ({{taskTracking.olderRows.length}})
+                    </a>
+                  </td>
+                  <td [attr.colspan]="rawRoster.characters.length"></td>
+                </tr>
+                <ng-container *ngIf="olderRaidsOpen">
+                  <tr *ngFor="let row of taskTracking.olderRows; trackBy: trackByTask" class="older-raid-row">
+                    <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
+                  </tr>
+                </ng-container>
                 </tbody>
               </nz-table>
             </div>
             <div class="tracking-legend">Faded = auto, Solid = set by you, dash = item level too low</div>
+            <ng-template #trackingRow let-row>
+              <td class="task-name">
+                <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
+                     class="task-icon">
+                {{row.task.label}}
+                <ng-container *ngIf="row.isRaid">
+                  <button class="raid-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="raidMenu" nzPlacement="bottomLeft"
+                          [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
+                  <nz-dropdown-menu #raidMenu="nzDropdownMenu">
+                    <ul nz-menu class="raid-menu">
+                      <li nz-menu-item nzDisabled class="raid-menu-title">{{row.task.label}}: all characters who can enter it ({{row.eligibleCount}})</li>
+                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, true)">Track for all</li>
+                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, false)">Ignore for all</li>
+                      <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setRaidForAll(rawRoster, row.task, null)">Back to auto for all</li>
+                    </ul>
+                  </nz-dropdown-menu>
+                </ng-container>
+              </td>
+              <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
+                <ng-container *ngIf="flag.inIlvlRange; else ilvlTooLow">
+                  <nz-switch nzSize="small" [class.auto-tracking]="flag.auto"
+                             [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
+                  <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                </ng-container>
+                <ng-template #ilvlTooLow>
+                  <span class="ilvl-too-low">-</span>
+                  <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you before the item level stopped fitting. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                </ng-template>
+              </td>
+            </ng-template>
           </nz-card>
         </ng-container>
       </ng-container>
