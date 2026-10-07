@@ -65,3 +65,36 @@ export function pickDefaultRunningMode(gate: Gate, character: Character): string
 export function shouldAutoPickRunningMode(takingGold: boolean, currentMode: string | undefined): boolean {
   return takingGold && !currentMode
 }
+
+/** A character can take gold from at most this many raids per week. */
+export const MAX_GOLD_RAIDS = 3;
+
+/** One gate cell of a character: its raid, whether Taking Gold is ticked, and whether it counts (not hidden by tracking). */
+export interface GoldGateState {
+  raidName: string;
+  takingGold: boolean;
+  counted: boolean;
+}
+
+/**
+ * Whether a character's cell counts toward the gold cap: a gate line, shown by tracking, that the character's item level allows.
+ * Gates already done this week still count, matching the game's weekly gold limit.
+ */
+export function isGateCountedForGoldCap(cell: { hiddenByTracking: boolean; isGateLine: boolean; meetsGateIlvl: boolean }): boolean {
+  return !cell.hiddenByTracking && cell.isGateLine && cell.meetsGateIlvl;
+}
+
+/** Raids the character takes gold from: gold ticked on at least one counted gate. A raid counts once. */
+export function getGoldRaids(gates: GoldGateState[]): Set<string> {
+  return new Set(gates.filter(gate => gate.takingGold && gate.counted).map(gate => gate.raidName));
+}
+
+/** Taking Gold is disabled on a raid not yet taking gold once the character already takes gold from the maximum. */
+export function isGoldTakingDisabled(goldRaids: Set<string>, raidName: string): boolean {
+  return goldRaids.size >= MAX_GOLD_RAIDS && !goldRaids.has(raidName);
+}
+
+/** Warning for data already over the cap (for example imported); ticks are never removed automatically. */
+export function getGoldCapWarning(goldRaidCount: number): string | undefined {
+  return goldRaidCount > MAX_GOLD_RAIDS ? `Gold from ${goldRaidCount} raids, max is ${MAX_GOLD_RAIDS}` : undefined;
+}
