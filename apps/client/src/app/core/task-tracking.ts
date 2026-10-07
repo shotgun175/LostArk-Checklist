@@ -80,6 +80,19 @@ export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string,
   return getExplicitTrackingKeys(trackedTasks).filter(key => key.startsWith(prefix));
 }
 
+/**
+ * How many explicit choices one character has among the tasks the grid shows. Keys left behind by
+ * deleted tasks or tasks moved to roster scope are not counted, since no switch shows them.
+ *
+ * Args:
+ *   trackedTasks: roster.trackedTasks (explicit choices).
+ *   character: the character whose choices to count.
+ *   gridTasks: the tasks shown in the grid.
+ */
+export function countGridTrackingChoices(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">, gridTasks: LostarkTask[]): number {
+  return gridTasks.filter(task => typeof trackedTasks?.[getCompletionEntryKey(character, task)] === "boolean").length;
+}
+
 /** Whether the task is a raid or abyssal dungeon listed in raidReleaseOrder (custom tasks never are). */
 export function isRaidTask(task: LostarkTask): boolean {
   return raidIndex(task) !== undefined;

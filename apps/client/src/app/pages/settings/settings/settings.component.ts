@@ -19,6 +19,7 @@ import { DataTransferService } from "../../../core/import/data-transfer.service"
 import { ExportValidation, parseExportFile } from "../../../core/import/validate-export";
 import { LostarkExport } from "../../../core/import/lostark-export";
 import {
+  countGridTrackingChoices,
   getExplicitTrackingKeys,
   getExplicitTrackingKeysForCharacter,
   getSetForAllKeys,
@@ -133,7 +134,7 @@ export class SettingsComponent {
             }))
           };
         });
-      const perCharacter = roster.characters.map(c => getExplicitTrackingKeysForCharacter(roster.trackedTasks, c).length);
+      const perCharacter = roster.characters.map(c => countGridTrackingChoices(roster.trackedTasks, c, rows.map(row => row.task)));
       const isOlder = (row: typeof rows[number]) => row.isRaid && !isRaidInMainList(roster.trackedTasks, roster.characters, row.task, tasks);
       return {
         rows,

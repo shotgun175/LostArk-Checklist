@@ -2,6 +2,7 @@ import { raidReleaseOrder, tasks as defaultTasks } from './tasks';
 import {
   getDefaultTrackedRaidLabels,
   getExplicitTrackingKeys,
+  countGridTrackingChoices,
   getExplicitTrackingKeysForCharacter,
   getSetForAllKeys,
   getTrackedTaskOverride,
@@ -155,6 +156,36 @@ describe('getExplicitTrackingKeysForCharacter', () => {
   it('returns nothing for a character without choices or a missing map', () => {
     expect(getExplicitTrackingKeysForCharacter(trackedTasks, character(1700, 99))).toEqual([]);
     expect(getExplicitTrackingKeysForCharacter(undefined, character(1700, 42))).toEqual([]);
+  });
+});
+
+describe('countGridTrackingChoices', () => {
+  const gridTasks = [task('Serca'), task('Armoche')];
+  const trackedTasks = {
+    '42:Serca': false,
+    '42:Armoche': true,
+    '42:Gone': true,
+    'Char42:Serca': true,
+    'Char7:Serca': false,
+    'Char7:Gone': true,
+    '42:Mordum': undefined
+  };
+
+  it('counts only choices for tasks the grid shows, so keys of deleted or moved tasks are left out', () => {
+    expect(countGridTrackingChoices(trackedTasks, character(1700, 42), gridTasks)).toBe(2);
+  });
+
+  it('ignores legacy name keys of a character with an id', () => {
+    expect(countGridTrackingChoices({ 'Char42:Serca': true }, character(1700, 42), gridTasks)).toBe(0);
+  });
+
+  it('counts name keys for a character without an id', () => {
+    const noId = { name: 'Char7', ilvl: 1700 } as Character;
+    expect(countGridTrackingChoices(trackedTasks, noId, gridTasks)).toBe(1);
+  });
+
+  it('returns 0 for a missing map', () => {
+    expect(countGridTrackingChoices(undefined, character(1700, 42), gridTasks)).toBe(0);
   });
 });
 
