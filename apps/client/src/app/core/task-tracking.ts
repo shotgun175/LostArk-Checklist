@@ -68,16 +68,14 @@ export function getExplicitTrackingKeys(trackedTasks: Record<string, boolean | u
 }
 
 /**
- * The explicit-choice keys of one character: keys stored under its id and legacy keys stored under its name.
+ * The explicit-choice keys of one character that the grid reads: keys under its id, or under its
+ * name when it has no id. Legacy name keys of a character with an id are left to Reset all.
  *
  * Args:
  *   trackedTasks: roster.trackedTasks (explicit choices).
  *   character: the character whose keys to list.
  */
 export function getExplicitTrackingKeysForCharacter(trackedTasks: Record<string, boolean | undefined> | undefined, character: Pick<Character, "id" | "name">): string[] {
-  const prefixes = [`${character.name}:`];
-  if (character.id) {
-    prefixes.push(`${character.id}:`);
-  }
-  return getExplicitTrackingKeys(trackedTasks).filter(key => prefixes.some(prefix => key.startsWith(prefix)));
+  const prefix = character.id ? `${character.id}:` : `${character.name}:`;
+  return getExplicitTrackingKeys(trackedTasks).filter(key => key.startsWith(prefix));
 }

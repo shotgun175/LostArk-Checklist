@@ -139,9 +139,9 @@ describe('getExplicitTrackingKeysForCharacter', () => {
     '42:Kazeros': undefined
   };
 
-  it('lists the id keys and the legacy name keys of one character only', () => {
+  it('lists only the id keys of a character with an id, since the grid never reads its legacy name keys', () => {
     expect(getExplicitTrackingKeysForCharacter(trackedTasks, character(1700, 42)))
-      .toEqual(['42:Serca', '42:Armoche', 'Char42:Mordum']);
+      .toEqual(['42:Serca', '42:Armoche']);
   });
 
   it('matches name keys for a character without an id', () => {

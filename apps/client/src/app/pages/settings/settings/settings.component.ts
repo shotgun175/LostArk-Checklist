@@ -117,10 +117,11 @@ export class SettingsComponent {
             }))
           };
         });
+      const perCharacter = roster.characters.map(c => getExplicitTrackingKeysForCharacter(roster.trackedTasks, c).length);
       return {
         rows,
-        setByYou: getExplicitTrackingKeys(roster.trackedTasks).length,
-        perCharacter: roster.characters.map(c => getExplicitTrackingKeysForCharacter(roster.trackedTasks, c).length),
+        setByYou: perCharacter.reduce((sum, count) => sum + count, 0),
+        perCharacter,
         taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
         characterColumnWidth: `${TRACKING_CHARACTER_COLUMN_WIDTH}px`,
         scroll: {
