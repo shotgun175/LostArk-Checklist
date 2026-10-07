@@ -116,16 +116,6 @@
         "jestConfig": "apps/client/jest.config.ts",
         "passWithNoTests": true
       }
-    },
-    "deploy": {
-      "executor": "@angular/fire:deploy",
-      "options": {
-        "prerender": false,
-        "ssr": false,
-        "browserTarget": "client:build:production",
-        "firebaseProject": "loa-checklist",
-        "firebaseHostingSite": "loa-checklist"
-      }
     }
   },
   "tags": []
