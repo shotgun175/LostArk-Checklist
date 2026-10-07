@@ -180,7 +180,10 @@
                                  [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
                       <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
                     </ng-container>
-                    <ng-template #ilvlTooLow><span class="ilvl-too-low">-</span></ng-template>
+                    <ng-template #ilvlTooLow>
+                      <span class="ilvl-too-low">-</span>
+                      <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you before the item level stopped fitting. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                    </ng-template>
                   </td>
                 </tr>
                 </tbody>
