@@ -47,11 +47,4 @@ export class RegisterPopupComponent {
         this.modalRef.close();
       });
   }
-
-  googleOauth(): void {
-    this.auth.googleOauthRegister()
-      .subscribe(() => {
-        this.modalRef.close();
-      });
-  }
 }
