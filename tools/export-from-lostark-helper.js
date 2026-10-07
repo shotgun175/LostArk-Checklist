@@ -4,8 +4,9 @@
  * How to use (Chrome, on the PC where you use lostark-helper.com):
  * 1. Open https://lostark-helper.com/checklist and wait until your checklist shows.
  *    (Opening the checklist first also brings the rest bonus up to date.)
- * 2. Press F12 and open the Console tab. If Chrome asks, type: allow pasting  and press Enter.
- * 3. Paste this whole file into the console and press Enter.
+ * 2. Press F12 and open the Console tab.
+ * 3. Paste this whole file into the console and press Enter. If Chrome warns about pasting
+ *    instead of running it, type: allow pasting, press Enter, then paste again and press Enter.
  * 4. Chrome downloads lostark-helper-export-<date>.json. On LostArk-Checklist, open Settings,
  *    "Bring data over", "Import from Lostark-helper", and pick that file.
  *
