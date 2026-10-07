@@ -165,7 +165,7 @@
                                     <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">{{ row.completionData[i].modeBadge }}</span>
                                     <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
                                   </span>
-                                  <span class="gold-badge-up" *ngIf="row.completionData[i].modeBadge && row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
+                                  <span class="gold-badge-up" *ngIf="row.completionData[i].modeBadge && row.completionData[i].higherModeInfo" role="img" [attr.aria-label]="row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
                                     <i nz-icon nzType="arrow-up" nzTheme="outline"></i>
                                   </span>
                                 </ng-container>
