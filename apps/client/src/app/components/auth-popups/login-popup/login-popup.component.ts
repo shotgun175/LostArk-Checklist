@@ -33,11 +33,4 @@ export class LoginPopupComponent {
         this.modalRef.close();
       });
   }
-
-  googleOauth(): void {
-    this.auth.googleOauthLogin()
-      .subscribe(() => {
-        this.modalRef.close();
-      });
-  }
 }

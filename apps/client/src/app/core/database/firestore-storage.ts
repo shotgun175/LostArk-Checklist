@@ -1,5 +1,5 @@
 import { DataModel } from "./data-model";
-import { distinctUntilChanged, finalize, first, from, map, merge, Observable, shareReplay, Subject, tap } from "rxjs";
+import { catchError, distinctUntilChanged, EMPTY, finalize, first, from, map, merge, Observable, shareReplay, Subject, tap } from "rxjs";
 import {
   addDoc,
   collection,
@@ -103,7 +103,8 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   public query(...filterQuery: QueryConstraint[]): Observable<T[]> {
     return collectionData(query(this.collection, ...filterQuery).withConverter(this.converter)).pipe(
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      catchError(err => this.endListener(err))
     );
   }
 
@@ -154,12 +155,20 @@ export abstract class FirestoreStorage<T extends DataModel> {
         );
       } else {
         this.cache[key] = source$.pipe(
+          catchError(err => this.endListener(err)),
           shareReplay({ refCount: true, bufferSize: 1 }),
           finalize(() => delete this.cache[key])
         );
       }
     }
     return this.cache[key];
+  }
+
+  // After Log out or Sign in, Firestore re-checks the previous user's live listeners with the new
+  // credentials and the rules deny them. Ending that listener here keeps the outer per-user stream alive.
+  private endListener(err: unknown): Observable<never> {
+    console.warn(`Stopped a ${this.getCollectionName()} listener:`, err);
+    return EMPTY;
   }
 
   public addOne(row: Omit<T, "$key">): Observable<string> {

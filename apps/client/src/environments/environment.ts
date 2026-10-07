@@ -6,12 +6,12 @@ export const environment = {
   verboseOperations: false,
   useEmulators: false,
   firebase: {
-    projectId: 'lostark-helper-8dfb0',
-    appId: '1:149724175977:web:07f4bb26bb508e98a18cf8',
-    storageBucket: 'lostark-helper-8dfb0.appspot.com',
-    apiKey: 'AIzaSyAS587wsXY3WqaWchRGdQ66IQrVk2kjEyE',
-    authDomain: 'lostark-helper-8dfb0.firebaseapp.com',
-    messagingSenderId: '149724175977',
+    projectId: 'loa-checklist',
+    appId: '1:840196169331:web:fa4f4dc69b8cd95d5f9406',
+    storageBucket: 'loa-checklist.firebasestorage.app',
+    apiKey: 'AIzaSyA7C1ZNoySzCBu6OrjoWV2cp0X7Ru8x4QE',
+    authDomain: 'loa-checklist.firebaseapp.com',
+    messagingSenderId: '840196169331',
   },
   production: false
 };

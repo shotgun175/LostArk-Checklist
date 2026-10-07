@@ -1,14 +1,14 @@
 {
   "targets": {
-    "lostark-helper-8dfb0": {
+    "loa-checklist": {
       "hosting": {
         "client": [
-          "lostark-helper-8dfb0"
+          "loa-checklist"
         ]
       }
     }
   },
   "projects": {
-    "default": "lostark-helper-8dfb0"
+    "default": "loa-checklist"
   }
 }
