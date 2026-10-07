@@ -3,7 +3,6 @@ import { CommonModule } from "@angular/common";
 import { GoldPlannerComponent } from "./gold-planner/gold-planner.component";
 import { RouterModule, Routes } from "@angular/router";
 import { NzCardModule } from "ng-zorro-antd/card";
-import { NzTableModule } from "ng-zorro-antd/table";
 import { NzSwitchModule } from "ng-zorro-antd/switch";
 import { NzRadioModule } from "ng-zorro-antd/radio";
 import { FormsModule } from "@angular/forms";
@@ -27,7 +26,6 @@ const routes: Routes = [{
     CommonModule,
     RouterModule.forChild(routes),
     NzCardModule,
-    NzTableModule,
     NzSwitchModule,
     NzRadioModule,
     FormsModule,

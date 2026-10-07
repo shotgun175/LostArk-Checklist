@@ -15,6 +15,7 @@ import { EnergyService } from "../../../core/database/services/energy.service";
 import { combineLatest, of } from "rxjs";
 import { LostarkClass } from "../../../model/character/lostark-class";
 import { Character } from "../../../model/character/character";
+import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickDisabled, newCharacterWeeklyGold } from "../../../core/weekly-gold";
 
 @Component({
   selector: "lostark-helper-roster",
@@ -64,7 +65,7 @@ export class RosterComponent {
       ilvl: form.ilvl,
       lazy: form.lazy,
       class: form.class,
-      weeklyGold: roster.characters.length < 6,
+      weeklyGold: newCharacterWeeklyGold(roster.characters),
       tickets: {
         EbonyCubeLevel1: 0,
         EbonyCubeLevel2: 0,
@@ -173,6 +174,14 @@ export class RosterComponent {
     this.rosterService.setOne(uid, { characters, trackedTasks: {}, showAllTasks: false });
     localStorage.removeItem("roster");
     this.hasLocalstorageRoster = false;
+  }
+
+  isWeeklyGoldTickDisabled(roster: Roster, character: Character): boolean {
+    return isWeeklyGoldTickDisabled(roster.characters, character);
+  }
+
+  weeklyGoldLimitWarning(roster: Roster): string | undefined {
+    return getWeeklyGoldLimitWarning(countWeeklyGoldCharacters(roster.characters));
   }
 
   trackByCharacter(index: number, character: Character): string {

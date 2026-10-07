@@ -1,7 +1,7 @@
 import { Component } from "@angular/core";
-import { BehaviorSubject, combineLatest, map, Observable, of, pluck, startWith } from "rxjs";
+import { BehaviorSubject, combineLatest, map, Observable, of, pluck } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGoldTakingDisabled, getGoldCapWarning, isGateCountedForGoldCap } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, getGoldCapWarning, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -14,7 +14,7 @@ import { UpdateData } from "firebase/firestore";
 import { getCompletionEntry } from '../../../core/get-completion-entry-key';
 import { Completion } from "../../../model/completion";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
-import { filterGoldPlannerCharacters } from "../../../core/visible-characters";
+import { filterVisibleCharacters } from "../../../core/visible-characters";
 import { isTaskTracked } from "../../../core/task-tracking";
 
 interface chestsData {
@@ -27,7 +27,7 @@ interface chestsData {
     takingGold: boolean,
     indeterminateTakingGold: boolean,
     countsForGoldCap: boolean,
-    goldTakingDisabled: boolean,
+    goldTakingDisabledReason?: string,
     canRunHM: boolean,
     canRunNightmare: boolean,
     soloModeExists: boolean,
@@ -39,6 +39,8 @@ interface chestsData {
     chestPrice: number,
     runningMode: string,
   }[],
+  // Gate rows of a raid with several gates, shown under it when expanded
+  children?: chestsData[],
 }
 
 interface PlannerLine {
@@ -55,11 +57,16 @@ interface GoldPlannerDisplay {
   other: Record<string, number>;
   tracking: Record<string, boolean>;
   raidModesForGoldPlanner: Record<string, string>;
-  total: { unboundGold: number, boundGold: number }[];
-  grandTotal: { unboundGold: number, boundGold: number };
+  total: GoldTotal[];
+  grandTotal: GoldTotal & { goldEarners: number };
+  goldRaidCounts: number[];
+  chestCosts: number[];
   goldCapWarnings: (string | undefined)[];
+  groups: { goldEarners: number[], others: number[] };
   plannerLines: PlannerLine[]
 }
+
+const SELECTED_CHARACTER_KEY = "gold-planner:selected-character";
 
 @Component({
   selector: "lostark-helper-gold-planner",
@@ -69,7 +76,7 @@ interface GoldPlannerDisplay {
 export class GoldPlannerComponent {
   public rawRoster$ = this.rosterService.roster$;
   public roster$ = combineLatest([this.rosterService.roster$, this.layoutState.showHiddenCharacters$]).pipe(
-    map(([roster, showHidden]) => filterGoldPlannerCharacters(roster.characters, showHidden))
+    map(([roster, showHidden]) => filterVisibleCharacters(roster.characters, showHidden))
   );
 
   public settings$ = this.settings.settings$;
@@ -248,7 +255,13 @@ export class GoldPlannerComponent {
               })
             }
 
-            const hiddenByTracking = cantDoTask || !character.weeklyGold || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false)
+            // A character without Weekly Gold never takes gold; a tick stored from before is not shown
+            if (!character.weeklyGold) {
+              takingGold = false
+              indeterminateTakingGold = false
+            }
+
+            const hiddenByTracking = cantDoTask || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false)
 
             const goldDetail = {
               hide: false || hiddenByTracking || hideAlreadyDoneRaidOrGate,
@@ -267,7 +280,7 @@ export class GoldPlannerComponent {
                 isGateLine: !!line.gate,
                 meetsGateIlvl: !!line.gate && this.characterHasRequiredILvlForGate(line.gate, character, tasks, task)
               }),
-              goldTakingDisabled: false,
+              goldTakingDisabledReason: undefined as string | undefined,
               canRunHM,
               canRunNightmare,
               soloModeExists: line.gTask.gates[0].modes.find(mode => mode.name === 'Solo') !== undefined,
@@ -290,22 +303,27 @@ export class GoldPlannerComponent {
         });
 
       // Gold cap: per character, the raids taking gold on a gate cell; counted before rows done this week are filtered out
-      const goldRaids = roster.map((_, i) => getGoldRaids(allRows
+      const goldRaids = roster.map((character, i) => getGoldRaids(allRows
         .filter(row => row.line.gate)
         .map(row => ({
           raidName: row.line.gTask.name,
-          takingGold: !!row.goldDetails[i].takingGold,
+          takingGold: earnsGold(row.goldDetails[i].takingGold, character.weeklyGold),
           counted: row.goldDetails[i].countsForGoldCap
         }))));
       allRows.forEach(row => row.goldDetails.forEach((detail, i) => {
-        detail.goldTakingDisabled = isGoldTakingDisabled(goldRaids[i], row.line.gTask.name);
+        detail.goldTakingDisabledReason = getGoldTakingDisabledReason(roster[i].weeklyGold, goldRaids[i], row.line.gTask.name);
       }));
-      const goldCapWarnings = goldRaids.map(raids => getGoldCapWarning(raids.size));
+      const goldCapWarnings = goldRaids.map((raids, i) => roster[i].weeklyGold ? getGoldCapWarning(raids.size) : undefined);
 
       const chestsData = allRows
         .filter(({ goldDetails }) => {
           return goldDetails.some(f => !f.hide);
         });
+      chestsData.forEach(row => {
+        if (!row.line.gate) {
+          row.children = chestsData.filter(child => child.line.parent === row.line);
+        }
+      });
 
       const chaos = roster.reduce((acc, c) => {
         return {
@@ -321,19 +339,21 @@ export class GoldPlannerComponent {
         };
       }, {});
 
+      const chestCosts: number[] = roster.map(() => 0);
       const total = chestsData
         .filter(row => row.task && row.line && row.line.gate)
         .reduce((acc, row) => {
           const { goldDetails } = row;
           goldDetails.forEach((flag, i) => {
             if (!flag.hide) {
-              if (flag.takingGold) {
+              if (earnsGold(flag.takingGold, roster[i].weeklyGold)) {
                 acc[i].unboundGold += flag.unboundGoldReward
                 acc[i].boundGold += flag.boundGoldReward
               }
 
               if (flag.takingChest) {
                 acc[i].boundGold -= flag.chestPrice
+                chestCosts[i] += flag.chestPrice
               }
             }
           });
@@ -345,16 +365,7 @@ export class GoldPlannerComponent {
         total[i].unboundGold += other[char.name];
       });
 
-      const grandTotal = total.reduce((acc, v) => {
-        acc.unboundGold += v.unboundGold
-        acc.boundGold += v.boundGold
-        return acc
-      }, { unboundGold: 0, boundGold: 0 })
-
-      if (grandTotal.boundGold < 0) {
-        grandTotal.unboundGold += grandTotal.boundGold
-        grandTotal.boundGold = 0
-      }
+      const grandTotal = getRosterSummary(total, roster)
 
       return {
         chestsData: chestsData,
@@ -362,7 +373,10 @@ export class GoldPlannerComponent {
         tracking,
         raidModesForGoldPlanner,
         grandTotal,
+        goldRaidCounts: goldRaids.map(raids => raids.size),
+        chestCosts,
         goldCapWarnings,
+        groups: groupPlannerCharacters(roster),
         chaos,
         other,
         plannerLines
@@ -370,24 +384,44 @@ export class GoldPlannerComponent {
     })
   );
 
-  private windowResize$ = new BehaviorSubject<void>(void 0);
+  public readonly maxGoldRaids = MAX_GOLD_RAIDS;
 
-  public scrolling$ = combineLatest([this.roster$, this.display$, this.windowResize$]).pipe(
-    map(([roster, display]) => {
-      let y = window.innerHeight - 270;
-      if (display.tracking['showExplanations']) {
-        y = y - 155
-      }
+  // Character shown in the panel, remembered in this browser (by id, or by name for a character without one)
+  private selectedCharacterKey$ = new BehaviorSubject<string | null>(this.readSelectedCharacterKey());
 
-      const scrolling: { x?: string | null, y: string | null } = { y: `${y}px`, x: "1200px" };
-      const widthPerCharacter = window.innerWidth < 992 ? 80 : 120;
-      if (window.innerWidth < widthPerCharacter * roster.length + 200) {
-        scrolling.x = `${window.innerWidth - 64 - 48 - 190 - 20}px`;
+  /** Index (in roster$) of the character in the panel: the remembered one, else the first gold earner, else the first character. */
+  public selection$: Observable<{ index: number }> = combineLatest([this.roster$, this.selectedCharacterKey$]).pipe(
+    map(([roster, key]) => {
+      const remembered = roster.findIndex(character => this.getCharacterKey(character) === key);
+      if (remembered >= 0) {
+        return { index: remembered };
       }
-      return scrolling;
-    }),
-    startWith({ x: null, y: null })
+      const firstEarner = roster.findIndex(character => character.weeklyGold);
+      return { index: firstEarner >= 0 ? firstEarner : 0 };
+    })
   );
+
+  selectCharacter(character: Character): void {
+    const key = this.getCharacterKey(character);
+    this.selectedCharacterKey$.next(key);
+    try {
+      localStorage.setItem(SELECTED_CHARACTER_KEY, key);
+    } catch {
+      // Storage unavailable (private window, blocked site data): the choice lasts until reload
+    }
+  }
+
+  private readSelectedCharacterKey(): string | null {
+    try {
+      return localStorage.getItem(SELECTED_CHARACTER_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  private getCharacterKey(character: Character): string {
+    return character.id !== undefined ? `id:${character.id}` : `name:${character.name}`;
+  }
 
   private shouldHideGateBasedOnWeeklyCompletion(gate: Gate, character: Character, taskList: LostarkTask[], tracking: Record<string, boolean>, completion: Completion, weeklyReset: number, task?: LostarkTask): boolean {
     const tempTask = taskList.find(t => t.label === gate.taskName && !t.custom);
@@ -467,21 +501,30 @@ export class GoldPlannerComponent {
     return `${characterName}:gold:${gate.name}`;
   }
 
-  setChestTakingFlag(settingsKey: string, tracking: Record<string, boolean>, line: PlannerLine, character: Character, flag: boolean): void {
+  setChestTakingFlag(settingsKey: string, tracking: Record<string, boolean>, currentRaidModes: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
+    // Edit a copy of the modes, as in setGoldTakingFlag, so an auto-picked mode shows without reload
+    const raidModesForGoldPlanner = { ...currentRaidModes };
     if (!line.gate) {
       line.gTask.gates.forEach(gate => {
-        this.setChestTakingFlagForGate(settingsKey, tracking, gate, character, flag)
+        this.setChestTakingFlagForGate(settingsKey, tracking, raidModesForGoldPlanner, gate, character, flag)
       })
     } else {
-      this.setChestTakingFlagForGate(settingsKey, tracking, line.gate, character, flag)
+      this.setChestTakingFlagForGate(settingsKey, tracking, raidModesForGoldPlanner, line.gate, character, flag)
     }
   }
 
-  setChestTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, gate: Gate, character: Character, flag: boolean): void {
+  // For a character without Weekly Gold, ticking a chest on a gate with no running mode also sets the highest mode it can run
+  setChestTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
     tracking[this.getChestTakingFlagNameForGate(character.name, gate)] = flag;
+    const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
+    const pickedMode = shouldAutoPickModeOnChest(character.weeklyGold, flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
+    if (pickedMode) {
+      raidModesForGoldPlanner[modeKey] = pickedMode;
+    }
     this.settings.patch({
       $key: settingsKey,
-      goldPlannerConfiguration: tracking
+      goldPlannerConfiguration: tracking,
+      ...(pickedMode ? { raidModesForGoldPlanner } : {})
     });
   }
 

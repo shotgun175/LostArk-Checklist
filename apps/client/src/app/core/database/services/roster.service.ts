@@ -6,6 +6,7 @@ import { AuthService } from "./auth.service";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { mapTo } from "rxjs/operators";
+import { applyWeeklyGoldDefaults } from "../../weekly-gold";
 
 @Injectable({
   providedIn: "root"
@@ -38,11 +39,11 @@ export class RosterService extends FirestoreStorage<Roster> {
     return super.getOne(key).pipe(
       switchMap(roster => {
         let shouldSave = false;
-        roster.characters = (roster.characters || []).map((c, i) => {
-          if (c.weeklyGold === undefined) {
-            shouldSave = true;
-            c.weeklyGold = i < 6;
-          }
+        roster.characters = roster.characters || [];
+        if (applyWeeklyGoldDefaults(roster.characters)) {
+          shouldSave = true;
+        }
+        roster.characters = roster.characters.map(c => {
           if (!c.id) {
             shouldSave = true;
             c.id = Math.floor(Math.random() * 1000000000);

@@ -17,6 +17,7 @@
       </button>
     </nz-page-header-extra>
   </nz-page-header>
+  <nz-alert *ngIf="weeklyGoldLimitWarning(roster) as warning" class="weekly-gold-warning" nzType="warning" nzShowIcon [nzMessage]="warning"></nz-alert>
   <nz-card nzTitle="Characters">
     <nz-list [nzDataSource]="roster.characters" cdkDropList [cdkDropListData]="roster.characters" (cdkDropListDropped)="drop(roster, $event)">
       <nz-list-item *ngFor="let character of roster.characters;trackBy: trackByCharacter"
@@ -46,8 +47,10 @@
                            (ngModelChange)="saveCharacter(character, roster)"></nz-input-number>
         </ng-template>
         <ng-template #setWeeklyGoldAction>
-          <label nz-checkbox [(ngModel)]="character.weeklyGold" (ngModelChange)="saveCharacter(character, roster)"></label>
-          Weekly Gold
+          <span nz-tooltip [nzTooltipTitle]="isWeeklyGoldTickDisabled(roster, character) ? '6 weekly gold characters already. Untick one to choose this character.' : ''">
+            <label nz-checkbox [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
+            Weekly Gold
+          </span>
           <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></i>
         </ng-template>
         <ng-template #setPrivateAction>

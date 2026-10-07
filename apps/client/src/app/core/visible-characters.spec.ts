@@ -1,4 +1,4 @@
-import { filterGoldPlannerCharacters, filterVisibleCharacters } from './visible-characters';
+import { filterVisibleCharacters } from './visible-characters';
 
 interface TestCharacter {
   name: string;
@@ -29,22 +29,5 @@ describe('filterVisibleCharacters', () => {
     expect(visible[0].name).toBe('MainA');
     expect(visible[0].ilvl).toBe(1745);
     expect(visible[1].name).toBe('MainB');
-  });
-});
-
-describe('filterGoldPlannerCharacters', () => {
-  const goldRoster = [
-    { name: 'HiddenEarner', isHide: true, weeklyGold: true },
-    { name: 'MainEarner', isHide: false, weeklyGold: true },
-    { name: 'MainNoGold', weeklyGold: false },
-    { name: 'HiddenNoGold', isHide: true, weeklyGold: false }
-  ];
-
-  it('keeps only visible characters with Weekly Gold on', () => {
-    expect(filterGoldPlannerCharacters(goldRoster, false).map(c => c.name)).toEqual(['MainEarner']);
-  });
-
-  it('adds hidden Weekly Gold characters when show hidden is on', () => {
-    expect(filterGoldPlannerCharacters(goldRoster, true).map(c => c.name)).toEqual(['HiddenEarner', 'MainEarner']);
   });
 });

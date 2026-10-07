@@ -1,3 +1,5 @@
+import { earnsGold } from "../../gold-planner/gold-task";
+
 export interface ChecklistScroll {
   x?: string | null;
   y: string | null;
@@ -65,4 +67,13 @@ export function formatModeBadge(runningMode: string | undefined): string {
     default:
       return runningMode;
   }
+}
+
+/**
+ * The checklist corner badge of a raid cell: shown when a mode is set for the raid (any character)
+ * or the raid earns gold; the gold coin only when it earns gold (Taking Gold on a weekly gold character).
+ */
+export function getGoldBadge(modeBadge: string, takingGold: boolean | undefined, weeklyGold: boolean | undefined): { show: boolean, coin: boolean } {
+  const coin = earnsGold(takingGold, weeklyGold);
+  return { show: !!modeBadge || coin, coin };
 }

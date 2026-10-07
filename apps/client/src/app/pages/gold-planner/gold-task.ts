@@ -66,6 +66,11 @@ export function shouldAutoPickRunningMode(takingGold: boolean, currentMode: stri
   return takingGold && !currentMode
 }
 
+/** A character without Weekly Gold cannot tick Taking Gold, so ticking Taking Chest on a gate with no running mode picks it instead. */
+export function shouldAutoPickModeOnChest(weeklyGold: boolean | undefined, takingChest: boolean, currentMode: string | undefined): boolean {
+  return !weeklyGold && shouldAutoPickRunningMode(takingChest, currentMode)
+}
+
 /** A character can take gold from at most this many raids per week. */
 export const MAX_GOLD_RAIDS = 3;
 
@@ -97,4 +102,55 @@ export function isGoldTakingDisabled(goldRaids: Set<string>, raidName: string): 
 /** Warning for data already over the cap (for example imported); ticks are never removed automatically. */
 export function getGoldCapWarning(goldRaidCount: number): string | undefined {
   return goldRaidCount > MAX_GOLD_RAIDS ? `Gold from ${goldRaidCount} raids, max is ${MAX_GOLD_RAIDS}` : undefined;
+}
+
+/** Gold counts only when Taking Gold is ticked and the character is one of the roster's weekly gold characters. */
+export function earnsGold(takingGold: boolean | undefined, weeklyGold: boolean | undefined): boolean {
+  return !!takingGold && !!weeklyGold;
+}
+
+/**
+ * Why Taking Gold is disabled for a character's raid, used as the tooltip; undefined when it is enabled.
+ *
+ * Args:
+ *   weeklyGold: whether the character has Weekly Gold on (Roster page).
+ *   goldRaids: the raids the character already takes gold from (getGoldRaids).
+ *   raidName: the raid of the checkbox.
+ */
+export function getGoldTakingDisabledReason(weeklyGold: boolean | undefined, goldRaids: Set<string>, raidName: string): string | undefined {
+  if (!weeklyGold) {
+    return 'Not a weekly gold character (6 per roster). Change on the Roster page.';
+  }
+  return isGoldTakingDisabled(goldRaids, raidName) ? `Already earning gold from ${MAX_GOLD_RAIDS} raids. Untick one to choose this raid.` : undefined;
+}
+
+/** Indexes of the planner's characters: gold earners (Weekly Gold on) and the others, each in roster order. */
+export function groupPlannerCharacters(characters: { weeklyGold?: boolean }[]): { goldEarners: number[], others: number[] } {
+  const indexes = characters.map((_, i) => i);
+  return {
+    goldEarners: indexes.filter(i => characters[i].weeklyGold),
+    others: indexes.filter(i => !characters[i].weeklyGold)
+  };
+}
+
+export interface GoldTotal {
+  unboundGold: number;
+  boundGold: number;
+}
+
+/**
+ * The roster's week: every character's total summed, with bound below zero taken from tradable,
+ * and how many of the characters are gold earners.
+ */
+export function getRosterSummary(totals: GoldTotal[], characters: { weeklyGold?: boolean }[]): GoldTotal & { goldEarners: number } {
+  const sum = totals.reduce((acc, total) => {
+    acc.unboundGold += total.unboundGold;
+    acc.boundGold += total.boundGold;
+    return acc;
+  }, { unboundGold: 0, boundGold: 0 });
+  if (sum.boundGold < 0) {
+    sum.unboundGold += sum.boundGold;
+    sum.boundGold = 0;
+  }
+  return { ...sum, goldEarners: groupPlannerCharacters(characters).goldEarners.length };
 }

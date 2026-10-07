@@ -1,4 +1,4 @@
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
 
 describe('checklistTaskColumnWidth', () => {
   it('is 180px with the sidebar collapsed', () => {
@@ -82,5 +82,22 @@ describe('formatModeBadge', () => {
     expect(formatModeBadge(undefined)).toBe('');
     // setRunningModeFlagForGate writes '' to clear a gate
     expect(formatModeBadge('')).toBe('');
+  });
+});
+
+describe('getGoldBadge', () => {
+  it('shows the mode without a coin when the raid earns no gold', () => {
+    expect(getGoldBadge('HM', false, true)).toEqual({ show: true, coin: false });
+    expect(getGoldBadge('HM', true, false)).toEqual({ show: true, coin: false });
+  });
+
+  it('adds the coin only when Taking Gold is ticked on a weekly gold character', () => {
+    expect(getGoldBadge('HM', true, true)).toEqual({ show: true, coin: true });
+    expect(getGoldBadge('', true, true)).toEqual({ show: true, coin: true });
+  });
+
+  it('shows nothing without a mode or gold', () => {
+    expect(getGoldBadge('', false, true)).toEqual({ show: false, coin: false });
+    expect(getGoldBadge('', true, false)).toEqual({ show: false, coin: false });
   });
 });

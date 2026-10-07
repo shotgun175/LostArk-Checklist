@@ -23,7 +23,7 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
 
 export interface TaskCharacter extends Character {
   done?: boolean;
@@ -168,7 +168,7 @@ export class ChecklistComponent {
                 tracked: isTaskTracked(roster.trackedTasks, character, task, allTasks),
                 doable: character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity),
                 energy: getCompletionEntry(energy.data, character, task) || 0,
-                takingGold: this.getGoldTakingInfoForTask(character.name, task.label, goldTracking) && character.weeklyGold
+                goldBadge: getGoldBadge(formatModeBadge(runningMode), this.getGoldTakingInfoForTask(character.name, task.label, goldTracking), character.weeklyGold)
               };
             });
 
