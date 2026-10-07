@@ -214,6 +214,12 @@ export const raidReleaseOrder: string[][] = [
   [`Demon Beast Canyon`]
 ];
 
+// Built-in tasks no longer given to new accounts. Existing copies stay built-in (not custom) on a TASKS_VERSION bump,
+// so code that looks for them by label, such as the Una's Task rest bonus, keeps working.
+export const retiredTaskLabels = [
+  "Kalthertz Slaves",
+  "Una's Task"
+];
 
 export const oldTaskNames = [
   "South Vern Dungeon",

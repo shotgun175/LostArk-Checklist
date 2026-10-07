@@ -5,10 +5,48 @@ import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
 import { combineLatest, debounceTime, from, map, mapTo, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
-import { tasks, oldTaskNames } from "../../tasks";
+import { tasks, oldTaskNames, retiredTaskLabels } from "../../tasks";
 import { catchError, filter } from "rxjs/operators";
 import { SettingsService } from "./settings.service";
 import { subHours } from "date-fns";
+
+/**
+ * A user's copy of a built-in task brought up to TASKS_VERSION, or null when it is custom or already current.
+ * A copy with a matching default task takes that task's fields, keeping the user's key, item levels,
+ * switch and order. A copy of a retired task keeps its fields and stays built-in; any other copy
+ * without a default task becomes custom.
+ *
+ * Args:
+ *   t: the user's task.
+ *   defaultTasks: the default task list, with each task's index.
+ *   uid: the user's id, saved as authorId.
+ */
+export function upgradeUserTask(t: LostarkTask, defaultTasks: LostarkTask[], uid: string): LostarkTask | null {
+  if (t.custom || !(t.version < TASKS_VERSION)) {
+    return null;
+  }
+  const defaultTask = defaultTasks.find(dt => dt.label?.toLowerCase() === t.label?.toLowerCase() && dt.frequency === t.frequency && !dt.custom);
+  if (defaultTask) {
+    return {
+      ...t,
+      ...defaultTask,
+      $key: t.$key,
+      maxIlvl: t.maxIlvl === 9999 ? defaultTask.maxIlvl : t.maxIlvl,
+      minIlvl: t.minIlvl,
+      enabled: t.enabled,
+      authorId: uid,
+      index: t.index,
+      version: TASKS_VERSION
+    };
+  }
+  return {
+    ...t,
+    custom: !retiredTaskLabels.includes(t.label),
+    authorId: uid,
+    index: t.index,
+    version: TASKS_VERSION
+  };
+}
 
 @Injectable({
   providedIn: "root"
@@ -41,34 +79,12 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
             ...toCreate,
             ...userTasks
               .map((t) => {
-                const instance = { ...t };
-                if (!t.custom && t.version < TASKS_VERSION) {
-                  const defaultTask = this.sortedTasks.find(dt => dt.label?.toLowerCase() === t.label?.toLowerCase() && dt.frequency === t.frequency && !dt.custom);
-                  if (defaultTask) {
-                    Object.assign(instance, {
-                      ...defaultTask,
-                      $key: t.$key,
-                      maxIlvl: t.maxIlvl === 9999 ? defaultTask.maxIlvl : t.maxIlvl,
-                      minIlvl: t.minIlvl,
-                      enabled: t.enabled,
-                      authorId: uid,
-                      index: t.index,
-                      version: TASKS_VERSION
-                    });
-                  } else {
-                    Object.assign(instance, {
-                      ...t,
-                      custom: true,
-                      authorId: uid,
-                      index: t.index,
-                      version: TASKS_VERSION
-                    });
-                  }
-                  toUpdate.push(instance);
-                } else {
-                  Object.assign(instance, t);
+                const upgraded = upgradeUserTask(t, this.sortedTasks, uid);
+                if (upgraded) {
+                  toUpdate.push(upgraded);
+                  return upgraded;
                 }
-                return instance;
+                return { ...t };
               })
           ]
             .filter(t => t !== null)
