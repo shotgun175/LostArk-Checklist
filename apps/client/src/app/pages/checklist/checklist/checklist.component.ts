@@ -26,10 +26,6 @@ import { LayoutStateService } from '../../../core/services/layout-state.service'
 import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
 
-export interface TaskCharacter extends Character {
-  done?: boolean;
-}
-
 @Component({
   selector: 'lostark-helper-checklist',
   templateUrl: './checklist.component.html',

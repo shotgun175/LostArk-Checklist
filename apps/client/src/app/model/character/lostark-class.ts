@@ -38,7 +38,3 @@ export enum LostarkClass {
   GUARDIANKNIGHT,
   DIMENTIONALIST,
 }
-
-export function isSupportClass(c: LostarkClass): boolean {
-  return [LostarkClass.BARD, LostarkClass.PALADIN, LostarkClass.ARTIST, LostarkClass.VALKYRIE].includes(+c);
-}

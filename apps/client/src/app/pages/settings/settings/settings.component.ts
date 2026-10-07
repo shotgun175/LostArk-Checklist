@@ -1,5 +1,5 @@
 import { Component } from "@angular/core";
-import { BehaviorSubject, combineLatest, map, Observable, pluck } from "rxjs";
+import { combineLatest, map, Observable, pluck } from "rxjs";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
 import { LostarkTask } from "../../../model/lostark-task";
@@ -50,8 +50,6 @@ function readOlderRaidsOpen(): boolean {
   styleUrls: ["./settings.component.less"]
 })
 export class SettingsComponent {
-  public energyReloader$ = new BehaviorSubject<void>(void 0);
-
   public uid$ = this.auth.uid$;
 
   public anonymous$ = this.auth.isAnonymous$;
