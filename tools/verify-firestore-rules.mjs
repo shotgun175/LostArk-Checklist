@@ -3,9 +3,9 @@
 // exercises the rules through the Firestore REST API, prints PASS or FAIL per check, then
 // deletes every document it created and both accounts. Exit code 1 means a check failed.
 //
-// Needs Node 18 or newer (global fetch). The repo pins Node 16, so run the system Node:
-//   "/c/Program Files/nodejs/node.exe" tools/verify-firestore-rules.mjs              (deployed rules)
-//   "/c/Program Files/nodejs/node.exe" tools/verify-firestore-rules.mjs --emulator   (local emulators)
+// Needs Node 18 or newer (global fetch); the Node version pinned in package.json works:
+//   node tools/verify-firestore-rules.mjs              (deployed rules)
+//   node tools/verify-firestore-rules.mjs --emulator   (local emulators)
 // --emulator expects the Auth emulator on localhost:9099 and the Firestore emulator on
 // localhost:8085 (see firebase.json), started with project id demo-loa-checklist.
 

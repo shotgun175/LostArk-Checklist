@@ -1,18 +1,20 @@
-# Lost Ark Helper
+# Lost Ark Checklist
 
-* [Korean (한국어)](README_ko.md)
+A daily and weekly checklist and gold planner for Lost Ark (Global version) rosters: https://loa-checklist.web.app
 
-A set of tools to help you organizing your Lost Ark adventure
+Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Lost Ark names and icons belong to their owners. Based on [Lostark-helper](https://github.com/Supamiu/Lostark-helper) by Supamiu.
 
-[https://lostark-helper.com](https://lostark-helper.com)
+## Pages
 
-![](https://user-images.githubusercontent.com/11519203/167081443-faaba8b0-2c55-449c-9cf3-650c436479cf.png)
+- **Checklist**: daily and weekly tasks per character, with rest bonus.
+- **Gold Planner**: weekly gold per character and raid.
+- **Roster** and **Tasks Manager**: your characters and the tasks you track.
+- **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion.
+- **Privacy** (footer link): what is stored and why.
 
 ## Checklist
 
-The checklist page provides you with tasks checkboxes, so you can mark what's done and have it reset automatically for you every day/week.
-
-All you have to do is configure your roster, manage the tasks you want to track, and you're good to go !
+Tick off what you have done; ticks clear by themselves at the daily and weekly reset. Set up your characters on **Roster** and the tasks you want on **Tasks Manager** first.
 
 ### Which raids are tracked
 
@@ -52,21 +54,6 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - **Kalthertz Slaves** and **Una's Task** are still tasks (new accounts get them too, and an account missing one gets it back), but they are off by default for every character, so they no longer show on the checklist. To track one, switch it on per character in Settings, Task tracking (or use the **&#8942;** menu on its row for every character). Cells you already switched on or off keep your choice.
 - **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 
-
-## Contributing
-
-This project is open to Pull Requests, feel free to join the [Discord Server](https://discord.gg/ZyYSJChpX9) if you need help to contribute to this.
-
-The tech stack is pretty simple:
-
- - Angular w/ Ant Design
- - Firebase hosting
-
-To start the project locally:
-
- - npm install
- - npm start
-
 ## Signing in and syncing
 
 - Without signing in, each browser gets its own anonymous account. Your data is saved, but only in that browser profile. Clearing site data loses it.
@@ -75,6 +62,7 @@ To start the project locally:
   2. On the phone, open the user menu, choose **Sign in** and use the same email and password.
 - **Trap: Sign in is not Register.** On a browser that already has anonymous data, **Sign in** switches to the other account and leaves the anonymous data behind, so it no longer shows. Use **Register** the first time on the browser that holds your data. This behavior comes from the original app and is kept as is. The original code also tries to delete the previous anonymous account's tasks during that switch. On this site the database rules block that, so nothing is deleted and the app ignores the refusal.
 - **Log out** starts a fresh, empty anonymous account in that browser. Your registered account's data is untouched. Sign in again to get it back.
+- **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
 
 ## Bringing data over from lostark-helper.com
 
@@ -88,3 +76,85 @@ The import replaces this account's roster, tasks, ticks, rest bonus and settings
 
 - **Download backup** (Settings, Bring data over) saves this account's data as a JSON file.
 - **Restore backup** imports such a file. It uses the same format as the lostark-helper.com export and replaces the same data. Unlike **Import from Lostark-helper**, it keeps your raid tracking choices.
+
+## Development
+
+Stack: Angular 22 with NgModules, ng-zorro-antd 22, Nx 23, Firebase JS SDK 12 (used directly through `apps/client/src/app/core/firebase`, no AngularFire), Jest.
+
+Requirements:
+
+- Node 24.21.0 and the npm that comes with it. The version is pinned in `package.json`; with [Volta](https://volta.sh) installed it is picked automatically.
+- Java 21 or newer, only for the local emulators.
+- The Firebase CLI is not a project dependency. The commands below run it with `npx -y firebase-tools`, which downloads it on first use.
+
+```bash
+npm ci                                           # install the exact versions from package-lock.json
+npx nx serve client --configuration=emulator     # http://localhost:4200 against the local emulators, test data only
+npx nx serve client                              # http://localhost:4200 against the live Firebase project
+npx nx build client                              # production build into dist/apps/client/browser
+npx nx lint client
+```
+
+Unit tests, exactly as CI runs them:
+
+```bash
+npx nx test client --testNamePattern='^(?!EnergyService (should update energy properly|should update energy properly with partially done task|should update energy properly with partially done task on last day only|should not update energy if task was completed yesterday)$)'
+```
+
+A plain `npx nx test client` also runs 4 old EnergyService tests inherited from the original project that are known to fail; CI skips them by name.
+
+### Local emulators
+
+Point `JAVA_HOME` at your Java install and put its `bin` folder on `PATH`, then start Auth and Firestore (Git Bash, macOS or Linux shell; the path is an example):
+
+```bash
+export JAVA_HOME="/c/path/to/jdk-21"
+export PATH="$JAVA_HOME/bin:$PATH"
+npx -y firebase-tools emulators:start --only auth,firestore --project demo-loa-checklist
+```
+
+Auth runs on port 9099 and Firestore on 8085 (see `firebase.json`). In a second terminal run `npx nx serve client --configuration=emulator`. That configuration uses the project id `demo-loa-checklist`, which can never reach a real project, and App Check is off there. The emulators start empty every time.
+
+For test data, open http://localhost:4200/settings, choose **Bring data over**, **Import from Lostark-helper** and pick `tools/fixtures/lostark-helper-export-synthetic.json` (15 made-up characters, 6 of them visible). Never use a real export for local testing.
+
+To check the database rules against the running emulators:
+
+```bash
+node tools/verify-firestore-rules.mjs --emulator
+```
+
+### App Check on localhost
+
+The live site uses App Check with reCAPTCHA Enterprise. Today it only monitors requests; it is not enforced, so `npx nx serve client` works without extra steps.
+
+Once App Check is enforced, `npx nx serve client` needs a debug token, because it talks to the live project from localhost:
+
+1. Open http://localhost:4200 and copy the `App Check debug token` line from the browser console.
+2. In the Firebase console, open App Check, Apps, the web app's menu, **Manage debug tokens**, and add it.
+
+The token stays in your browser. Never commit it, paste it into code or share it. Production builds never use debug mode, and the emulator configuration does not use App Check at all.
+
+## Deploy
+
+Deploying needs a Google account with access to the `loa-checklist` Firebase project. Sign in once with `npx -y firebase-tools login`, then:
+
+```bash
+npx nx build client
+npx -y firebase-tools deploy --only hosting,firestore:rules --project loa-checklist
+node tools/verify-firestore-rules.mjs
+```
+
+The build lands in `dist/apps/client/browser`, which `firebase.json` serves. The last command checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (build and unit tests); deploys are always manual.
+
+## Firebase plan
+
+The project stays on the free Spark plan. On Spark, a product that goes over its quota stops working until the quota resets; it never bills. The limits that matter here:
+
+- **Firestore**: 1 GiB stored, 50,000 document reads, 20,000 writes and 20,000 deletes a day, 10 GiB a month of downloads.
+- **Hosting**: 10 GB stored, 360 MB of downloads a day.
+- **Authentication**: email and password plus guest (anonymous) sign-in, free up to 50,000 monthly active users.
+- **App Check**: reCAPTCHA Enterprise includes 10,000 free assessments a month. The 7 day App Check token lifetime keeps usage far below that.
+
+The app saves ticks and toggles as small field updates grouped about once a second per document, which keeps writes well inside the daily quota.
+
+If the project ever moves to the Blaze plan (for example for Cloud Functions), first create a budget alert in Google Cloud console, Billing, Budgets and alerts, with a small amount and alerts at 50, 90 and 100 percent. Budget alerts warn; they do not cap spending.
