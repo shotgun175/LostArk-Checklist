@@ -23,7 +23,7 @@ export interface GoldSummary {
   earnedGross: number;
   /** Earned gold after the chests paid so far: earned tradable + earned bound. */
   net: number;
-  /** earnedGross out of possible, rounded down; 0 when nothing is possible. */
+  /** earnedGross out of possible, rounded down and never below 0; 0 when nothing is possible. */
   percent: number;
   earned: SettledGold;
   plan: SettledGold;
@@ -37,7 +37,8 @@ export function settleChests(gold: { tradable: number, bound: number, chests: nu
 }
 
 function percentOf(part: number, whole: number): number {
-  return whole > 0 ? Math.floor(part / whole * 100) : 0;
+  // A negative Other entry (a bus cost) can push the earned gold below zero; the percentage stops at 0
+  return whole > 0 ? Math.max(0, Math.floor(part / whole * 100)) : 0;
 }
 
 /**

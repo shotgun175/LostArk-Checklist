@@ -71,6 +71,15 @@ describe('summarizeCharacterGold', () => {
     expect(summary.net).toBe(700);
   });
 
+  it('a negative Other entry larger than the gold earned keeps % earned at 0, while net shows the loss', () => {
+    const notDone = summarizeCharacterGold([{ tradable: 10000, bound: 0, chest: 0, done: false }], [0, -5000]);
+    expect(notDone.percent).toBe(0);
+    expect(notDone.net).toBe(-5000);
+    const done = summarizeCharacterGold([{ tradable: 10000, bound: 0, chest: 0, done: true }], [0, -12000]);
+    expect(done.percent).toBe(0);
+    expect(sumGoldSummaries([notDone, done]).percent).toBe(0);
+  });
+
   it('a character with only chests has nothing possible, 0% earned and a negative net', () => {
     const summary = summarizeCharacterGold([{ tradable: 0, bound: 0, chest: 2530, done: true }], []);
     expect(summary.possible).toBe(0);
