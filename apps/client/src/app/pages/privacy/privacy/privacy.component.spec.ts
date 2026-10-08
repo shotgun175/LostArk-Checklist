@@ -22,7 +22,7 @@ describe("PrivacyComponent", () => {
     expect(text).toContain("Until you delete it");
     expect(text).toContain("Download backup");
     expect(text).toContain("Delete my account and data");
-    expect(text).toContain("This site is protected by reCAPTCHA.");
+    expect(text).toContain("This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.");
     expect(text).toContain("not affiliated with or endorsed by Smilegate or Amazon Games");
   });
 
