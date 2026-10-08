@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { UntypedFormBuilder, Validators } from "@angular/forms";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
 import { filter, first, switchMap, withLatestFrom } from "rxjs/operators";
@@ -21,6 +21,7 @@ import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickD
   selector: "lostark-helper-roster",
   templateUrl: "./roster.component.html",
   styleUrls: ["./roster.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class RosterComponent {

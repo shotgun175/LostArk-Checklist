@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { BehaviorSubject, combineLatest, map, Observable, pluck, startWith } from 'rxjs';
 import { LostarkTask } from '../../../model/lostark-task';
 import { TaskFrequency } from '../../../model/task-frequency';
@@ -30,6 +30,7 @@ import { capGoldTracking } from "../../gold-planner/gold-cap";
   selector: 'lostark-helper-checklist',
   templateUrl: './checklist.component.html',
   styleUrls: ['./checklist.component.less'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class ChecklistComponent {

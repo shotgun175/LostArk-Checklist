@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { AbstractControl, UntypedFormBuilder, ValidationErrors, Validators } from "@angular/forms";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { NzModalRef } from "ng-zorro-antd/modal";
@@ -10,6 +10,7 @@ import { LostarkRegion } from "../../../model/lostark-region";
   selector: "lostark-helper-register-popup",
   templateUrl: "./register-popup.component.html",
   styleUrls: ["./register-popup.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class RegisterPopupComponent {

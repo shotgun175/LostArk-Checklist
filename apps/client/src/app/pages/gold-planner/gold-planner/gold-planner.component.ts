@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, tap } from "rxjs";
 import { goldTasks } from "../gold-tasks";
 import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS } from "../gold-task";
@@ -75,6 +75,7 @@ const SELECTED_CHARACTER_KEY = "gold-planner:selected-character";
   selector: "lostark-helper-gold-planner",
   templateUrl: "./gold-planner.component.html",
   styleUrls: ["./gold-planner.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class GoldPlannerComponent {

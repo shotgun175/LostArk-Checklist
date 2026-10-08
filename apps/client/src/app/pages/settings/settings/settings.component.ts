@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { combineLatest, map, Observable, pluck } from "rxjs";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
@@ -48,6 +48,7 @@ function readOlderRaidsOpen(): boolean {
   selector: "lostark-helper-settings",
   templateUrl: "./settings.component.html",
   styleUrls: ["./settings.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class SettingsComponent {

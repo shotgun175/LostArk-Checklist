@@ -99,34 +99,34 @@
     <form nz-form [formGroup]="form" (ngSubmit)="addCharacter(roster)">
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a character name">
-          <nz-input-group nzPrefixIcon="user">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="user"></span>
             <input type="text" nz-input formControlName="name" placeholder="Name" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input an ilvl">
-          <nz-input-group nzPrefixIcon="info">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="info"></span>
             <input nz-input formControlName="ilvl" placeholder="Item Level" type="number" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a class">
-          <nz-input-group nzAddOnBefore="Class">
-            <nz-select formControlName="class" class="class-selector" nzShowSearch>
-              @for (row of classes; track row) {
-                <nz-option
-                  [nzValue]="row.id" [nzLabel]="row.name"
-                  nzCustomContent class="class-row">
-                  <div class="class-row">
-                    <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
-                    <div>{{row.name}}</div>
-                  </div>
-                </nz-option>
-              }
-            </nz-select>
-          </nz-input-group>
+          <nz-select nzPrefix="Class" formControlName="class" class="class-selector" nzShowSearch>
+            @for (row of classes; track row) {
+              <nz-option
+                [nzValue]="row.id" [nzLabel]="row.name"
+                nzCustomContent class="class-row">
+                <div class="class-row">
+                  <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
+                  <div>{{row.name}}</div>
+                </div>
+              </nz-option>
+            }
+          </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>

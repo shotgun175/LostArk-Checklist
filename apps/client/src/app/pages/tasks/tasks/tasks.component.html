@@ -120,76 +120,74 @@
     <form nz-form [formGroup]="form" (ngSubmit)="addTask(uid)" nzLayout="inline">
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a task name">
-          <nz-input-group nzPrefixIcon="user">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="user"></span>
             <input type="text" nz-input formControlName="label" placeholder="Name" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a task frequency">
-          <nz-input-group [nzAddOnBefore]="imagePreview">
-            <ng-template #imagePreview>
-              @if (form.value.iconPath) {
-                <img src="./assets/icons/{{form.value.iconPath}}" alt=""
-                  class="task-icon preview">
-              }
-              @if (!form.value.iconPath) {
-                <span>Icon</span>
-              }
-            </ng-template>
-            <nz-select formControlName="iconPath"
-              nzAllowClear
-              class="icon-select">
-              @for (icon of icons; track icon) {
-                <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
-                  <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
-                </nz-option>
-              }
-            </nz-select>
-          </nz-input-group>
+          <ng-template #imagePreview>
+            @if (form.value.iconPath) {
+              <img src="./assets/icons/{{form.value.iconPath}}" alt=""
+                class="task-icon preview">
+            }
+            @if (!form.value.iconPath) {
+              <span>Icon</span>
+            }
+          </ng-template>
+          <nz-select [nzPrefix]="imagePreview" formControlName="iconPath"
+            nzAllowClear
+            class="icon-select">
+            @for (icon of icons; track icon) {
+              <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
+                <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
+              </nz-option>
+            }
+          </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a task frequency">
-          <nz-input-group nzAddOnBefore="Frequency">
-            <nz-select formControlName="frequency">
-              <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
-              <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
-              <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
-              <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
-            </nz-select>
-          </nz-input-group>
+          <nz-select nzPrefix="Frequency" formControlName="frequency">
+            <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
+            <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
+            <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
+            <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
+          </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a task scope">
-          <nz-input-group nzAddOnBefore="Scope">
-            <nz-select formControlName="scope">
-              <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
-              <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
-            </nz-select>
-          </nz-input-group>
+          <nz-select nzPrefix="Scope" formControlName="scope">
+            <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
+            <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
+          </nz-select>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a minimum ilvl">
-          <nz-input-group nzPrefixIcon="info">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="info"></span>
             <input type="number" nz-input formControlName="minIlvl" placeholder="Min ilvl" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a maximum ilvl">
-          <nz-input-group nzPrefixIcon="info">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="info"></span>
             <input type="number" nz-input formControlName="maxIlvl" placeholder="Max ilvl" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
         <nz-form-control nzErrorTip="Please input a repetition count">
-          <nz-input-group nzPrefixIcon="number">
+          <nz-input-wrapper>
+            <span nz-icon nzInputPrefix nzType="number"></span>
             <input type="number" nz-input formControlName="amount" placeholder="Repetitions" />
-          </nz-input-group>
+          </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <button nz-button [nzType]="'primary'" [disabled]="form.invalid">Add</button>
