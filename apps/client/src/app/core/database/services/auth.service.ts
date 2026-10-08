@@ -6,6 +6,7 @@ import { FIREBASE_AUTH } from "../../firebase/firebase.providers";
 import { authState$ } from "../../firebase/rx";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { authErrorMessage, passwordResetMessage } from "../../firebase/auth-errors";
+import { FirestoreStorage } from "../firestore-storage";
 
 @Injectable({
   providedIn: "root"
@@ -50,6 +51,8 @@ export class AuthService {
   }
 
   public login(email: string, password: string): Observable<void> {
+    // Send queued field changes while the user who made them is still signed in.
+    FirestoreStorage.flushPending();
     return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
       catchError((err) => {
         this.message.error(authErrorMessage(err));
@@ -61,6 +64,8 @@ export class AuthService {
 
 
   disconnect(): void {
+    // Send queued field changes while the user who made them is still signed in.
+    FirestoreStorage.flushPending();
     signOut(this.auth);
   }
 
