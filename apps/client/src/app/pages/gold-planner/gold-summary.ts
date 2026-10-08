@@ -117,14 +117,14 @@ export function getGoldBar(summary: GoldSummary): GoldBarSegment[] {
   return amounts.map(([kind, amount]) => ({ kind, width: total > 0 ? amount / total * 100 : 0 }));
 }
 
-/** Short gold for the character list: 69360 as 69.4k, 152000 as 152k, small numbers as they are. */
+/** Short gold for the character list: 1360 as 1.4k, 69360 as 69k, 152000 as 152k, small numbers as they are (whole k from 10k up so a line fits the list). */
 export function formatCompactGold(amount: number): string {
   const sign = amount < 0 ? '-' : '';
   const value = Math.abs(amount);
   if (value < 1000) {
     return `${sign}${Math.round(value)}`;
   }
-  const thousands = (value / 1000).toFixed(value >= 100000 ? 0 : 1).replace(/\.0$/, '');
+  const thousands = (value / 1000).toFixed(value >= 10000 ? 0 : 1).replace(/\.0$/, '');
   return `${sign}${thousands}k`;
 }
 
