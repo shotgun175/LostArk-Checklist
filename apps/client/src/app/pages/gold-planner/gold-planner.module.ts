@@ -8,11 +8,10 @@ import { FormsModule } from "@angular/forms";
 import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
 import { IconsProviderModule } from "../../icons-provider.module";
-import { NzToolTipModule } from "ng-zorro-antd/tooltip";
+import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzButtonModule } from "ng-zorro-antd/button";
-import { NzMessageModule } from "ng-zorro-antd/message";
 
 const routes: Routes = [{
   path: "",
@@ -30,11 +29,10 @@ const routes: Routes = [{
     NzPageHeaderModule,
     NzCheckboxModule,
     IconsProviderModule,
-    NzToolTipModule,
+    NzTooltipModule,
     NzInputModule,
     NzInputNumberLegacyModule,
-    NzButtonModule,
-    NzMessageModule
+    NzButtonModule
   ]
 })
 export class GoldPlannerModule {

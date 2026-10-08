@@ -12,9 +12,8 @@ import { NzInputModule } from "ng-zorro-antd/input";
 import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzSelectModule } from "ng-zorro-antd/select";
 import { NzFormModule } from "ng-zorro-antd/form";
-import { NzMessageModule } from "ng-zorro-antd/message";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
-import { NzToolTipModule } from "ng-zorro-antd/tooltip";
+import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { IconsProviderModule } from "../../icons-provider.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { TextQuestionPopupModule } from "../../components/text-question-popup/text-question-popup.module";
@@ -43,9 +42,8 @@ const routes: Routes = [{
     NzSelectModule,
     ReactiveFormsModule,
     NzFormModule,
-    NzMessageModule,
     NzPopconfirmModule,
-    NzToolTipModule,
+    NzTooltipModule,
     IconsProviderModule,
     NzModalModule,
     DragDropModule

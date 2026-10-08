@@ -1,6 +1,5 @@
 import { TestBed } from "@angular/core/testing";
 import { EnergyService } from "./energy.service";
-import { NzMessageModule } from "ng-zorro-antd/message";
 import { TimeService } from "../../time.service";
 import { NEVER, of } from "rxjs";
 import { TasksService } from "./tasks.service";
@@ -29,9 +28,6 @@ describe("EnergyService", () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [
-        NzMessageModule
-      ],
       providers: [
         { provide: FIRESTORE, useValue: {} },
         { provide: AuthService, useValue: { uid$: NEVER } },
