@@ -27,7 +27,6 @@ import {
   isTaskInIlvlRange,
   isTaskTracked
 } from "../../../core/task-tracking";
-import { deleteField } from "firebase/firestore";
 
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
@@ -172,8 +171,8 @@ export class SettingsComponent {
               private dataTransfer: DataTransferService, private message: NzMessageService) {
   }
 
-  saveSettings(settings: Settings): void {
-    this.settings.save(settings);
+  saveSetting(settings: Settings, field: "crystallineAura" | "hiddenOnCompletion"): void {
+    this.settings.patchFields(settings.$key, [{ path: [field], value: settings[field] }]);
   }
 
   trackByTask(index: number, row: { task: LostarkTask }): string | undefined {
@@ -181,29 +180,24 @@ export class SettingsComponent {
   }
 
   setLazyFlag(settingsKey: string, tracking: Record<string, boolean>, task: LostarkTask, character: Character, flag: boolean): void {
-    tracking[`${character.name}:${task.$key}`] = flag;
-    this.settings.patch({
-      $key: settingsKey,
-      lazytracking: tracking
-    });
+    const flagName = `${character.name}:${task.$key}`;
+    tracking[flagName] = flag;
+    this.settings.patchFields(settingsKey, [{ path: ["lazytracking", flagName], value: flag }]);
   }
 
   setRestBonus(energy: Energy, task: LostarkTask, character: Character, value: number): void {
-    this.energyService.updateOne(energy.$key, {
-      [`data.${getCompletionEntryKey(character, task)}`]: { amount: Math.max(Math.min(task.label === 'Chaos Dungeon' ? 200 : 100, value), 0) }
-    });
+    this.energyService.patchFields(energy.$key, [{
+      path: ["data", getCompletionEntryKey(character, task)],
+      value: { amount: Math.max(Math.min(task.label === 'Chaos Dungeon' ? 200 : 100, value), 0) }
+    }]);
   }
 
   setTrackedTask(roster: Roster, task: LostarkTask, character: Character, value: boolean): void {
-    this.rosterService.updateOne(roster.$key, {
-      [`trackedTasks.${getCompletionEntryKey(character, task)}`]: value
-    });
+    this.rosterService.patchFields(roster.$key, [{ path: ["trackedTasks", getCompletionEntryKey(character, task)], value }]);
   }
 
   resetTrackedTask(roster: Roster, task: LostarkTask, character: Character): void {
-    this.rosterService.updateOne(roster.$key, {
-      [`trackedTasks.${getCompletionEntryKey(character, task)}`]: deleteField()
-    });
+    this.rosterService.patchFields(roster.$key, [{ path: ["trackedTasks", getCompletionEntryKey(character, task)], delete: true }]);
   }
 
   resetAllTracking(roster: Roster): void {
@@ -219,9 +213,7 @@ export class SettingsComponent {
     if (keys.length === 0) {
       return;
     }
-    this.rosterService.updateOne(roster.$key, Object.fromEntries(
-      keys.map(key => [`trackedTasks.${key}`, deleteField()])
-    ));
+    this.rosterService.patchFields(roster.$key, keys.map(key => ({ path: ["trackedTasks", key], delete: true as const })));
   }
 
   /**
@@ -237,9 +229,7 @@ export class SettingsComponent {
     if (keys.length === 0) {
       return;
     }
-    this.rosterService.updateOne(roster.$key, Object.fromEntries(
-      keys.map(key => [`trackedTasks.${key}`, value])
-    ));
+    this.rosterService.patchFields(roster.$key, keys.map(key => ({ path: ["trackedTasks", key], value })));
   }
 
   toggleOlderRaids(): void {

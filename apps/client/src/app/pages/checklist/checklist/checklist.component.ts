@@ -5,7 +5,7 @@ import { TaskFrequency } from '../../../model/task-frequency';
 import { TaskScope } from '../../../model/task-scope';
 import { Completion } from '../../../model/completion';
 import { Energy } from '../../../model/energy';
-import { getCompletionEntry, getCompletionEntryKey, setCompletionEntry } from '../../../core/get-completion-entry-key';
+import { completionEntryFieldWrites, getCompletionEntry, getCompletionEntryKey, setCompletionEntry } from '../../../core/get-completion-entry-key';
 import { RosterService } from '../../../core/database/services/roster.service';
 import { SettingsService } from '../../../core/database/services/settings.service';
 import { EnergyService } from '../../../core/database/services/energy.service';
@@ -319,16 +319,12 @@ export class ChecklistComponent {
         if (task.label === 'Chaos Dungeon') {
           if (energyEntry.amount >= 40) {
             energyEntry.amount = energyEntry.amount - 40; // Since Chaos Dungeon rework, max Chaos Dungeon per day is 1 and it consumes 40 energy if you have energy
-            this.energyService.updateOne(energy.$key, {
-              [`data.${getCompletionEntryKey(character, task)}`]: energyEntry
-            });
+            this.energyService.patchFields(energy.$key, [{ path: ["data", getCompletionEntryKey(character, task)], value: energyEntry }]);
           }
         } else {
           if (energyEntry.amount >= 20) {
             energyEntry.amount = Math.max(energyEntry.amount - (20 * (setAllDone ? task.amount : 1)), 0);
-            this.energyService.updateOne(energy.$key, {
-              [`data.${getCompletionEntryKey(character, task)}`]: energyEntry
-            });
+            this.energyService.patchFields(energy.$key, [{ path: ["data", getCompletionEntryKey(character, task)], value: energyEntry }]);
           }
         }
       }
@@ -338,7 +334,7 @@ export class ChecklistComponent {
         updated: Date.now()
       };
     }
-    this.completionService.setOne(completion.$key, completion);
+    this.completionService.patchFields(completion.$key, completionEntryFieldWrites("data", completion.data, character, task));
   }
 
   trackByEntry(index: number, entry: { task: LostarkTask, completion: number[] }): string | undefined {

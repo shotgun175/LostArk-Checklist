@@ -2,6 +2,7 @@ import { of } from "rxjs";
 import { Firestore } from "firebase/firestore";
 import { AuthService } from "../database/services/auth.service";
 import { CompletionService } from "../database/services/completion.service";
+import { FirestoreStorage } from "../database/firestore-storage";
 import { DataTransferService } from "./data-transfer.service";
 import { LostarkExport } from "./lostark-export";
 
@@ -61,6 +62,14 @@ describe("DataTransferService", () => {
     commit.mockResolvedValue(undefined);
     await service.importExport(file());
     expect(setLocal).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes queued field changes before the import batch, so the import lands on top of them", async () => {
+    const flush = jest.spyOn(FirestoreStorage, "flushPending").mockImplementation(() => undefined);
+    commit.mockImplementation(async () => expect(flush).toHaveBeenCalledTimes(1));
+    await service.importExport(file());
+    expect(commit).toHaveBeenCalledTimes(1);
+    flush.mockRestore();
   });
 
   it("backs up an account with no roster or settings document as a restorable file", async () => {

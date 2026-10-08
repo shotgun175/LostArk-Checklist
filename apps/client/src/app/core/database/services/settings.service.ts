@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
-import { Firestore, UpdateData } from "firebase/firestore";
+import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { Settings } from "../../../model/settings";
 import { mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
@@ -63,15 +63,6 @@ export class SettingsService extends FirestoreStorage<Settings> {
 
   constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
     super(firestore);
-  }
-
-
-  public save(settings: Settings): void {
-    this.setOne(settings.$key, settings);
-  }
-
-  public patch(settings: UpdateData<Settings> & { $key: string }): void {
-    this.updateOne(settings.$key, settings);
   }
 
   public getRunningModeFlag(raidModesForGoldPlanner: Record<string, string>, characterName: string, gateNames: string[]): string {
