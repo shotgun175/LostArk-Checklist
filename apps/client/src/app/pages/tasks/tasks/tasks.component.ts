@@ -14,11 +14,8 @@ import { AuthService } from "../../../core/database/services/auth.service";
 import { distinctUntilChanged, map, merge, Subject, tap } from "rxjs";
 import { customTasksExport, ilvlRangeValidator, nextTaskIndex, parseTasksImport } from "../task-input";
 import { importErrorMessage } from "../../../core/import-errors";
+import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
-/** The part of NgModel the table inputs use to show the saved value again after a rejected edit. */
-interface ResettableModel {
-  reset(value?: unknown): void;
-}
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
 
@@ -230,21 +227,21 @@ export class TasksComponent {
    * Saves a name, repetitions or item level edited in the table. A blank name, a blank number or a
    * number below the minimum is not saved: the saved value shows again.
    */
-  saveTaskField(task: LostarkTask, field: "label" | "amount" | "minIlvl" | "maxIlvl", value: unknown, model: ResettableModel): void {
+  saveTaskField(task: LostarkTask, field: "label" | "amount" | "minIlvl" | "maxIlvl", value: unknown, model: SavedValueModel): void {
     if (field === "label") {
       const label = typeof value === "string" ? value.trim() : "";
       if (!label) {
-        model.reset(task.label);
+        showSavedValue(model, task.label);
         return;
       }
       if (label !== value) {
-        model.reset(label);
+        showSavedValue(model, label);
       }
       task.label = label;
     } else {
       const min = field === "amount" ? 1 : 0;
       if (typeof value !== "number" || !Number.isFinite(value) || value < min) {
-        model.reset(task[field]);
+        showSavedValue(model, task[field]);
         return;
       }
       task[field] = value;

@@ -115,11 +115,11 @@ describe('TasksComponent', () => {
 
   it('reverts a blank name or blank minimum item level in the table instead of saving it', () => {
     const row = tasks$.value[0];
-    const model = { reset: jest.fn() };
+    const model = { control: { setValue: jest.fn() } };
     component.saveTaskField(row, 'label', '  ', model);
     component.saveTaskField(row, 'minIlvl', null, model);
-    expect(model.reset).toHaveBeenNthCalledWith(1, 'Guild Chores');
-    expect(model.reset).toHaveBeenNthCalledWith(2, 1600);
+    expect(model.control.setValue).toHaveBeenNthCalledWith(1, 'Guild Chores', { emitViewToModelChange: false });
+    expect(model.control.setValue).toHaveBeenNthCalledWith(2, 1600, { emitViewToModelChange: false });
     expect(tasksService.updateTask).not.toHaveBeenCalled();
     component.saveTaskField(row, 'label', ' Guild Duties ', model);
     expect(tasksService.updateTask).toHaveBeenCalledWith(expect.objectContaining({ label: 'Guild Duties' }));

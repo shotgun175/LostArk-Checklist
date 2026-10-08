@@ -20,11 +20,8 @@ import { characterNameError, cleanCharacterName, MAX_CHARACTER_ILVL, MAX_CHARACT
 import { SettingsService } from "../../../core/database/services/settings.service";
 import { characterKeyMigrationWrites } from "../../../core/character-keys";
 import { importErrorMessage } from "../../../core/import-errors";
+import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
-/** The part of NgModel the inputs use to show a value again after a rejected edit. */
-interface ResettableModel {
-  reset(value?: unknown): void;
-}
 
 @Component({
   selector: "lostark-helper-roster",
@@ -111,16 +108,16 @@ export class RosterComponent {
     });
   }
 
-  public saveCharacterName(character: Character, roster: Roster, newName: string, nameModel: ResettableModel): void {
+  public saveCharacterName(character: Character, roster: Roster, newName: string, nameModel: SavedValueModel): void {
     const name = cleanCharacterName(newName);
     if (name === character.name) {
       // Only spaces or invisible characters were added: show the saved name again
-      nameModel.reset(character.name);
+      showSavedValue(nameModel, character.name);
       return;
     }
     const nameError = characterNameError(name, roster.characters, character.id);
     if (nameError) {
-      nameModel.reset(character.name);
+      showSavedValue(nameModel, character.name);
       this.message.error(nameError);
       return;
     }
@@ -160,9 +157,9 @@ export class RosterComponent {
     this.saveCharacter({ ...character, name }, roster);
   }
 
-  public saveIlvl(character: Character, roster: Roster, value: number | null, ilvlModel: ResettableModel): void {
+  public saveIlvl(character: Character, roster: Roster, value: number | null, ilvlModel: SavedValueModel): void {
     if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > MAX_CHARACTER_ILVL) {
-      ilvlModel.reset(character.ilvl);
+      showSavedValue(ilvlModel, character.ilvl);
       return;
     }
     character.ilvl = value;

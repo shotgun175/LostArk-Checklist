@@ -128,9 +128,9 @@ describe('RosterComponent', () => {
 
     it('reverts an emptied item level instead of saving it', () => {
       const r = roster([character(1, 'Arwen')]);
-      const model = { reset: jest.fn() };
+      const model = { control: { setValue: jest.fn() } };
       component.saveIlvl(r.characters[0], r, null, model);
-      expect(model.reset).toHaveBeenCalledWith(1700);
+      expect(model.control.setValue).toHaveBeenCalledWith(1700, { emitViewToModelChange: false });
       expect(rosterService.updateOne).not.toHaveBeenCalled();
     });
   });
@@ -138,11 +138,11 @@ describe('RosterComponent', () => {
   describe('renaming a character', () => {
     it('rejects a blank or duplicate name, restores the old one and shows a message', () => {
       const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
-      const model = { reset: jest.fn() };
+      const model = { control: { setValue: jest.fn() } };
       component.saveCharacterName(r.characters[0], r, '  ​ ', model);
       component.saveCharacterName(r.characters[0], r, 'BRAKKA', model);
-      expect(model.reset).toHaveBeenCalledTimes(2);
-      expect(model.reset).toHaveBeenCalledWith('Arwen');
+      expect(model.control.setValue).toHaveBeenCalledTimes(2);
+      expect(model.control.setValue).toHaveBeenCalledWith('Arwen', { emitViewToModelChange: false });
       expect(message.error).toHaveBeenCalledTimes(2);
       expect(rosterService.updateOne).not.toHaveBeenCalled();
     });
@@ -151,7 +151,7 @@ describe('RosterComponent', () => {
       completion.data = { 'Arwen:t1': { amount: 1 }, 'Arwenna:t1': { amount: 2 } };
       energy.data = { 'Arwen:t1': { amount: 40 }, 'Arwenna:t1': { amount: 60 } };
       const r = roster([character(1, 'Arwen'), character(2, 'Arwenna')]);
-      component.saveCharacterName(r.characters[0], r, 'Elkie', { reset: jest.fn() });
+      component.saveCharacterName(r.characters[0], r, 'Elkie', { control: { setValue: jest.fn() } });
       expect(completion.data).toEqual({ '1:t1': { amount: 1 }, 'Arwenna:t1': { amount: 2 } });
       expect(energy.data).toEqual({ '1:t1': { amount: 40 }, 'Arwenna:t1': { amount: 60 } });
       expect(rosterService.updateOne.mock.calls[0][1].characters[0].name).toBe('Elkie');
