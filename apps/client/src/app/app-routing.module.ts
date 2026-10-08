@@ -10,7 +10,8 @@ const routes: Routes = [
     path: "gold-planner",
     loadChildren: () => import("./pages/gold-planner/gold-planner.module").then(m => m.GoldPlannerModule)
   },
-  { path: "settings", loadChildren: () => import("./pages/settings/settings.module").then(m => m.SettingsModule) }
+  { path: "settings", loadChildren: () => import("./pages/settings/settings.module").then(m => m.SettingsModule) },
+  { path: "privacy", loadChildren: () => import("./pages/privacy/privacy.module").then(m => m.PrivacyModule) }
 ];
 
 @NgModule({
