@@ -2,10 +2,10 @@ import { InjectionToken, NgZone, Provider } from "@angular/core";
 import { FirebaseApp, FirebaseOptions, initializeApp } from "firebase/app";
 import { Auth, connectAuthEmulator, getAuth, useDeviceLanguage } from "firebase/auth";
 import { connectFirestoreEmulator, Firestore, getFirestore } from "firebase/firestore";
+import { AppCheckEnvironment, initAppCheck } from "./app-check";
 
-export interface FirebaseEnvironment {
+export interface FirebaseEnvironment extends AppCheckEnvironment {
   firebase: FirebaseOptions;
-  useEmulators: boolean;
 }
 
 export const FIREBASE_APP = new InjectionToken<FirebaseApp>("FIREBASE_APP");
@@ -22,7 +22,12 @@ export function provideFirebase(environment: FirebaseEnvironment): Provider[] {
     {
       provide: FIREBASE_APP,
       deps: [NgZone],
-      useFactory: (zone: NgZone): FirebaseApp => zone.runOutsideAngular(() => initializeApp(environment.firebase))
+      useFactory: (zone: NgZone): FirebaseApp => zone.runOutsideAngular(() => {
+        const app = initializeApp(environment.firebase);
+        // Before Auth and Firestore: their factories inject FIREBASE_APP, so this always runs first.
+        initAppCheck(app, environment);
+        return app;
+      })
     },
     {
       provide: FIREBASE_AUTH,

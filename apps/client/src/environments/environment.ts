@@ -5,6 +5,8 @@
 export const environment = {
   verboseOperations: false,
   useEmulators: false,
+  recaptchaEnterpriseKey: '6Lf1N-UtAAAAAMw5kjJJ3KAscnDlkxUycxCi5-Fg',
+  appCheckDebug: true,
   firebase: {
     projectId: 'loa-checklist',
     appId: '1:840196169331:web:fa4f4dc69b8cd95d5f9406',

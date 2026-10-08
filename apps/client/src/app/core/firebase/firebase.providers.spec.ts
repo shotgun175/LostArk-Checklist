@@ -1,5 +1,6 @@
 import { NgZone } from "@angular/core";
 import { TestBed } from "@angular/core/testing";
+import { initAppCheck } from "./app-check";
 import { FIREBASE_APP, FIREBASE_AUTH, FIRESTORE, provideFirebase } from "./firebase.providers";
 
 const mockApp = { name: "[DEFAULT]" };
@@ -25,8 +26,10 @@ jest.mock("firebase/firestore", () => ({
   getFirestore: (...args: unknown[]) => mockGetFirestore(...args),
   connectFirestoreEmulator: (...args: unknown[]) => mockConnectFirestoreEmulator(...args)
 }));
+jest.mock("./app-check", () => ({ initAppCheck: jest.fn() }));
 
 const options = { projectId: "demo-test", apiKey: "key", appId: "app" };
+const appCheck = { recaptchaEnterpriseKey: "site-key", appCheckDebug: false };
 
 describe("provideFirebase", () => {
   beforeEach(() => {
@@ -36,10 +39,11 @@ describe("provideFirebase", () => {
     mockUseDeviceLanguage.mockReset();
     mockConnectAuthEmulator.mockReset();
     mockConnectFirestoreEmulator.mockReset();
+    jest.mocked(initAppCheck).mockReset();
   });
 
   it("creates Auth and Firestore from one app, with the device language and no emulators", () => {
-    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false }) });
+    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false, ...appCheck }) });
     expect(TestBed.inject(FIREBASE_AUTH)).toBe(mockAuth);
     expect(TestBed.inject(FIRESTORE)).toBe(mockFirestore);
     expect(TestBed.inject(FIREBASE_APP)).toBe(mockApp);
@@ -53,14 +57,14 @@ describe("provideFirebase", () => {
   });
 
   it("connects both emulators on the firebase.json ports when useEmulators is on", () => {
-    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: true }) });
+    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: true, ...appCheck }) });
     TestBed.inject(FIREBASE_AUTH);
     TestBed.inject(FIRESTORE);
     expect(mockConnectAuthEmulator).toHaveBeenCalledWith(mockAuth, "http://localhost:9099");
     expect(mockConnectFirestoreEmulator).toHaveBeenCalledWith(mockFirestore, "localhost", 8085);
   });
 
-  it("creates the app, Auth and Firestore outside the Angular zone, as AngularFire did", () => {
+  it("creates the app, App Check, Auth and Firestore outside the Angular zone, as AngularFire did", () => {
     const inAngularZone: boolean[] = [];
     const record = (result: unknown) => () => {
       inAngularZone.push(NgZone.isInAngularZone());
@@ -69,11 +73,21 @@ describe("provideFirebase", () => {
     mockInitializeApp.mockImplementation(record(mockApp));
     mockGetAuth.mockImplementation(record(mockAuth));
     mockGetFirestore.mockImplementation(record(mockFirestore));
-    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false }) });
+    jest.mocked(initAppCheck).mockImplementation(record(null));
+    TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false, ...appCheck }) });
     TestBed.inject(NgZone).run(() => {
       TestBed.inject(FIREBASE_AUTH);
       TestBed.inject(FIRESTORE);
     });
-    expect(inAngularZone).toEqual([false, false, false]);
+    expect(inAngularZone).toEqual([false, false, false, false]);
+  });
+
+  it("starts App Check on the new app before Auth is created", () => {
+    const environment = { firebase: options, useEmulators: false, ...appCheck };
+    TestBed.configureTestingModule({ providers: provideFirebase(environment) });
+    TestBed.inject(FIREBASE_AUTH);
+    expect(initAppCheck).toHaveBeenCalledTimes(1);
+    expect(initAppCheck).toHaveBeenCalledWith(mockApp, environment);
+    expect(jest.mocked(initAppCheck).mock.invocationCallOrder[0]).toBeLessThan(mockGetAuth.mock.invocationCallOrder[0]);
   });
 });

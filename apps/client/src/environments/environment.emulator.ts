@@ -3,6 +3,8 @@
 export const environment = {
   verboseOperations: false,
   useEmulators: true,
+  recaptchaEnterpriseKey: '',
+  appCheckDebug: false,
   firebase: {
     projectId: 'demo-loa-checklist',
     appId: '1:000000000000:web:0000000000000000000000',
