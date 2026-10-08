@@ -225,17 +225,21 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
       })
     );
 
+    const deletedTaskKeys = new Set<string>();
+
     combineLatest(
       [
         duplicates$,
         oldTasksCleanup$
       ]
     ).pipe(
-      map(([duplicates, cleanup]) => [...duplicates, ...cleanup]),
+      // Each task is deleted once: the list can emit again before the first delete lands, and the rules refuse to delete a missing task
+      map(([duplicates, cleanup]) => [...duplicates, ...cleanup].filter(task => !deletedTaskKeys.has(task.$key))),
       filter(toDelete => toDelete.length > 0),
       switchMap(toDelete => {
         const batch = this.batch();
         toDelete.forEach((task) => {
+          deletedTaskKeys.add(task.$key);
           batch.delete(this.docRef(task.$key));
         });
         return from(batch.commit()).pipe(

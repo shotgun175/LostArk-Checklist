@@ -31,7 +31,6 @@ export const tasks = [
   createTask("Affinity Emote", 302, TaskFrequency.DAILY, TaskScope.ROSTER, 6, 9999, "rapport.webp"),
 
   // Weekly Character
-  createTask(`Weekly Mission`, 302, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 3, 9999, "weekly.webp"),
   createTask(`Paradise`, 1580, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 5, 9999, "weekly.webp"),
   createTask(`Haal's Hourglass`, 1730, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 9999, "weekly.webp"),
   createTask(`Demon Beast Canyon`, 340, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 1, 840, "abyssal-dungeon.webp", {
@@ -229,8 +228,10 @@ export const renamedTaskLabels: Record<string, string> = {
   "Howl's Hourglass": "Haal's Hourglass"
 };
 
+// Built-in tasks that no longer exist in the game: removed from the default list and deleted from every account on load.
 export const oldTaskNames = [
   "South Vern Dungeon",
   "Challenge Guardian",
-  "Challenge Abyssal Dungeon"
+  "Challenge Abyssal Dungeon",
+  "Weekly Mission"
 ]

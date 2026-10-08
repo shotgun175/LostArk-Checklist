@@ -57,6 +57,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - A character with **Taking Gold** on more than 3 raids gets the lowest-paying extras unticked the next time you open the Gold Planner, with a message naming them. Characters with 3 or fewer are not touched.
 - **Kalthertz Slaves** and **Una's Task** are still tasks (new accounts get them too, and an account missing one gets it back), but they are off by default for every character, so they no longer show on the checklist. To track one, switch it on per character in Settings, Task tracking (or use the **&#8942;** menu on its row for every character). Cells you already switched on or off keep your choice.
 - **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
+- **Weekly Mission** is gone. It no longer exists in the game, so it is removed from the built-in list and from existing accounts the next time the site loads.
 
 ## Signing in and syncing
 

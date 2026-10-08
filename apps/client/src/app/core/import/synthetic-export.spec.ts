@@ -16,16 +16,16 @@ describe("synthetic lostark-helper export", () => {
     expect(Object.keys(validation.data?.settings || {})).not.toContain("marketRegion");
   });
 
-  it("replaces 51 freshly created default tasks within one batch", () => {
-    const freshIds = Array.from({ length: 51 }, (_, i) => `fresh${i}`);
+  it("replaces 50 freshly created default tasks within one batch", () => {
+    const freshIds = Array.from({ length: 50 }, (_, i) => `fresh${i}`);
     if (!validation.data) {
       throw new Error("fixture did not validate");
     }
     let next = 0;
     const { writes } = planImportWrites("me", freshIds, validation.data, () => `new${++next}`);
-    expect(writes.filter(w => w.op === "delete")).toHaveLength(51);
+    expect(writes.filter(w => w.op === "delete")).toHaveLength(50);
     expect(writes.filter(w => w.op === "set" && w.collection === "tasks")).toHaveLength(53);
-    expect(writes).toHaveLength(108);
+    expect(writes).toHaveLength(107);
     expect(writes.length).toBeLessThanOrEqual(FIRESTORE_BATCH_LIMIT);
     const written = JSON.stringify(writes);
     validation.data.tasks.forEach(task => expect(written).not.toContain(task.$key));
