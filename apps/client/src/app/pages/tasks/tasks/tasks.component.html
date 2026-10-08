@@ -19,6 +19,7 @@
       nzSize="middle">
       <thead>
         <tr>
+          <th nzWidth="36px"></th>
           <th>Name</th>
           <th>Icon</th>
           <th>Frequency</th>
@@ -36,6 +37,10 @@
         [cdkDropListData]="tasks">
         @for (task of tasksTable.data; track trackByTask($index, task)) {
           <tr cdkDrag [cdkDragData]="task">
+            <td class="drag-cell">
+              <span class="drag-handle" cdkDragHandle nz-icon nzType="holder" nzTheme="outline"
+                aria-label="Drag to reorder" nz-tooltip nzTooltipTitle="Drag to reorder"></span>
+            </td>
             <td>
               <input type="text" [(ngModel)]="task.label" (ngModelChange)="updateTask(task)" [disabled]="!task.custom"
                 nz-input>
