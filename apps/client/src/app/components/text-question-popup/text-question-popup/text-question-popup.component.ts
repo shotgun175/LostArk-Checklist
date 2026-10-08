@@ -1,6 +1,12 @@
-import { Component, Input, OnInit } from "@angular/core";
-import { NzModalRef } from "ng-zorro-antd/modal";
+import { Component, inject, OnInit } from "@angular/core";
+import { NZ_MODAL_DATA, NzModalRef } from "ng-zorro-antd/modal";
 import { UntypedFormControl, Validators } from "@angular/forms";
+
+export interface TextQuestionPopupData {
+  baseText?: string;
+  placeholder?: string;
+  type?: "textarea" | "input";
+}
 
 @Component({
   selector: "lostark-helper-text-question-popup",
@@ -9,14 +15,13 @@ import { UntypedFormControl, Validators } from "@angular/forms";
 })
 export class TextQuestionPopupComponent implements OnInit {
 
-  @Input()
-  baseText = "";
+  private readonly data: TextQuestionPopupData = inject(NZ_MODAL_DATA) ?? {};
 
-  @Input()
-  placeholder = "";
+  baseText = this.data.baseText ?? "";
 
-  @Input()
-  type: "textarea" | "input" = "textarea";
+  placeholder = this.data.placeholder ?? "";
+
+  type: "textarea" | "input" = this.data.type ?? "textarea";
 
   public control!: UntypedFormControl;
 

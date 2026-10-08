@@ -142,7 +142,7 @@ export class RosterComponent {
     this.modal.create({
       nzTitle: "Import roster",
       nzContent: TextQuestionPopupComponent,
-      nzComponentParams: {
+      nzData: {
         placeholder: "Paste your exported roster here"
       },
       nzFooter: null

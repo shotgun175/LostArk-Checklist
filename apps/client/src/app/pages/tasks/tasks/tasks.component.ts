@@ -161,7 +161,7 @@ export class TasksComponent {
     this.modal.create({
       nzTitle: "Import tasks",
       nzContent: TextQuestionPopupComponent,
-      nzComponentParams: {
+      nzData: {
         placeholder: "Paste your exported tasks here"
       },
       nzFooter: null
