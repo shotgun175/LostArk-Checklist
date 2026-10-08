@@ -16,6 +16,8 @@ import { provideFirebase } from "./core/firebase/firebase.providers";
 import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
+import { NzAlertModule } from "ng-zorro-antd/alert";
+import { NzButtonModule } from "ng-zorro-antd/button";
 import { provideNzDateFnsAdapter } from 'ng-zorro-antd/core/time';
 
 
@@ -32,7 +34,9 @@ registerLocaleData(en);
     NzMenuModule,
     NzDropdownModule,
     AuthPopupsModule,
-    NzModalModule
+    NzModalModule,
+    NzAlertModule,
+    NzButtonModule
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },
