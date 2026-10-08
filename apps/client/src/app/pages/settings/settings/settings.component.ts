@@ -29,6 +29,7 @@ import {
 } from "../../../core/task-tracking";
 import { AccountDeletionService } from "../../../core/account/account-deletion.service";
 import { authErrorMessage } from "../../../core/firebase/auth-errors";
+import { characterFlagKey, readCharacterFlag } from "../../../core/character-keys";
 
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
@@ -44,7 +45,6 @@ function readOlderRaidsOpen(): boolean {
     return false;
   }
 }
-
 @Component({
   selector: "lostark-helper-settings",
   templateUrl: "./settings.component.html",
@@ -86,7 +86,7 @@ export class SettingsComponent {
             task,
             flags: roster
               .map(character => {
-                const flag = tracking[`${character.name}:${task.$key}`];
+                const flag = readCharacterFlag(tracking, character, task.$key);
                 return flag === undefined ? true : flag;
               })
           };
@@ -188,7 +188,7 @@ export class SettingsComponent {
   }
 
   setLazyFlag(settingsKey: string, tracking: Record<string, boolean>, task: LostarkTask, character: Character, flag: boolean): void {
-    const flagName = `${character.name}:${task.$key}`;
+    const flagName = characterFlagKey(character, task.$key);
     tracking[flagName] = flag;
     this.settings.patchFields(settingsKey, [{ path: ["lazytracking", flagName], value: flag }]);
   }

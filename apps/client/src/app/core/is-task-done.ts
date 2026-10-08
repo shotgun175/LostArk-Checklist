@@ -5,10 +5,11 @@ import { subDays, subHours } from 'date-fns';
 import { getCompletionEntry } from './get-completion-entry-key';
 import { TaskFrequency } from '../model/task-frequency';
 import { TaskScope } from '../model/task-scope';
+import { readCharacterFlag } from './character-keys';
 
 export function isTaskDone(task: LostarkTask, character: Character, completion: Completion, dailyReset: number, weeklyReset: number, biWeeklyReset: number, theamineReset: number, lazyTracking: Record<string, boolean>): number {
   if (character.lazy && task.scope !== TaskScope.ROSTER) {
-    const lazyTrackingFlag = lazyTracking && lazyTracking[`${character.name}:${task.$key}`];
+    const lazyTrackingFlag = readCharacterFlag(lazyTracking, character, task.$key);
     if (lazyTrackingFlag === undefined || lazyTrackingFlag) {
       dailyReset = subDays(new Date(dailyReset), 2).getTime();
     }
