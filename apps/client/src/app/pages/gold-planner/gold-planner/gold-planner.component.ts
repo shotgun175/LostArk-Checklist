@@ -638,7 +638,7 @@ export class GoldPlannerComponent {
       return 0;
     }
     return Math.floor(value);
-  };
+  }
 
   constructor(private rosterService: RosterService,
     private tasksService: TasksService,

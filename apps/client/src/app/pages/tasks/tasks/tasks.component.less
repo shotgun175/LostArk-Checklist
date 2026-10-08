@@ -22,3 +22,9 @@ nz-card {
 .icon-select {
   min-width: 100px;
 }
+
+// ng-zorro 17 shows a "picked / max" count in multiple selects that set nzMaxMultipleCount,
+// with no option to turn it off; it overlapped the Delete button, so the Days select hides it
+:host ::ng-deep .td-select-box.ant-select-multiple nz-select-arrow {
+  display: none;
+}
