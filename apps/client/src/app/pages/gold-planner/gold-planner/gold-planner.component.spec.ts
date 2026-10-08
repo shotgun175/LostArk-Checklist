@@ -96,3 +96,74 @@ describe('GoldPlannerComponent gold cap', () => {
     expect(info).not.toHaveBeenCalled();
   });
 });
+
+describe('GoldPlannerComponent gold this week', () => {
+  // Kazeros on Hard: gate 1 pays 16,000 tradable (chest 5,120), gate 2 pays 32,000 tradable (chest 10,240), no bound gold
+  const kazerosHard: Record<string, boolean> = {
+    'Valtist:gold:taking:Kazeros Gate 1': true,
+    'Valtist:gold:taking:Kazeros Gate 2': true,
+    'Valtist:gold:Kazeros Gate 1': true,
+    'Valtist:gold:Kazeros Gate 2': true
+  };
+
+  // The display for Kazeros Hard with gate 1 ticked done on the Checklist this week (weekly reset at 0)
+  const displayFor = (hideAlreadyDoneTasks: boolean) => {
+    let display: unknown;
+    const component = new GoldPlannerComponent(
+      { roster$: of({ $key: 'roster-key', characters: [character], trackedTasks: allRaidsTracked }) } as never,
+      { tasks$: of(tasks) } as never,
+      {
+        settings$: of({
+          $key: 'settings-key',
+          goldPlannerConfiguration: { ...kazerosHard, hideAlreadyDoneTasks },
+          raidModesForGoldPlanner: { 'Valtist:runningMode:Kazeros Gate 1': 'HM', 'Valtist:runningMode:Kazeros Gate 2': 'HM' },
+          manualGoldEntries: {}
+        }),
+        patchFields: jest.fn(),
+        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+      } as never,
+      { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
+      { completion$: of({ $key: 'completion-key', data: { '1:Kazeros': { amount: 1, updated: 10 } } }) } as never,
+      { showHiddenCharacters$: of(false) } as never,
+      { info: jest.fn() } as never
+    );
+    component.display$.subscribe(value => display = value).unsubscribe();
+    return display as {
+      characterSummaries: { possible: number, earnedGross: number, net: number, percent: number, earned: { tradable: number, bound: number, chests: number } }[],
+      rosterSummary: { net: number, possible: number },
+      total: { unboundGold: number, boundGold: number }[],
+      chestCosts: number[],
+      chestsData: { line: { name: string }, goldDetails: { completion?: string }[] }[]
+    };
+  };
+
+  it('pays chests from tradable when the character has no bound gold, so bound never goes negative', () => {
+    const display = displayFor(false);
+    expect(display.total[0]).toEqual({ unboundGold: 32640, boundGold: 0 });
+    expect(display.chestCosts[0]).toBe(15360);
+  });
+
+  it('counts earned gold from the gates done on the Checklist, out of every planned gate', () => {
+    const summary = displayFor(false).characterSummaries[0];
+    expect(summary.possible).toBe(48000);
+    expect(summary.earnedGross).toBe(16000);
+    expect(summary.earned).toEqual(expect.objectContaining({ tradable: 10880, bound: 0, chests: 5120 }));
+    expect(summary.net).toBe(10880);
+    expect(summary.percent).toBe(33);
+  });
+
+  it('keeps the earned and possible numbers on Remaining for the week, while the totals show only what is left', () => {
+    const display = displayFor(true);
+    expect(display.characterSummaries[0]).toEqual(displayFor(false).characterSummaries[0]);
+    expect(display.rosterSummary).toEqual(expect.objectContaining({ net: 10880, possible: 48000 }));
+    expect(display.total[0]).toEqual({ unboundGold: 21760, boundGold: 0 });
+    expect(display.chestCosts[0]).toBe(10240);
+  });
+
+  it('labels the raid and each gate with their Checklist completion', () => {
+    const labels = Object.fromEntries(displayFor(false).chestsData
+      .filter(row => row.line.name.startsWith('Kazeros'))
+      .map(row => [row.line.name, row.goldDetails[0].completion]));
+    expect(labels).toEqual({ 'Kazeros': '1 of 2 done', 'Kazeros Gate 1': 'done', 'Kazeros Gate 2': 'to do' });
+  });
+});

@@ -134,7 +134,7 @@ export interface GoldTotal {
 }
 
 /**
- * The roster's week: every character's total summed, with bound below zero taken from tradable,
+ * The roster's week: every character's total summed (each already settled, so bound is never below zero),
  * and how many of the characters are gold earners.
  */
 export function getRosterSummary(totals: GoldTotal[], characters: { weeklyGold?: boolean }[]): GoldTotal & { goldEarners: number } {
@@ -143,9 +143,5 @@ export function getRosterSummary(totals: GoldTotal[], characters: { weeklyGold?:
     acc.boundGold += total.boundGold;
     return acc;
   }, { unboundGold: 0, boundGold: 0 });
-  if (sum.boundGold < 0) {
-    sum.unboundGold += sum.boundGold;
-    sum.boundGold = 0;
-  }
   return { ...sum, goldEarners: groupPlannerCharacters(characters).goldEarners.length };
 }

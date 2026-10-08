@@ -128,16 +128,17 @@ describe('planner character list', () => {
 
   it('sums every character into the roster total and counts gold earners', () => {
     const totals = [
-      { unboundGold: 0, boundGold: -300 },
+      { unboundGold: -300, boundGold: 0 },
       { unboundGold: 1000, boundGold: 500 },
       { unboundGold: 200, boundGold: 0 },
       { unboundGold: 2000, boundGold: 100 }
     ];
-    expect(getRosterSummary(totals, roster)).toEqual({ unboundGold: 3200, boundGold: 300, goldEarners: 2 });
+    expect(getRosterSummary(totals, roster)).toEqual({ unboundGold: 2900, boundGold: 600, goldEarners: 2 });
   });
 
-  it('takes bound below zero out of tradable in the roster total', () => {
-    const totals = [{ unboundGold: 1000, boundGold: -1500 }, { unboundGold: 500, boundGold: 200 }];
-    expect(getRosterSummary(totals, [{ weeklyGold: true }, { weeklyGold: true }])).toEqual({ unboundGold: 200, boundGold: 0, goldEarners: 2 });
+  it("adds settled totals as they are: one character's bound is not moved to cover another's chests", () => {
+    // A character whose chests cost more than its gold is below zero in tradable, never in bound
+    const totals = [{ unboundGold: -500, boundGold: 0 }, { unboundGold: 500, boundGold: 200 }];
+    expect(getRosterSummary(totals, [{ weeklyGold: true }, { weeklyGold: true }])).toEqual({ unboundGold: 0, boundGold: 200, goldEarners: 2 });
   });
 });
