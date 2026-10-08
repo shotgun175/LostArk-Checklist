@@ -48,7 +48,7 @@ export class UserService extends FirestoreStorage<LAHUser> {
     return this.modal.create({
       nzTitle: "Change your user name",
       nzContent: TextQuestionPopupComponent,
-      nzComponentParams: {
+      nzData: {
         placeholder: "Username",
         type: "input"
       },
