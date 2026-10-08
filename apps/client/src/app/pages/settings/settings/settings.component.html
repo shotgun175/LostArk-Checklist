@@ -143,7 +143,7 @@
                                 </td>
                                 @for (bonus of row.energy; track $index; let i = $index) {
                                   <td>
-                                    <nz-input-number [ngModel]="bonus"
+                                    <nz-input-number nzChangeOnWheel="false" [ngModel]="bonus"
                                       [nzMin]="0"
                                       [nzStep]="10"
                                       [nzMax]="row.task.label === 'Chaos Dungeon' ? 200 : 100"

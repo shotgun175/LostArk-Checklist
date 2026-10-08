@@ -57,7 +57,7 @@
                     <td><img src="./assets/icons/{{ ticket.icon }}" class="ticket-icon icon-rarity icon-rarity-{{ ticket.rarity }}" alt="" />{{ ticket.name }}</td>
                     @for (character of characters; track trackByCharacter($index, character)) {
                       <td class="ticket-cell">
-                        <nz-input-number [(ngModel)]="character.tickets[ticket.key]" (ngModelChange)="saveRoster(roster)"></nz-input-number>
+                        <nz-input-number nzChangeOnWheel="false" [(ngModel)]="character.tickets[ticket.key]" (ngModelChange)="saveRoster(roster)"></nz-input-number>
                       </td>
                     }
                   </tr>

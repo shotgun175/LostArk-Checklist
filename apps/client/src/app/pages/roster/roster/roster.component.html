@@ -46,7 +46,7 @@
           </ng-template>
           <ng-template #description>
             ilvl
-            <nz-input-number [(ngModel)]="character.ilvl" [ngModelOptions]="{updateOn: 'blur'}"
+            <nz-input-number nzChangeOnWheel="false" [(ngModel)]="character.ilvl" [ngModelOptions]="{updateOn: 'blur'}"
             (ngModelChange)="saveCharacter(character, roster)"></nz-input-number>
           </ng-template>
           <ng-template #setWeeklyGoldAction>
