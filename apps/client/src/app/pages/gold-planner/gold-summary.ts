@@ -15,7 +15,7 @@ export interface GoldCell {
   done: boolean;
 }
 
-/** A character's (or the roster's) week: what is possible, what is earned so far, and the whole plan, each after chests. */
+/** A character's (or the roster's) week: what is possible, what is earned so far, what is still to do and the whole plan, each after chests. */
 export interface GoldSummary {
   /** Gross gold (tradable + bound) of every planned gold gate, before chests, plus Chaos and Other entries above zero. */
   possible: number;
@@ -26,6 +26,9 @@ export interface GoldSummary {
   /** earnedGross out of possible, rounded down and never below 0; 0 when nothing is possible. */
   percent: number;
   earned: SettledGold;
+  /** The gates not done yet, settled on their own: what Remaining for the week shows. */
+  remaining: SettledGold;
+  /** earned + remaining: bound gold from raids not run yet never pays chests already bought. */
   plan: SettledGold;
 }
 
@@ -52,27 +55,31 @@ function percentOf(part: number, whole: number): number {
 export function summarizeCharacterGold(cells: GoldCell[], manual: number[]): GoldSummary {
   const manualTotal = manual.reduce((sum, amount) => sum + amount, 0);
   const manualPossible = manual.reduce((sum, amount) => sum + Math.max(0, amount), 0);
-  const add = (list: GoldCell[]) => list.reduce((sum, cell) => ({
+  const add = (list: GoldCell[], start: number) => list.reduce((sum, cell) => ({
     tradable: sum.tradable + cell.tradable,
     bound: sum.bound + cell.bound,
     chests: sum.chests + cell.chest
-  }), { tradable: manualTotal, bound: 0, chests: 0 });
-  const all = add(cells);
-  const done = add(cells.filter(cell => cell.done));
-  const possible = all.tradable - manualTotal + all.bound + manualPossible;
+  }), { tradable: start, bound: 0, chests: 0 });
+  // The Chaos and Other entries are already earned, so they go with the done gates
+  const done = add(cells.filter(cell => cell.done), manualTotal);
+  const toDo = add(cells.filter(cell => !cell.done), 0);
+  const possible = done.tradable - manualTotal + done.bound + toDo.tradable + toDo.bound + manualPossible;
   const earnedGross = done.tradable + done.bound;
   const earned = settleChests(done);
+  const remaining = settleChests(toDo);
   return {
     possible,
     earnedGross,
     net: earned.tradable + earned.bound,
     percent: percentOf(earnedGross, possible),
     earned,
-    plan: settleChests(all)
+    remaining,
+    plan: addSettled(earned, remaining)
   };
 }
 
-function addSettled(a: SettledGold, b: SettledGold): SettledGold {
+/** Adds two settled weeks field by field. */
+export function addSettled(a: SettledGold, b: SettledGold): SettledGold {
   return {
     tradable: a.tradable + b.tradable,
     bound: a.bound + b.bound,
@@ -91,8 +98,9 @@ export function sumGoldSummaries(summaries: GoldSummary[]): GoldSummary {
     net: acc.net + summary.net,
     percent: 0,
     earned: addSettled(acc.earned, summary.earned),
+    remaining: addSettled(acc.remaining, summary.remaining),
     plan: addSettled(acc.plan, summary.plan)
-  }), { possible: 0, earnedGross: 0, net: 0, percent: 0, earned: none, plan: none });
+  }), { possible: 0, earnedGross: 0, net: 0, percent: 0, earned: none, remaining: none, plan: none });
   return { ...sum, percent: percentOf(sum.earnedGross, sum.possible) };
 }
 
@@ -117,15 +125,25 @@ export function getGoldBar(summary: GoldSummary): GoldBarSegment[] {
   return amounts.map(([kind, amount]) => ({ kind, width: total > 0 ? amount / total * 100 : 0 }));
 }
 
-/** Short gold for the character list: 1360 as 1.4k, 69360 as 69k, 152000 as 152k, small numbers as they are (whole k from 10k up so a line fits the list). */
+const COMPACT_UNITS: [number, string][] = [[1e3, 'k'], [1e6, 'M'], [1e9, 'B']];
+
+/**
+ * Short gold for the character list: 1360 as 1.4k, 69360 as 69k, 152000 as 152k, 1250000 as 1.3M, small numbers as they are
+ * (one decimal below 10 of a unit, whole numbers from 10 up, so a line fits the list).
+ */
 export function formatCompactGold(amount: number): string {
   const sign = amount < 0 ? '-' : '';
   const value = Math.abs(amount);
   if (value < 1000) {
     return `${sign}${Math.round(value)}`;
   }
-  const thousands = (value / 1000).toFixed(value >= 10000 ? 0 : 1).replace(/\.0$/, '');
-  return `${sign}${thousands}k`;
+  // The largest unit the amount reaches; 999,950 rounds to 1000k, so it moves up to 1M
+  let unit = COMPACT_UNITS.filter(([size]) => value >= size).length - 1;
+  const short = (u: number) => (value / COMPACT_UNITS[u][0]).toFixed(value >= 10 * COMPACT_UNITS[u][0] ? 0 : 1).replace(/\.0$/, '');
+  if (Number(short(unit)) >= 1000 && unit < COMPACT_UNITS.length - 1) {
+    unit++;
+  }
+  return `${sign}${short(unit)}${COMPACT_UNITS[unit][1]}`;
 }
 
 /** Checklist completion of a raid or gate for one character: done, to do, or how many of its gates are done. */

@@ -42,7 +42,7 @@ describe('capGoldTracking', () => {
     const result = capGoldTracking([character(1780)], tracking, modes('Char1', five), tasks, allTracked, gTasks);
     expect(takingRaids(result.tracking, 'Char1')).toEqual(['Armoche', 'Kazeros', 'Serca']);
     expect(result.tracking['Char1:gold:taking:Mordum Gate 2']).toBe(false);
-    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Mordum', 'Horizon Cathedral'] }]);
+    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Mordum', 'Horizon Cathedral'], kept: ['Serca', 'Kazeros', 'Armoche'] }]);
     expect(tracking['Char1:gold:taking:Mordum Gate 1']).toBe(true);
   });
 
@@ -56,7 +56,7 @@ describe('capGoldTracking', () => {
     const noGoldAtThisIlvl = [raid('Horizon Cathedral', 100), raid('Serca', 500, 1700), raid('Kazeros', 400), raid('Armoche', 300)];
     const four = ['Horizon Cathedral', 'Serca', 'Kazeros', 'Armoche'];
     const result = capGoldTracking([character(1780)], ticked('Char1', four), modes('Char1', four), tasks, allTracked, noGoldAtThisIlvl);
-    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Serca'] }]);
+    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Serca'], kept: ['Kazeros', 'Armoche', 'Horizon Cathedral'] }]);
   });
 
   it('counts gold of the selected mode, and a raid without a mode as paying nothing', () => {
@@ -67,6 +67,31 @@ describe('capGoldTracking', () => {
     const raidModes = { ...modes('Char1', ['Horizon Cathedral', 'Serca', 'Kazeros']), ...modes('Char1', ['Mordum'], 'HM') };
     const result = capGoldTracking([character(1780)], ticked('Char1', five), raidModes, tasks, allTracked, twoModes);
     expect(takingRaids(result.tracking, 'Char1')).toEqual(['Horizon Cathedral', 'Mordum', 'Serca']);
+  });
+
+  it('ranks a saved Hard the item level cannot run by the Normal amounts it counts as', () => {
+    // Hard pays far more, but needs 1730 on every raid; at 1712 Armoche counts as Normal and pays the least
+    const withHard = (label: string, gold: number): GoldTask => ({
+      ...raid(label, gold),
+      gates: raid(label, gold).gates.map(gate => ({
+        ...gate,
+        modes: [{ ...gate.modes[0], HMThreashold: 1730 }, { ...gate.modes[0], name: 'HM', unboundGoldReward: 100000 }]
+      }))
+    });
+    const four = ['Horizon Cathedral', 'Serca', 'Kazeros', 'Armoche'];
+    const hardRaids = [withHard('Horizon Cathedral', 300), withHard('Serca', 400), withHard('Kazeros', 500), withHard('Armoche', 100)];
+    const raidModes = { ...modes('Char1', ['Horizon Cathedral', 'Serca', 'Kazeros']), ...modes('Char1', ['Armoche'], 'HM') };
+    const result = capGoldTracking([character(1712)], ticked('Char1', four), raidModes, tasks, { '1:Armoche': true }, hardRaids);
+    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Armoche'], kept: ['Kazeros', 'Serca', 'Horizon Cathedral'] }]);
+    // The saved mode is not rewritten
+    expect(raidModes['Char1:runningMode:Armoche Gate 1']).toBe('HM');
+  });
+
+  it('Brakka at 1712 with Hard saved on four raids keeps the three paying the most on Normal (real gold data)', () => {
+    const four = ['Horizon Cathedral', 'Serca', 'Kazeros', 'Armoche'];
+    const brakka = { id: 2, name: 'Brakka', ilvl: 1712, weeklyGold: true } as Character;
+    const result = capGoldTracking([brakka], ticked('Brakka', four), modes('Brakka', four, 'HM'), tasks, { '2:Armoche': true });
+    expect(result.unticked).toEqual([{ characterName: 'Brakka', raids: ['Armoche'], kept: ['Serca', 'Kazeros', 'Horizon Cathedral'] }]);
   });
 
   it('changes nothing at 3 raids or fewer and returns the same tracking object', () => {
@@ -118,8 +143,9 @@ describe('capGoldTracking', () => {
 
 describe('formatGoldCapMessage', () => {
   it('names the character and the unticked raids', () => {
-    expect(formatGoldCapMessage([{ characterName: 'Valtist', raids: ['Echidna'] }])).toBe('Valtist: gold limit is 3 raids, unticked Echidna');
-    expect(formatGoldCapMessage([{ characterName: 'A', raids: ['X', 'Y'] }, { characterName: 'B', raids: ['Z'] }]))
-      .toBe('A: gold limit is 3 raids, unticked X, Y. B: gold limit is 3 raids, unticked Z');
+    expect(formatGoldCapMessage([{ characterName: 'Brakka', raids: ['Armoche'], kept: ['Kazeros', 'Serca', 'Horizon Cathedral'] }]))
+      .toBe('Brakka can take gold from 3 raids a week. Kept Kazeros, Serca, Horizon Cathedral; unticked Armoche.');
+    expect(formatGoldCapMessage([{ characterName: 'A', raids: ['X', 'Y'], kept: ['K'] }, { characterName: 'B', raids: ['Z'], kept: ['L'] }]))
+      .toBe('A can take gold from 3 raids a week. Kept K; unticked X, Y. B can take gold from 3 raids a week. Kept L; unticked Z.');
   });
 });

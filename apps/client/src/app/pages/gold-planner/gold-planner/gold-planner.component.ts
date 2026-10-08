@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, tap } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS, getCountedRunningMode, getCountedModeNote } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -41,6 +41,8 @@ interface chestsData {
     boundGoldReward: number,
     chestPrice: number,
     runningMode: string,
+    // Saved modes the character's item level cannot run, with the mode they count as instead
+    modeNotes: string[],
     // Gate line: the gate is done this week on the Checklist
     done: boolean,
     // Checklist completion shown next to the raid or gate: done, to do, or how many gates are done
@@ -120,6 +122,9 @@ export class GoldPlannerComponent {
       // At most 3 gold raids per character, applied before anything is counted; the write follows in saveGoldCap
       const goldCap = capGoldTracking(rawRoster.characters, settings.goldPlannerConfiguration, raidModesForGoldPlanner, tasks, rawRoster.trackedTasks, gTasks);
       const tracking = goldCap.tracking;
+      // The mode a gate counts as: a saved Hard or Nightmare the item level cannot run counts as the highest mode it can (never saved back)
+      const savedMode = (gate: Gate, character: Character): string | undefined => raidModesForGoldPlanner?.[this.getRunningModeFlagNameForGate(character.name, gate)];
+      const countedMode = (gate: Gate, character: Character) => getCountedRunningMode(gate, character, savedMode(gate, character));
       const plannerLines: PlannerLine[] = [];
       gTasks.forEach(gTask => {
 
@@ -259,14 +264,14 @@ export class GoldPlannerComponent {
             let chestPrice = 0
             if (line.gate) {
               const gate = line.gate
-              const runningMode = gate.modes.find(mode => mode.name === this.settings.getRunningModeFlag(raidModesForGoldPlanner, character.name, [gate.name]))
+              const runningMode = gate.modes.find(mode => mode.name === countedMode(gate, character).mode)
               unboundGoldReward = runningMode ? runningMode.goldILvlLimit > character.ilvl ? runningMode.unboundGoldReward : 0 : 0
               boundGoldReward = runningMode ? runningMode.goldILvlLimit > character.ilvl ? runningMode.boundGoldReward : 0 : 0
               chestPrice = runningMode ? runningMode.chestPrice : 0
             } else {
               line.gTask.gates.forEach(gate => {
                 if (!this.shouldHideGateBasedOnWeeklyCompletion(gate, character, tasks, tracking, completion, lineReset, task)) {
-                  const runningMode = gate.modes.find(mode => mode.name === this.settings.getRunningModeFlag(raidModesForGoldPlanner, character.name, [gate.name]))
+                  const runningMode = gate.modes.find(mode => mode.name === countedMode(gate, character).mode)
                   unboundGoldReward += runningMode ? runningMode.goldILvlLimit > character.ilvl ? runningMode.unboundGoldReward : 0 : 0
                   boundGoldReward += runningMode ? runningMode.goldILvlLimit > character.ilvl ? runningMode.boundGoldReward : 0 : 0
                   chestPrice += runningMode ? runningMode.chestPrice : 0
@@ -285,15 +290,18 @@ export class GoldPlannerComponent {
               indeterminateTakingGold = false
             }
 
+            // The line's mode as the buttons show it: the counted mode of its gates, or Mixed when they differ
+            const countedModes = gatesInReach.map(gate => countedMode(gate, character).mode)
+            const modeNotes = [...new Set(reachableGates
+              .map(gate => getCountedModeNote(savedMode(gate, character), countedMode(gate, character)))
+              .filter((note): note is string => !!note))]
+
             const hiddenByTracking = cantDoTask || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false)
 
             const goldDetail = {
               hide: false || hiddenByTracking || hideAlreadyDoneRaidOrGate,
-              runningMode: this.settings.getRunningModeFlag(
-                raidModesForGoldPlanner,
-                character.name,
-                line.gate ? [line.gate.name] : line.gTask.gates.map(gate => gate.name)
-              ),
+              runningMode: countedModes.every(mode => mode === countedModes[0]) ? countedModes[0] as string : "Mixed",
+              modeNotes,
               takingChest,
               indeterminateTakingChest,
               takingGold,
@@ -378,22 +386,20 @@ export class GoldPlannerComponent {
       };
       const manualGold = (character: Character) => [chaos[character.name], other[character.name]];
 
-      // Totals follow the Full Planning switch: the gates shown, chests paid from that character's bound gold first, then tradable
-      const shownTotals = roster.map((character, i) => summarizeCharacterGold(
-        goldRows.filter(row => !row.goldDetails[i].hide).map(row => goldCell(row, i)),
-        manualGold(character)
-      ).plan);
-      const total: GoldTotal[] = shownTotals.map(settled => ({ unboundGold: settled.tradable, boundGold: settled.bound }));
-      const chestCosts: number[] = shownTotals.map(settled => settled.chests);
-
-      const grandTotal = getRosterSummary(total, roster)
-
       // The summary cards ignore the switch: every planned gate (as counted for the gold cap), done or not
       const characterSummaries = roster.map((character, i) => summarizeCharacterGold(
         goldRows.filter(row => row.goldDetails[i].countsForGoldCap).map(row => goldCell(row, i)),
         manualGold(character)
       ));
       const rosterSummary = sumGoldSummaries(characterSummaries);
+
+      // Totals follow the Full Planning switch: the whole plan, or only the gates still to do (Chaos and Other entries are
+      // already earned); done and to-do gates each pay their own chests, bound gold first, then tradable
+      const shownTotals = characterSummaries.map(summary => tracking['hideAlreadyDoneTasks'] ? summary.remaining : summary.plan);
+      const total: GoldTotal[] = shownTotals.map(settled => ({ unboundGold: settled.tradable, boundGold: settled.bound }));
+      const chestCosts: number[] = shownTotals.map(settled => settled.chests);
+
+      const grandTotal = getRosterSummary(total, roster)
 
       return {
         chestsData: chestsData,
@@ -436,7 +442,8 @@ export class GoldPlannerComponent {
     this.sentGoldCaps.add(signature);
     // Only the unticked flags, so a tick saved meanwhile from another tab is kept
     this.settings.patchFields(display.settingsKey, display.goldCapWrites);
-    this.message.info(formatGoldCapMessage(display.goldCapUnticked));
+    // Long enough to read which raids were kept and which were unticked
+    this.message.info(formatGoldCapMessage(display.goldCapUnticked), { nzDuration: 10000 });
   }
 
   public readonly maxGoldRaids = MAX_GOLD_RAIDS;
@@ -662,8 +669,11 @@ export class GoldPlannerComponent {
     return Math.floor(value);
   }
 
-  // nz-input-number formatter: shows the same whole-gold value that setManualGold stores.
-  manualGoldDisplay = (value: number): string => String(this.manualGoldFormatter(value));
+  // nz-input-number parser: drops the decimals of a typed amount (1234.56 is 1234), the same whole gold setManualGold stores
+  manualGoldParser = (value: string): number => {
+    const text = value.trim().replace(/,/g, '');
+    return text.length ? Math.trunc(Number(text)) : NaN;
+  };
 
   constructor(private rosterService: RosterService,
     private tasksService: TasksService,

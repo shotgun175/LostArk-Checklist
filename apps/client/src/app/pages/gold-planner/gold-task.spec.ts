@@ -1,5 +1,5 @@
 import { goldTasks } from './gold-tasks';
-import { earnsGold, Gate, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
+import { earnsGold, Gate, getCountedModeNote, getCountedRunningMode, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
 import { Character } from '../../model/character/character';
 
 const gate = (name: string): Gate => goldTasks.flatMap(t => t.gates).find(g => g.name === name) as Gate;
@@ -24,6 +24,28 @@ describe('pickDefaultRunningMode', () => {
   it('never picks Solo', () => {
     expect(pickDefaultRunningMode(gate('Valtan Gate 1'), character(1415))).not.toBe('Solo');
     expect(pickDefaultRunningMode(gate('Serca Gate 1'), character(1710))).toBe('NM');
+  });
+});
+
+describe('getCountedRunningMode', () => {
+  it('counts a saved Hard the item level cannot run as the highest mode it can run, and says why', () => {
+    const counted = getCountedRunningMode(gate('Kazeros Gate 1'), character(1712), 'HM');
+    expect(counted).toEqual({ mode: 'NM', needsIlvl: 1730 });
+    expect(getCountedModeNote('HM', counted)).toBe('Hard needs 1730, counted as Normal');
+  });
+
+  it('counts a saved Nightmare the item level cannot run as Hard when Hard is possible', () => {
+    const counted = getCountedRunningMode(gate('Serca Gate 1'), character(1735), 'Nightmare');
+    expect(counted).toEqual({ mode: 'HM', needsIlvl: 1740 });
+    expect(getCountedModeNote('Nightmare', counted)).toBe('Nightmare needs 1740, counted as Hard');
+  });
+
+  it('keeps a saved mode the item level allows, Solo and no mode as they are, with no note', () => {
+    expect(getCountedRunningMode(gate('Kazeros Gate 1'), character(1730), 'HM')).toEqual({ mode: 'HM' });
+    expect(getCountedRunningMode(gate('Kazeros Gate 1'), character(1700), 'Solo')).toEqual({ mode: 'Solo' });
+    expect(getCountedRunningMode(gate('Kazeros Gate 1'), character(1700), undefined)).toEqual({ mode: undefined });
+    expect(getCountedModeNote('HM', { mode: 'HM' })).toBeUndefined();
+    expect(getCountedModeNote(undefined, { mode: undefined })).toBeUndefined();
   });
 });
 
