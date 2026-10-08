@@ -202,6 +202,10 @@
                     @for (note of flag.modeNotes; track note) {
                       <span class="mode-tag">{{ note }}</span>
                     }
+                    <!-- The counted mode's button is already selected, so a click on it saves nothing; this saves it -->
+                    @if (flag.modeNotes.length && flag.runningMode && flag.runningMode !== 'Mixed') {
+                      <button nz-button nzType="link" nzSize="small" class="save-mode" (click)="setRunningModeFlag(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag.runningMode)">Save as {{ modeLabel(flag.runningMode) }}</button>
+                    }
                   </div>
                   <div class="checkbox-line">
                     <span nz-tooltip [nzTooltipTitle]="flag.goldTakingDisabledReason || ''">
