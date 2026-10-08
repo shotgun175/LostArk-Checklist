@@ -58,6 +58,14 @@
   }
 }
 
+// While the note is hidden the row can be wider than the card: the actions start 36px closer
+// (the grip's width), so the row is no wider than it was before the grip.
+@media screen and (max-width: 1150px) {
+  :host ::ng-deep .ant-list-item-action {
+    margin-inline-start: 12px;
+  }
+}
+
 :host ::ng-deep .cdk-drop-list-dragging,
 :host ::ng-deep .cdk-drop-list-dragging * {
   cursor: grabbing;
