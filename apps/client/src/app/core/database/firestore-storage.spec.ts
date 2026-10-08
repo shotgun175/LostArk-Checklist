@@ -134,6 +134,51 @@ describe("FirestoreStorage field writes", () => {
   });
 });
 
+describe("FirestoreStorage after a document it saw is deleted (account deleted in another tab)", () => {
+  let storage: TestStorage;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    storage = new TestStorage();
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  it("keeps the last copy instead of reporting the document as missing", () => {
+    const snapshots = new Subject<TestDoc | undefined>();
+    jest.mocked(docData$).mockReturnValue(snapshots as never);
+    const seen: TestDoc[] = [];
+    storage.getOne("u1").subscribe(doc => seen.push(doc));
+    snapshots.next({ $key: "u1", data: { a: 1 } });
+    snapshots.next(undefined);
+    expect(seen).toEqual([{ $key: "u1", data: { a: 1 } }]);
+  });
+
+  it("still reports a document that never existed as missing", () => {
+    const snapshots = new Subject<TestDoc | undefined>();
+    jest.mocked(docData$).mockReturnValue(snapshots as never);
+    const seen: TestDoc[] = [];
+    storage.getOne("u1").subscribe(doc => seen.push(doc));
+    snapshots.next(undefined);
+    expect(seen).toEqual([{ $key: "u1", notFound: true }]);
+  });
+
+  it("does not create it again when a field change finds it gone", async () => {
+    const snapshots = new Subject<TestDoc | undefined>();
+    jest.mocked(docData$).mockReturnValue(snapshots as never);
+    storage.getOne("u1", true).subscribe();
+    snapshots.next({ $key: "u1", data: { a: 1 } });
+    jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
+    const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+    await settle();
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
 describe("FirestoreStorage.pauseWrites", () => {
   let storage: TestStorage;
 
