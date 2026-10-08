@@ -103,10 +103,8 @@ npx nx lint client
 Unit tests, exactly as CI runs them:
 
 ```bash
-npx nx test client --testNamePattern='^(?!EnergyService (should update energy properly|should update energy properly with partially done task|should update energy properly with partially done task on last day only|should not update energy if task was completed yesterday)$)'
+npx nx test client
 ```
-
-A plain `npx nx test client` also runs 4 old EnergyService tests inherited from the original project that are known to fail; CI skips them by name.
 
 ### Local emulators
 

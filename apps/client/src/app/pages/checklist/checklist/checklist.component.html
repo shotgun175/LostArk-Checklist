@@ -138,7 +138,7 @@
                               class="section-span"
                               [class.completed]="entry.done"
                               [class.daily]="entry.data[0].task.frequency === TaskFrequency.DAILY"
-                              [class.weekly]="entry.data[0].task.frequency === TaskFrequency.WEEKLY || entry.data[0].task.frequency === TaskFrequency.BIWEEKLY"
+                              [class.weekly]="isWeeklyFrequency(entry.data[0].task.frequency)"
                               >
                               <div class="section-span-toggle">
                                 <nz-switch [nzCheckedChildren]="checked" [nzUnCheckedChildren]="unchecked" [(ngModel)]="categoriesDisplay[key]" (ngModelChange)="categoriesDisplay$.next(categoriesDisplay)" nzSize="small" class="visibility-switch">
@@ -156,7 +156,7 @@
                                 [class.completed]="row.allDone || (!row.available && row.task.scope === TaskScope.ROSTER)"
                                 [class.daily]="row.task.frequency === TaskFrequency.DAILY"
                                 [class.one-time]="row.task.frequency === TaskFrequency.ONE_TIME"
-                                [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                [class.weekly]="isWeeklyFrequency(row.task.frequency)"
                                 >
                                 <td [style.width.px]="taskColumnWidth" class="task-name" [attr.title]="row.task.label">
                                   <div class="task-name-content" [style.width.px]="taskColumnWidth - 17">
@@ -177,7 +177,7 @@
                                             nzBlock
                                             nzType="primary"
                                             [disabled]="row.completion[0] >= row.task.amount"
-                                            (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                            (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
                                             >
                                             {{ row.completion[0] }}/{{ row.task.amount }}
                                           </button>
@@ -185,7 +185,7 @@
                                         @if (row.completion[0] > 0) {
                                           <div class="reset-button">
                                             @if (row.completion[0] >= row.task.amount) {
-                                              <button nz-button nzSize="small" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                              <button nz-button nzSize="small" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset)">
                                                 <span nz-icon nzType="reload" nzTheme="outline"></span>
                                               </button>
                                             }
@@ -203,7 +203,7 @@
                                     <td
                                       [class.completed]="col === row.task.amount && !row.allDone"
                                       [class.daily]="row.task.frequency === TaskFrequency.DAILY"
-                                      [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                      [class.weekly]="isWeeklyFrequency(row.task.frequency)"
                                       >
                                       @if (row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl) {
                                         @if (row.completionData[i].goldBadge.show) {
@@ -228,7 +228,7 @@
                                               nzSize="small"
                                               nzType="primary"
                                               [disabled]="col >= row.task.amount"
-                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
                                               >
                                               {{ col }} / {{ row.task.amount }}
                                             </button>
@@ -236,7 +236,7 @@
                                           @if (col > 0) {
                                             <div class="reset-button">
                                               @if (col > 0) {
-                                                <button nz-button nzSize="small" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                                <button nz-button nzSize="small" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset)">
                                                   <span nz-icon nzType="reload" nzTheme="outline"></span>
                                                 </button>
                                               }

@@ -23,8 +23,30 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge, isWeeklyFrequency } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
+
+interface CategoriesDisplay {
+  dailyCharacter: boolean,
+  weeklyCharacter: boolean,
+  biWeeklyCharacter: boolean,
+  oneTimeCharacter: boolean,
+  dailyRoster: boolean,
+  weeklyRoster: boolean,
+  biWeeklyRoster: boolean,
+  oneTimeRoster: boolean,
+}
+
+const CATEGORIES_DISPLAY_DEFAULT: CategoriesDisplay = {
+  dailyCharacter: true,
+  weeklyCharacter: true,
+  biWeeklyCharacter: true,
+  oneTimeCharacter: true,
+  dailyRoster: true,
+  weeklyRoster: true,
+  biWeeklyRoster: true,
+  oneTimeRoster: true
+};
 
 @Component({
   selector: 'lostark-helper-checklist',
@@ -37,18 +59,12 @@ export class ChecklistComponent {
 
   public TaskFrequency = TaskFrequency;
   public TaskScope = TaskScope;
+  public isWeeklyFrequency = isWeeklyFrequency;
 
   public rawRoster$ = this.rosterService.roster$;
   public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
 
-  public categoriesDisplay$ = new LocalStorageBehaviorSubject<{
-    dailyCharacter: boolean,
-    weeklyCharacter: boolean,
-    biWeeklyCharacter: boolean,
-    dailyRoster: boolean,
-    weeklyRoster: boolean,
-    biWeeklyRoster: boolean,
-  }>('checklist:displayed', { dailyCharacter: true, weeklyCharacter: true, biWeeklyCharacter: true, dailyRoster: true, weeklyRoster: true, biWeeklyRoster: true });
+  public categoriesDisplay$ = new LocalStorageBehaviorSubject<CategoriesDisplay>('checklist:displayed', CATEGORIES_DISPLAY_DEFAULT);
 
   public roster$: Observable<Character[]> = this.rawRoster$.pipe(
     pluck('characters')
@@ -240,6 +256,7 @@ export class ChecklistComponent {
         dailyReset,
         weeklyReset,
         biWeeklyReset,
+        biWeeklyOffsetReset,
         data
       };
     })
@@ -273,6 +290,8 @@ export class ChecklistComponent {
     private settings: SettingsService, private energyService: EnergyService,
     private timeService: TimeService, private completionService: CompletionService,
     private layoutState: LayoutStateService) {
+    // A choice saved before a section existed has no value for it, so that section starts visible
+    this.categoriesDisplay$.next({ ...CATEGORIES_DISPLAY_DEFAULT, ...this.categoriesDisplay$.value });
     this.setTableHeight();
   }
 
@@ -286,7 +305,7 @@ export class ChecklistComponent {
     this.ticketsTrackingOpened = opened;
   }
 
-  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, clickEvent?: MouseEvent): void {
+  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent): void {
     let reset = Infinity;
     switch (task.frequency) {
       case TaskFrequency.DAILY:
@@ -298,6 +317,9 @@ export class ChecklistComponent {
       case TaskFrequency.BIWEEKLY:
         reset = biWeeklyReset;
         break;
+      case TaskFrequency.BIWEEKLY_OFFSET:
+        reset = biWeeklyOffsetReset;
+        break;
     }
     if (done) {
       const setAllDone = clickEvent?.ctrlKey;
@@ -305,10 +327,13 @@ export class ChecklistComponent {
       if (existingEntry?.updated < reset && reset !== Infinity) {
         existingEntry.amount = 0;
       }
+      const currentAmount = existingEntry?.amount || 0;
+      // Ctrl+click fills only the runs left, so rest bonus is spent for those runs only
+      const runs = setAllDone ? Math.max(task.amount - currentAmount, 0) : 1;
 
       setCompletionEntry(completion.data, character, task, {
         ...(existingEntry || {}),
-        amount: setAllDone ? task.amount : (existingEntry?.amount || 0) + 1,
+        amount: setAllDone ? task.amount : currentAmount + 1,
         updated: Date.now()
       });
 
@@ -323,7 +348,7 @@ export class ChecklistComponent {
           }
         } else {
           if (energyEntry.amount >= 20) {
-            energyEntry.amount = Math.max(energyEntry.amount - (20 * (setAllDone ? task.amount : 1)), 0);
+            energyEntry.amount = Math.max(energyEntry.amount - (20 * runs), 0);
             this.energyService.patchFields(energy.$key, [{ path: ["data", getCompletionEntryKey(character, task)], value: energyEntry }]);
           }
         }

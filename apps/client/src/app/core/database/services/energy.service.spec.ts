@@ -71,17 +71,23 @@ describe("EnergyService", () => {
     expect(service).toBeTruthy();
   });
 
+  // Current task data: Chaos Dungeon is 1 run a day worth 20 rest bonus (cap 200);
+  // Una's Task is 3 runs a day worth 10 each (cap 100).
+  const unaTask = tasks.find(task => task.label === "Una's Task");
+  const day = 86400000;
+
   it("should update energy properly", () => {
     const reset = 1652005000000;
-    const twoDaysBefore = reset + 3600000 - 2 * 86400000;
+    const twoDaysBefore = reset + 3600000 - 2 * day;
     const completionEntry: CompletionEntry = {
-      amount: 2,
+      amount: 1,
       updated: twoDaysBefore
     };
     const energy = { $key: "test", data: {}, updated: twoDaysBefore };
     const task = tasks[0]; // Chaos dungeon
     const entry = { amount: 0 };
 
+    // Done two days ago, then one full day missed: 1 run x 20
     expect(service.getEnergyUpdate(reset, completionEntry, energy, task, entry).amount).toBe(20);
   });
 
@@ -100,37 +106,37 @@ describe("EnergyService", () => {
   });
 
   it("should update energy properly with partially done task", () => {
-    const reset = 1652004000;
-    const twoDaysBefore = reset + 3600000 - 2 * 86400000;
+    const reset = 1652005000000;
+    const twoDaysBefore = reset + 3600000 - 2 * day;
     const completionEntry: CompletionEntry = {
       amount: 1,
       updated: twoDaysBefore
     };
     const energy = { $key: "test", data: {}, updated: twoDaysBefore };
-    const task = tasks[0]; // Chaos dungeon
     const entry = { amount: 0 };
 
-    expect(service.getEnergyUpdate(reset, completionEntry, energy, task, entry).amount).toBe(30);
+    // 2 runs left that day (20), then one full day missed (3 x 10)
+    expect(service.getEnergyUpdate(reset, completionEntry, energy, unaTask, entry).amount).toBe(50);
   });
 
   it("should update energy properly with partially done task on last day only", () => {
-    const reset = 1652004000;
-    const oneDayBefore = reset + 3600000 - 86400000;
+    const reset = 1652005000000;
+    const oneDayBefore = reset + 3600000 - day;
     const completionEntry: CompletionEntry = {
       amount: 1,
       updated: oneDayBefore
     };
     const energy = { $key: "test", data: {}, updated: oneDayBefore };
-    const task = tasks[0]; // Chaos dungeon
     const entry = { amount: 0 };
 
-    expect(service.getEnergyUpdate(reset, completionEntry, energy, task, entry).amount).toBe(10);
+    // Only the 2 runs left yesterday count: 2 x 10
+    expect(service.getEnergyUpdate(reset, completionEntry, energy, unaTask, entry).amount).toBe(20);
   });
 
   it("should update energy properly with partially done task after existing update", () => {
-    const reset = 1652004000;
-    const twoDaysBefore = reset + 3600000 - 2 * 86400000;
-    const oneDayBefore = reset + 3600000 - 86400000;
+    const reset = 1652005000000;
+    const twoDaysBefore = reset + 3600000 - 2 * day;
+    const oneDayBefore = reset + 3600000 - day;
     const completionEntry: CompletionEntry = {
       amount: 1,
       updated: twoDaysBefore
@@ -143,16 +149,63 @@ describe("EnergyService", () => {
   });
 
   it("should not update energy if task was completed yesterday", () => {
-    const reset = 1652004000;
-    const oneDayBefore = reset + 3600000 - 86400000;
+    const reset = 1652005000000;
+    const oneDayBefore = reset + 3600000 - day;
     const completionEntry: CompletionEntry = {
-      amount: 2,
+      amount: 3,
       updated: oneDayBefore
     };
     const energy = { $key: "test", data: {}, updated: oneDayBefore };
-    const task = tasks[0]; // Chaos dungeon
     const entry = { amount: 40 };
 
-    expect(service.getEnergyUpdate(reset, completionEntry, energy, task, entry).amount).toBe(40);
+    expect(service.getEnergyUpdate(reset, completionEntry, energy, unaTask, entry).amount).toBe(40);
+  });
+});
+
+describe("EnergyService daily rollover", () => {
+  // Sun 08/05/2022 @10AM UTC +1s
+  const reset = 1652005000000;
+  const chaosTask = { ...tasks[0], $key: "chaos" };
+  const guardianTask = { ...tasks.find(task => task.label === "Guardian"), $key: "guardian" };
+  const character = { id: 1, name: "Arwen", ilvl: 1700 };
+
+  function rollover(energyData: Record<string, { amount: number }>, energyUpdated: number): Record<string, { amount: number }> {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of("uid") } },
+        { provide: TimeService, useValue: { lastDailyReset$: of(reset) } },
+        { provide: TasksService, useValue: { tasks$: of([chaosTask, guardianTask]) } },
+        { provide: RosterService, useValue: { roster$: of({ characters: [character] }) } },
+        {
+          provide: CompletionService,
+          useValue: {
+            completion$: of({ $key: "uid", data: {} }),
+            setOne: () => of(undefined)
+          }
+        }
+      ]
+    });
+    const service = TestBed.inject(EnergyService);
+    jest.spyOn(service, "getOne").mockReturnValue(of({ $key: "uid", data: energyData, updated: energyUpdated }));
+    jest.spyOn(service, "setOne").mockReturnValue(of(undefined));
+    let result: Record<string, { amount: number }> = {};
+    service.energy$.subscribe(energy => result = energy.data).unsubscribe();
+    return result;
+  }
+
+  it("keeps and grows a stored bonus when the task has no completion entry", () => {
+    // Saved 1 hour before the reset (a restored backup or a value typed in Settings), never ticked
+    const result = rollover({ "1:chaos": { amount: 100 }, "1:guardian": { amount: 30 } }, reset - 3600000);
+
+    // One day not done: Chaos Dungeon +20, Guardian +10
+    expect(result["1:chaos"]).toEqual({ amount: 120 });
+    expect(result["1:guardian"]).toEqual({ amount: 40 });
+  });
+
+  it("creates a 0 bonus when the task has no energy entry yet", () => {
+    const result = rollover({ "1:guardian": { amount: 30 } }, reset - 3600000);
+
+    expect(result["1:chaos"]).toEqual({ amount: 0 });
   });
 });
