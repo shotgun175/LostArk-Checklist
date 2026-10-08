@@ -11,6 +11,8 @@ export const tasks = [
     shared: true,
     partySize: 4
   }),
+  createTask(`Una's Task`, 302, TaskFrequency.DAILY, TaskScope.CHARACTER, 3, 9999, "daily.webp"),
+  createTask(`Kalthertz Slaves`, 302, TaskFrequency.DAILY, TaskScope.CHARACTER, 1, 9999, "pirate_coin.png"),
   createTask(`Guild Support`, 0, TaskFrequency.DAILY, TaskScope.CHARACTER, 1, 9999, "sylmael.png"),
 
 
@@ -214,9 +216,9 @@ export const raidReleaseOrder: string[][] = [
   [`Demon Beast Canyon`]
 ];
 
-// Built-in tasks no longer given to new accounts. Existing copies stay built-in (not custom) on a TASKS_VERSION bump,
-// so code that looks for them by label, such as the Una's Task rest bonus, keeps working.
-export const retiredTaskLabels = [
+// Built-in tasks that no character tracks by default (auto mode). A user switches them on per character in
+// Settings > Task tracking; an explicit choice always wins. Custom tasks with the same label are not affected.
+export const defaultOffTaskLabels = [
   "Kalthertz Slaves",
   "Una's Task"
 ];

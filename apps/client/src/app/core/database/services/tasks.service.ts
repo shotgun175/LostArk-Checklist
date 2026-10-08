@@ -5,7 +5,7 @@ import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
 import { combineLatest, debounceTime, from, map, mapTo, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
-import { tasks, oldTaskNames, renamedTaskLabels, retiredTaskLabels } from "../../tasks";
+import { tasks, oldTaskNames, renamedTaskLabels } from "../../tasks";
 import { catchError, filter } from "rxjs/operators";
 import { SettingsService } from "./settings.service";
 import { subHours } from "date-fns";
@@ -13,8 +13,7 @@ import { subHours } from "date-fns";
 /**
  * A user's copy of a built-in task brought up to TASKS_VERSION, or null when it is custom or already current.
  * A copy with a matching default task takes that task's fields, keeping the user's key, item levels,
- * switch and order. A copy of a retired task keeps its fields and stays built-in; any other copy
- * without a default task becomes custom.
+ * switch and order. A copy without a default task becomes custom.
  *
  * Args:
  *   t: the user's task.
@@ -41,7 +40,7 @@ export function upgradeUserTask(t: LostarkTask, defaultTasks: LostarkTask[], uid
   }
   return {
     ...t,
-    custom: !retiredTaskLabels.includes(t.label),
+    custom: true,
     authorId: uid,
     index: t.index,
     version: TASKS_VERSION
