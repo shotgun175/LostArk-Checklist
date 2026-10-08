@@ -9,8 +9,7 @@ import { TasksService } from "../../../core/database/services/tasks.service";
 import { CompletionService } from '../../../core/database/services/completion.service';
 import { Character } from "../../../model/character/character";
 import { TimeService } from "../../../core/time.service";
-import { ManualWeeklyGoldEntry, Settings } from "../../../model/settings";
-import { UpdateData } from "firebase/firestore";
+import { ManualWeeklyGoldEntry } from "../../../model/settings";
 import { getCompletionEntry } from '../../../core/get-completion-entry-key';
 import { Completion } from "../../../model/completion";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
@@ -18,6 +17,7 @@ import { filterVisibleCharacters } from "../../../core/visible-characters";
 import { isTaskTracked } from "../../../core/task-tracking";
 import { capGoldTracking, formatGoldCapMessage, GoldCapUntick } from "../gold-cap";
 import { NzMessageService } from "ng-zorro-antd/message";
+import { FieldWrite } from "../../../core/database/write-coalescer";
 
 interface chestsData {
   task?: LostarkTask,
@@ -65,6 +65,8 @@ interface GoldPlannerDisplay {
   chestCosts: number[];
   settingsKey: string;
   goldCapUnticked: GoldCapUntick[];
+  // The gold cap's unticks as field writes, one per changed flag
+  goldCapWrites: FieldWrite[];
   groups: { goldEarners: number[], others: number[] };
   plannerLines: PlannerLine[]
 }
@@ -383,6 +385,9 @@ export class GoldPlannerComponent {
         chestCosts,
         settingsKey: settings.$key,
         goldCapUnticked: goldCap.unticked,
+        goldCapWrites: tracking === settings.goldPlannerConfiguration ? [] : Object.keys(tracking)
+          .filter(key => tracking[key] !== settings.goldPlannerConfiguration[key])
+          .map(key => ({ path: ["goldPlannerConfiguration", key], value: tracking[key] })),
         groups: groupPlannerCharacters(roster),
         chaos,
         other,
@@ -405,10 +410,8 @@ export class GoldPlannerComponent {
       return;
     }
     this.sentGoldCaps.add(signature);
-    this.settings.patch({
-      $key: display.settingsKey,
-      goldPlannerConfiguration: display.tracking
-    });
+    // Only the unticked flags, so a tick saved meanwhile from another tab is kept
+    this.settings.patchFields(display.settingsKey, display.goldCapWrites);
     this.message.info(formatGoldCapMessage(display.goldCapUnticked));
   }
 
@@ -511,17 +514,17 @@ export class GoldPlannerComponent {
 
   // Ticking gold on a gate with no running mode yet also sets the highest mode the character can run
   setGoldTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
-    tracking[this.getGoldTakingFlagNameForGate(character.name, gate)] = flag;
+    const flagName = this.getGoldTakingFlagNameForGate(character.name, gate);
+    tracking[flagName] = flag;
     const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
     const pickedMode = shouldAutoPickRunningMode(flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
     if (pickedMode) {
       raidModesForGoldPlanner[modeKey] = pickedMode;
     }
-    this.settings.patch({
-      $key: settingsKey,
-      goldPlannerConfiguration: tracking,
-      ...(pickedMode ? { raidModesForGoldPlanner } : {})
-    });
+    this.settings.patchFields(settingsKey, [
+      { path: ["goldPlannerConfiguration", flagName], value: flag },
+      ...(pickedMode ? [{ path: ["raidModesForGoldPlanner", modeKey], value: pickedMode }] : [])
+    ]);
   }
 
   //Taking Chest tick box
@@ -543,17 +546,17 @@ export class GoldPlannerComponent {
 
   // For a character without Weekly Gold, ticking a chest on a gate with no running mode also sets the highest mode it can run
   setChestTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
-    tracking[this.getChestTakingFlagNameForGate(character.name, gate)] = flag;
+    const flagName = this.getChestTakingFlagNameForGate(character.name, gate);
+    tracking[flagName] = flag;
     const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
     const pickedMode = shouldAutoPickModeOnChest(character.weeklyGold, flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
     if (pickedMode) {
       raidModesForGoldPlanner[modeKey] = pickedMode;
     }
-    this.settings.patch({
-      $key: settingsKey,
-      goldPlannerConfiguration: tracking,
-      ...(pickedMode ? { raidModesForGoldPlanner } : {})
-    });
+    this.settings.patchFields(settingsKey, [
+      { path: ["goldPlannerConfiguration", flagName], value: flag },
+      ...(pickedMode ? [{ path: ["raidModesForGoldPlanner", modeKey], value: pickedMode }] : [])
+    ]);
   }
 
   // Running mode selection utilities
@@ -573,11 +576,9 @@ export class GoldPlannerComponent {
   }
 
   setRunningModeFlagForGate(settingsKey: string, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: string): void {
-    raidModesForGoldPlanner[this.getRunningModeFlagNameForGate(character.name, gate)] = flag;
-    this.settings.patch({
-      $key: settingsKey,
-      raidModesForGoldPlanner: raidModesForGoldPlanner
-    });
+    const flagName = this.getRunningModeFlagNameForGate(character.name, gate);
+    raidModesForGoldPlanner[flagName] = flag;
+    this.settings.patchFields(settingsKey, [{ path: ["raidModesForGoldPlanner", flagName], value: flag }]);
   }
 
   private getRunningModeFlagNameForGate(characterName: string, gate: Gate): string {
@@ -590,20 +591,15 @@ export class GoldPlannerComponent {
   }
 
   setExpandRaidFlag(settingsKey: string, tracking: Record<string, boolean>, gTask: GoldTask, flag: boolean): void {
-    tracking[this.getExpandRaidFlag(gTask)] = flag;
-    this.settings.patch({
-      $key: settingsKey,
-      goldPlannerConfiguration: tracking
-    });
+    const flagName = this.getExpandRaidFlag(gTask);
+    tracking[flagName] = flag;
+    this.settings.patchFields(settingsKey, [{ path: ["goldPlannerConfiguration", flagName], value: flag }]);
   }
 
   // Toggle between Full Planning and Remaining for the week
   setHideAlreadyDoneTasksFlag(settingsKey: string, tracking: Record<string, boolean>, flag: boolean): void {
     tracking['hideAlreadyDoneTasks'] = flag;
-    this.settings.patch({
-      $key: settingsKey,
-      goldPlannerConfiguration: tracking
-    });
+    this.settings.patchFields(settingsKey, [{ path: ["goldPlannerConfiguration", "hideAlreadyDoneTasks"], value: flag }]);
   }
 
   // Manuel gold entries utilities
@@ -616,18 +612,16 @@ export class GoldPlannerComponent {
   }
 
   public setManualGold(settingsKey: string, type: string, characterName: string, newValue: number): void {
-    this.settings.updateOne(settingsKey, {
-      [`manualGoldEntries.${type}:${characterName}`]: { amount: this.manualGoldFormatter(newValue) || 0, timestamp: Date.now() }
-    } as unknown as UpdateData<Settings>);
+    this.settings.patchFields(settingsKey, [{
+      path: ["manualGoldEntries", `${type}:${characterName}`],
+      value: { amount: this.manualGoldFormatter(newValue) || 0, timestamp: Date.now() }
+    }]);
   }
 
   // Show/Hide explanations
   toggleExplanations(settingsKey: string, tracking: Record<string, boolean>): void {
     tracking['showExplanations'] = tracking['showExplanations'] ? !tracking['showExplanations'] : true;
-    this.settings.patch({
-      $key: settingsKey,
-      goldPlannerConfiguration: tracking
-    });
+    this.settings.patchFields(settingsKey, [{ path: ["goldPlannerConfiguration", "showExplanations"], value: tracking['showExplanations'] }]);
   }
 
   //Miscellaneous

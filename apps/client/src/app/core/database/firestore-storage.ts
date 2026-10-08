@@ -4,9 +4,11 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   DocumentData,
   DocumentReference,
+  FieldPath,
   Firestore,
   FirestoreDataConverter,
   query,
@@ -24,6 +26,7 @@ import {
 import { collectionData$, docData$ } from "../firebase/rx";
 import { environment } from "../../../environments/environment";
 import { startWith, switchMap } from "rxjs/operators";
+import { applyFieldWrites, FieldWrite, WriteCoalescer } from "./write-coalescer";
 
 export abstract class FirestoreStorage<T extends DataModel> {
 
@@ -54,7 +57,13 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   protected cache: Record<string, Observable<T>> = {};
 
-  protected updateSources: Record<string, Subject<UpdateData<T>>> = {};
+  protected updateSources: Record<string, Subject<FieldWrite[]>> = {};
+  /** Local field changes for documents read with a live listener (not the current-user path). */
+  private fieldWriteSources: Record<string, Subject<FieldWrite[]>> = {};
+
+  private static readonly coalescers: WriteCoalescer[] = [];
+  private static flushOnHideRegistered = false;
+  private readonly coalescer = new WriteCoalescer((key, writes) => this.commitFieldWrites(key, writes));
   protected setSources: Record<string, Subject<T>> = {};
 
   protected readonly collection = collection(this.firestore, this.getCollectionName()).withConverter(this.converter);
@@ -82,6 +91,18 @@ export abstract class FirestoreStorage<T extends DataModel> {
         console.groupEnd();
       };
     }
+    FirestoreStorage.coalescers.push(this.coalescer);
+    if (!FirestoreStorage.flushOnHideRegistered) {
+      FirestoreStorage.flushOnHideRegistered = true;
+      // Write queued field changes before the tab is hidden or closed.
+      const flushAll = (): void => FirestoreStorage.coalescers.forEach(coalescer => coalescer.flush());
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") {
+          flushAll();
+        }
+      });
+      window.addEventListener("pagehide", flushAll);
+    }
   }
 
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
@@ -107,13 +128,6 @@ export abstract class FirestoreStorage<T extends DataModel> {
     );
   }
 
-  private updateObjProp<T>(obj: T, value: unknown, propPath: string): void {
-    const [head, ...rest] = propPath.split(".");
-    !rest.length
-      ? obj[head] = value
-      : this.updateObjProp(obj[head], value, rest.join("."));
-  }
-
   public getOne(key: string, isForCurrentUser = false): Observable<T> {
     if (!this.cache[key]) {
       const source$ = docData$(this.docRef(key)).pipe(
@@ -130,7 +144,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
         })
       );
       if (isForCurrentUser) {
-        this.updateSources[key] = new Subject<UpdateData<T>>();
+        this.updateSources[key] = new Subject<FieldWrite[]>();
         this.setSources[key] = new Subject<T>();
         this.cache[key] = merge(
           this.setSources[key],
@@ -138,22 +152,20 @@ export abstract class FirestoreStorage<T extends DataModel> {
         ).pipe(
           switchMap((obj) => {
             return this.updateSources[key].pipe(
-              map(update => {
-                Object.keys(update).forEach(k => {
-                  // Skipping array manipulations
-                  if (typeof update[k] === "function") {
-                    return;
-                  }
-                  this.updateObjProp(obj, update[k], k);
-                });
-                return obj;
-              }),
+              map(writes => this.withLocalWrites(obj, writes)),
               startWith(obj)
             );
           })
         );
       } else {
+        const fieldWrites$ = this.fieldWriteSources[key] = this.fieldWriteSources[key] ?? new Subject<FieldWrite[]>();
         this.cache[key] = source$.pipe(
+          // Pending field changes are applied to every snapshot, so a snapshot that arrives
+          // before they are written cannot undo them on screen.
+          switchMap(obj => fieldWrites$.pipe(
+            map(writes => this.withLocalWrites(obj, writes)),
+            startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
+          )),
           catchError(err => this.endListener(err)),
           shareReplay({ refCount: true, bufferSize: 1 }),
           finalize(() => delete this.cache[key])
@@ -161,6 +173,40 @@ export abstract class FirestoreStorage<T extends DataModel> {
       }
     }
     return this.cache[key];
+  }
+
+  private withLocalWrites(obj: T, writes: readonly FieldWrite[]): T {
+    if (writes.length > 0) {
+      applyFieldWrites(obj, writes);
+      // A field change creates the document if it was missing, so it is no longer "not found".
+      delete obj.notFound;
+    }
+    return obj;
+  }
+
+  /**
+   * Changes only the given fields of one document. The change shows at once. A change to a document
+   * with no recent writes is written at once; further changes within the next second are written
+   * together when that second is over.
+   */
+  public patchFields(key: string, writes: FieldWrite[]): void {
+    (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
+    this.coalescer.enqueue(key, writes);
+  }
+
+  private commitFieldWrites(key: string, writes: FieldWrite[]): void {
+    this.recordOperation("write", key);
+    const ref = doc(this.firestore, this.getCollectionName(), key);
+    const [field, value, ...more] = writes.flatMap(write => [new FieldPath(...write.path), "delete" in write ? deleteField() : write.value]);
+    updateDoc(ref, field as FieldPath, value, ...more)
+      .catch((error: { code?: string }) => {
+        if (error?.code === "not-found") {
+          // First write for this document: create it with the same fields.
+          return setDoc(ref, applyFieldWrites({}, writes), { merge: true });
+        }
+        throw error;
+      })
+      .catch(error => console.error(`Could not save ${this.getCollectionName()}/${key}:`, error));
   }
 
   // After Log out or Sign in, Firestore re-checks the previous user's live listeners with the new
@@ -183,6 +229,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public setOne(key: string, row: Omit<T, "$key" | "notFound">): Observable<void> {
+    this.coalescer.discard(key);
     this.recordOperation("write", key);
     if (this.setSources[key]) {
       this.setSources[key].next({ ...row, $key: key } as T);
@@ -193,7 +240,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
   public updateOne(key: string, row: UpdateData<T>): Observable<void> {
     this.recordOperation("write", key);
     if (this.updateSources[key]) {
-      this.updateSources[key].next(row);
+      this.updateSources[key].next(Object.entries(row as Record<string, unknown>)
+        // Skipping array manipulations
+        .filter(([, value]) => typeof value !== "function")
+        .map(([field, value]) => ({ path: field.split("."), value })));
     }
     return from(updateDoc(this.docRef(key), row));
   }
