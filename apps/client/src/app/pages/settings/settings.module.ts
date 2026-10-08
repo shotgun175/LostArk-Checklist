@@ -9,12 +9,12 @@ import { FormsModule } from "@angular/forms";
 import { NzTableModule } from "ng-zorro-antd/table";
 import { NzSwitchModule } from "ng-zorro-antd/switch";
 import { NzCardModule } from "ng-zorro-antd/card";
-import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
+import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
 import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { NzEmptyModule } from "ng-zorro-antd/empty";
-import { NzDropDownModule } from "ng-zorro-antd/dropdown";
+import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 
 const routes: Routes = [{
   path: "",
@@ -33,12 +33,12 @@ const routes: Routes = [{
     NzTableModule,
     NzSwitchModule,
     NzCardModule,
-    NzInputNumberLegacyModule,
+    NzInputNumberModule,
     NzButtonModule,
     NzPopconfirmModule,
     NzTooltipModule,
     NzEmptyModule,
-    NzDropDownModule
+    NzDropdownModule
   ]
 })
 export class SettingsModule {

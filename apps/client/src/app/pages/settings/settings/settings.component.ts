@@ -179,10 +179,6 @@ export class SettingsComponent {
     return row.task.label;
   }
 
-  trackByIndex(index: number): number {
-    return index;
-  }
-
   setLazyFlag(settingsKey: string, tracking: Record<string, boolean>, task: LostarkTask, character: Character, flag: boolean): void {
     tracking[`${character.name}:${task.$key}`] = flag;
     this.settings.patch({

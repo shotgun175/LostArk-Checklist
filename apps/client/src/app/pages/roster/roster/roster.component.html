@@ -1,14 +1,15 @@
-<ng-container *ngIf="roster$ | async as roster">
+@if (roster$ | async; as roster) {
   <nz-page-header nzTitle="Roster manager" nzSubtitle="Manage & configure your roster">
     <nz-page-header-extra>
-      <button nz-button
-              *ngIf="hasLocalstorageRoster"
-              nzType="primary"
-              nz-popconfirm
-              nzPopconfirmTitle="This will overwrite your current roster with previously saved local data and clear it from localstorage !"
-              (nzOnConfirm)="importFromLocalStorage(roster.$key)">
-        Import from LocalStorage
-      </button>
+      @if (hasLocalstorageRoster) {
+        <button nz-button
+          nzType="primary"
+          nz-popconfirm
+          nzPopconfirmTitle="This will overwrite your current roster with previously saved local data and clear it from localstorage !"
+          (nzOnConfirm)="importFromLocalStorage(roster.$key)">
+          Import from LocalStorage
+        </button>
+      }
       <button nz-button (click)="exportRoster(roster)" nz-tooltip nzTooltipTitle="Export roster">
         <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
@@ -17,75 +18,80 @@
       </button>
     </nz-page-header-extra>
   </nz-page-header>
-  <nz-alert *ngIf="weeklyGoldLimitWarning(roster) as warning" class="weekly-gold-warning" nzType="warning" nzShowIcon [nzMessage]="warning"></nz-alert>
+  @if (weeklyGoldLimitWarning(roster); as warning) {
+    <nz-alert class="weekly-gold-warning" nzType="warning" nzShowIcon [nzMessage]="warning"></nz-alert>
+  }
   <nz-card nzTitle="Characters">
     <nz-list [nzDataSource]="roster.characters" cdkDropList [cdkDropListData]="roster.characters" (cdkDropListDropped)="drop(roster, $event)">
-      <nz-list-item *ngFor="let character of roster.characters;trackBy: trackByCharacter"
-                    [nzContent]="noteEditor"
-                    [nzActions]="[setLazyAction, setHideAction,setWeeklyGoldAction, setClassAction, deleteAction]"
-                    cdkDrag [cdkDragData]="character">
-        <ng-template #noteEditor>
-          <div class="note-editor">
-          <textarea nz-input
-                    placeholder="Custom note, you also can use it to set your BiFrost information or song of return location"
-                    cols="50"
-                    rows="3"
-                    [(ngModel)]="character.note"
-                    [ngModelOptions]="{updateOn: 'blur'}"
-                    (ngModelChange)="saveCharacter(character, roster)"></textarea>
-          </div>
-        </ng-template>
-
-        <nz-list-item-meta [nzTitle]="title" [nzDescription]="description" class="character-meta"
-                           nzAvatar="./assets/icons/classes/class_{{character.class?.toString()?.padStart(2,'0')}}.png"></nz-list-item-meta>
-        <ng-template #title>
-          <input type="text" nz-input [ngModel]="character.name" [ngModelOptions]="{updateOn: 'blur'}" (ngModelChange)="saveCharacterName(character, roster, $event)" class="character-name-input">
-        </ng-template>
-        <ng-template #description>
-          ilvl
-          <nz-input-number [(ngModel)]="character.ilvl" [ngModelOptions]="{updateOn: 'blur'}"
-                           (ngModelChange)="saveCharacter(character, roster)"></nz-input-number>
-        </ng-template>
-        <ng-template #setWeeklyGoldAction>
-          <span nz-tooltip [nzTooltipTitle]="isWeeklyGoldTickDisabled(roster, character) ? '6 weekly gold characters already. Untick one to choose this character.' : ''">
-            <label nz-checkbox [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
-            Weekly Gold
-          </span>
-          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></span>
-        </ng-template>
-        <ng-template #setHideAction>
-          <label nz-checkbox [(ngModel)]="character.isHide" (ngModelChange)="saveCharacter(character, roster)"></label>
-          Hide
-          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Hide character from the checklist"></span>
-        </ng-template>
-        <ng-template #setLazyAction>
-          <label nz-checkbox [(ngModel)]="character.lazy" (ngModelChange)="saveCharacter(character, roster)"></label>
-          Lazy
-          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
-        </ng-template>
-        <ng-template #setClassAction>
-          <nz-select class="class-selector"
-                     [(ngModel)]="character.class"
-                     (ngModelChange)="saveCharacter(character, roster)"
-                     nzShowSearch>
-            <nz-option *ngFor="let row of classes"
-                       [nzValue]="row.id" [nzLabel]="row.name"
-                       nzCustomContent>
-              <div class="class-row">
-                <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
-                <div>{{row.name}}</div>
-              </div>
-            </nz-option>
-          </nz-select>
-        </ng-template>
-        <ng-template #deleteAction>
-          <button nz-button nzDanger nz-popconfirm
-                  nzPopconfirmTitle="Are you sure?"
-                  (nzOnConfirm)="removeCharacter(character, roster)" nzShape="circle">
-            <span nz-icon nzType="delete" nzTheme="outline"></span>
-          </button>
-        </ng-template>
-      </nz-list-item>
+      @for (character of roster.characters; track trackByCharacter($index, character)) {
+        <nz-list-item
+          [nzContent]="noteEditor"
+          [nzActions]="[setLazyAction, setHideAction,setWeeklyGoldAction, setClassAction, deleteAction]"
+          cdkDrag [cdkDragData]="character">
+          <ng-template #noteEditor>
+            <div class="note-editor">
+              <textarea nz-input
+                placeholder="Custom note, you also can use it to set your BiFrost information or song of return location"
+                cols="50"
+                rows="3"
+                [(ngModel)]="character.note"
+                [ngModelOptions]="{updateOn: 'blur'}"
+              (ngModelChange)="saveCharacter(character, roster)"></textarea>
+            </div>
+          </ng-template>
+          <nz-list-item-meta [nzTitle]="title" [nzDescription]="description" class="character-meta"
+          nzAvatar="./assets/icons/classes/class_{{character.class?.toString()?.padStart(2,'0')}}.png"></nz-list-item-meta>
+          <ng-template #title>
+            <input type="text" nz-input [ngModel]="character.name" [ngModelOptions]="{updateOn: 'blur'}" (ngModelChange)="saveCharacterName(character, roster, $event)" class="character-name-input">
+          </ng-template>
+          <ng-template #description>
+            ilvl
+            <nz-input-number nzChangeOnWheel="false" [(ngModel)]="character.ilvl" [ngModelOptions]="{updateOn: 'blur'}"
+            (ngModelChange)="saveCharacter(character, roster)"></nz-input-number>
+          </ng-template>
+          <ng-template #setWeeklyGoldAction>
+            <span nz-tooltip [nzTooltipTitle]="isWeeklyGoldTickDisabled(roster, character) ? '6 weekly gold characters already. Untick one to choose this character.' : ''">
+              <label nz-checkbox [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
+              Weekly Gold
+            </span>
+            <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></span>
+          </ng-template>
+          <ng-template #setHideAction>
+            <label nz-checkbox [(ngModel)]="character.isHide" (ngModelChange)="saveCharacter(character, roster)"></label>
+            Hide
+            <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Hide character from the checklist"></span>
+          </ng-template>
+          <ng-template #setLazyAction>
+            <label nz-checkbox [(ngModel)]="character.lazy" (ngModelChange)="saveCharacter(character, roster)"></label>
+            Lazy
+            <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
+          </ng-template>
+          <ng-template #setClassAction>
+            <nz-select class="class-selector"
+              [(ngModel)]="character.class"
+              (ngModelChange)="saveCharacter(character, roster)"
+              nzShowSearch>
+              @for (row of classes; track row) {
+                <nz-option
+                  [nzValue]="row.id" [nzLabel]="row.name"
+                  nzCustomContent>
+                  <div class="class-row">
+                    <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
+                    <div>{{row.name}}</div>
+                  </div>
+                </nz-option>
+              }
+            </nz-select>
+          </ng-template>
+          <ng-template #deleteAction>
+            <button nz-button nzDanger nz-popconfirm
+              nzPopconfirmTitle="Are you sure?"
+              (nzOnConfirm)="removeCharacter(character, roster)" nzShape="circle">
+              <span nz-icon nzType="delete" nzTheme="outline"></span>
+            </button>
+          </ng-template>
+        </nz-list-item>
+      }
     </nz-list>
   </nz-card>
   <nz-divider></nz-divider>
@@ -109,14 +115,16 @@
         <nz-form-control nzErrorTip="Please input a class">
           <nz-input-group nzAddOnBefore="Class">
             <nz-select formControlName="class" class="class-selector" nzShowSearch>
-              <nz-option *ngFor="let row of classes"
-                         [nzValue]="row.id" [nzLabel]="row.name"
-                         nzCustomContent class="class-row">
-                <div class="class-row">
-                  <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
-                  <div>{{row.name}}</div>
-                </div>
-              </nz-option>
+              @for (row of classes; track row) {
+                <nz-option
+                  [nzValue]="row.id" [nzLabel]="row.name"
+                  nzCustomContent class="class-row">
+                  <div class="class-row">
+                    <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
+                    <div>{{row.name}}</div>
+                  </div>
+                </nz-option>
+              }
             </nz-select>
           </nz-input-group>
         </nz-form-control>
@@ -130,4 +138,4 @@
       <button nz-button [nzType]="'primary'" [disabled]="!form.valid">Add</button>
     </form>
   </nz-card>
-</ng-container>
+}

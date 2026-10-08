@@ -1,10 +1,14 @@
 <form (submit)="submit()">
-  <textarea nz-input [formControl]="control" rows="5" [placeholder]="placeholder" class="text-area"
-            *ngIf="type==='textarea'">
-  </textarea>
-  <input type="text" nz-input [formControl]="control" [placeholder]="placeholder" class="text-area"
-         *ngIf="type==='input'" />
+  @if (type==='textarea') {
+    <textarea nz-input [formControl]="control" rows="5" [placeholder]="placeholder" class="text-area"
+      >
+    </textarea>
+  }
+  @if (type==='input') {
+    <input type="text" nz-input [formControl]="control" [placeholder]="placeholder" class="text-area"
+      />
+  }
   <button nz-button [disabled]="!control.valid" nzType="primary"
-          type="submit">Submit
+    type="submit">Submit
   </button>
 </form>

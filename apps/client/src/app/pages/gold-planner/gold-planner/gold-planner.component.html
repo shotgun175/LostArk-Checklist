@@ -1,25 +1,27 @@
-<ng-container *ngIf="settings$ | async as settings">
-  <ng-container *ngIf="roster$ | async as roster">
-    <ng-container *ngIf="display$ | async as display">
+@if (settings$ | async; as settings) {
+  @if (roster$ | async; as roster) {
+    @if (display$ | async; as display) {
       <nz-page-header nzTitle="Gold Planner" nzSubtitle="Plan how much gold income you're generating with weeklies">
         <nz-page-header-extra>
           <button nz-button nzType="primary"
             (click)="toggleExplanations(settings.$key, display.tracking)"
-          >
+            >
             {{ display.tracking['showExplanations'] ? "Hide" : "Show" }} explanations
           </button>
         </nz-page-header-extra>
         <nz-page-header-content>
-          <div *ngIf="display.tracking['showExplanations']" class="explanations">
-            Pick a character in the list to plan its raids. The list shows each character's gold for the week and the roster total.<br />
-            Configure your run by selecting the right mode: <b>Solo</b>, <b>Normal</b>, <b>Hard</b> or <b>Nightmare</b>. Not available modes (based on the raid and your ilvl) are greyed out.<br />
-            For each raid you're taking gold in game, tick the <b>Taking Gold</b> checkbox. A character earns gold from at most <b>3 raids</b> a week, and only the 6 weekly gold characters set on the <a class='header-link' routerLink="/roster">Roster</a> page earn gold.<br />
-            If you are buying the chest, tick the <b>Taking Chest</b> checkbox.<br />
-            <br />
-            You can further customize each gate of a raid by expanding the gates using the <b>+</b> icon. <b>Mixed</b> means that you mixed and matched modes.<br />
-            <br />
-            Interested in how much gold you can still earn this week? Set the <b>Full Planning</b> slider to <b>Remaining for the week</b> and find out. The remaining raid entries are based on your weekly completion in the <a class='header-link' routerLink="/checklist">Checklist</a>.
-          </div>
+          @if (display.tracking['showExplanations']) {
+            <div class="explanations">
+              Pick a character in the list to plan its raids. The list shows each character's gold for the week and the roster total.<br />
+              Configure your run by selecting the right mode: <b>Solo</b>, <b>Normal</b>, <b>Hard</b> or <b>Nightmare</b>. Not available modes (based on the raid and your ilvl) are greyed out.<br />
+              For each raid you're taking gold in game, tick the <b>Taking Gold</b> checkbox. A character earns gold from at most <b>3 raids</b> a week, and only the 6 weekly gold characters set on the <a class='header-link' routerLink="/roster">Roster</a> page earn gold.<br />
+              If you are buying the chest, tick the <b>Taking Chest</b> checkbox.<br />
+              <br />
+              You can further customize each gate of a raid by expanding the gates using the <b>+</b> icon. <b>Mixed</b> means that you mixed and matched modes.<br />
+              <br />
+              Interested in how much gold you can still earn this week? Set the <b>Full Planning</b> slider to <b>Remaining for the week</b> and find out. The remaining raid entries are based on your weekly completion in the <a class='header-link' routerLink="/checklist">Checklist</a>.
+            </div>
+          }
           <nz-switch
             nzCheckedChildren="Remaining for the week"
             nzUnCheckedChildren="Full Planning"
@@ -28,140 +30,173 @@
           ></nz-switch>
         </nz-page-header-content>
       </nz-page-header>
-
-      <ng-template #goldIcon><img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /></ng-template>
-
-      <div class="planner" *ngIf="selection$ | async as selection">
-        <div class="character-list">
-          <div class="roster-summary">
-            <div class="summary-label">Roster this week</div>
-            <div class="summary-tradable">{{ display.grandTotal.unboundGold | number }} tradable</div>
-            <div class="summary-rest">{{ display.grandTotal.boundGold | number }} bound &middot; {{ display.grandTotal.goldEarners }} gold {{ display.grandTotal.goldEarners === 1 ? 'earner' : 'earners' }}</div>
+      @if (selection$ | async; as selection) {
+        <div class="planner">
+          <div class="character-list">
+            <div class="roster-summary">
+              <div class="summary-label">Roster this week</div>
+              <div class="summary-tradable">{{ display.grandTotal.unboundGold | number }} tradable</div>
+              <div class="summary-rest">{{ display.grandTotal.boundGold | number }} bound &middot; {{ display.grandTotal.goldEarners }} gold {{ display.grandTotal.goldEarners === 1 ? 'earner' : 'earners' }}</div>
+            </div>
+            @if (display.groups.goldEarners.length) {
+              <div class="list-heading">Gold earners</div>
+              @for (i of display.groups.goldEarners; track i) {
+                <button type="button" class="character-item"
+                  [class.selected]="i === selection.index" (click)="selectCharacter(roster[i])">
+                  <span class="character-name">{{ roster[i].name }}</span> <span class="character-ilvl">{{ roster[i].ilvl }}</span>
+                  <span class="character-sub">{{ display.goldRaidCounts[i] }} gold {{ display.goldRaidCounts[i] === 1 ? 'raid' : 'raids' }}</span>
+                  <span class="character-sub">
+                    <span class="gold-split gold">{{ display.total[i].unboundGold | number }} tradable</span> &middot;
+                    <span class="gold-split">{{ display.total[i].boundGold | number }} bound</span>
+                  </span>
+                </button>
+              }
+            }
+            @if (display.groups.others.length) {
+              <div class="list-heading">Other characters</div>
+              @for (i of display.groups.others; track i) {
+                <button type="button" class="character-item"
+                  [class.selected]="i === selection.index" (click)="selectCharacter(roster[i])">
+                  <span class="character-name">{{ roster[i].name }}</span> <span class="character-ilvl">{{ roster[i].ilvl }}</span>
+                  <span class="character-sub">
+                    @if (display.chestCosts[i]) {
+                      Box costs <span class="cost">-{{ display.chestCosts[i] | number }}</span>
+                    } @else {
+                      No box costs
+                    }
+                  </span>
+                </button>
+              }
+            }
           </div>
-
-          <ng-container *ngIf="display.groups.goldEarners.length">
-            <div class="list-heading">Gold earners</div>
-            <button type="button" class="character-item" *ngFor="let i of display.groups.goldEarners"
-              [class.selected]="i === selection.index" (click)="selectCharacter(roster[i])">
-              <span class="character-name">{{ roster[i].name }}</span> <span class="character-ilvl">{{ roster[i].ilvl }}</span>
-              <span class="character-sub">{{ display.goldRaidCounts[i] }} gold {{ display.goldRaidCounts[i] === 1 ? 'raid' : 'raids' }}</span>
-              <span class="character-sub">
-                <span class="gold-split gold">{{ display.total[i].unboundGold | number }} tradable</span> &middot;
-                <span class="gold-split">{{ display.total[i].boundGold | number }} bound</span>
-              </span>
-            </button>
-          </ng-container>
-
-          <ng-container *ngIf="display.groups.others.length">
-            <div class="list-heading">Other characters</div>
-            <button type="button" class="character-item" *ngFor="let i of display.groups.others"
-              [class.selected]="i === selection.index" (click)="selectCharacter(roster[i])">
-              <span class="character-name">{{ roster[i].name }}</span> <span class="character-ilvl">{{ roster[i].ilvl }}</span>
-              <span class="character-sub">
-                <ng-container *ngIf="display.chestCosts[i]; else noBoxCosts">Box costs <span class="cost">-{{ display.chestCosts[i] | number }}</span></ng-container>
-                <ng-template #noBoxCosts>No box costs</ng-template>
-              </span>
-            </button>
-          </ng-container>
-        </div>
-
-        <div class="character-panel" *ngIf="roster[selection.index] as character">
-          <div class="panel-title">
-            <span class="panel-name">
-              {{ character.name }} [{{ character.ilvl }}]
-              <span nz-icon nzType="message" nzTheme="outline" *ngIf="character.note" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></span>
-            </span>
-            <span class="panel-raids" *ngIf="character.weeklyGold">{{ display.goldRaidCounts[selection.index] }} of {{ maxGoldRaids }} gold raids</span>
-          </div>
-
-          <ng-template #controls let-row="row" let-flag="flag">
-            <div class="controls">
-              <nz-radio-group
-                [(ngModel)]="flag.runningMode"
-                nzButtonStyle="solid"
-                nzSize="small"
-                (ngModelChange)="setRunningModeFlag(settings.$key, display.raidModesForGoldPlanner, row.line, character, $event)"
-              >
-                <label *ngIf="flag.soloModeExists" nz-radio-button nzValue="Solo">Solo</label>
-                <label *ngIf="flag.normalModeExists" nz-radio-button nzValue="NM">Normal</label>
-                <label *ngIf="flag.hardModeExists" nz-radio-button nzValue="HM" [nzDisabled]="!flag.canRunHM">Hard</label>
-                <label *ngIf="flag.nightmareModeExists" nz-radio-button nzValue="Nightmare" [nzDisabled]="!flag.canRunNightmare">Nightmare</label>
-                <label nz-radio-button nzValue="Mixed" [nzDisabled]="true">Mixed</label>
-              </nz-radio-group>
-              <div class="checkbox-line">
-                <span nz-tooltip [nzTooltipTitle]="flag.goldTakingDisabledReason || ''">
-                  <label
-                    nz-checkbox
-                    [(ngModel)]="flag.takingGold"
-                    [nzDisabled]="!!flag.goldTakingDisabledReason"
-                    nzIndeterminate={{flag.indeterminateTakingGold}}
-                    (ngModelChange)="setGoldTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, character, $event)"
-                  >
-                    Taking Gold ( {{ flag.unboundGoldReward + flag.boundGoldReward | number }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
-                  </label>
+          @if (roster[selection.index]; as character) {
+            <div class="character-panel">
+              <div class="panel-title">
+                <span class="panel-name">
+                  {{ character.name }} [{{ character.ilvl }}]
+                  @if (character.note) {
+                    <span nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></span>
+                  }
                 </span>
-                <span class="all-bound" *ngIf="flag.unboundGoldReward === 0 && flag.boundGoldReward > 0">all bound</span>
-                <span *ngIf="flag.unboundGoldReward !== 0 && flag.boundGoldReward !== 0" nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipOverlayStyle]="{'max-width': '180px'}" nzTooltipTitle="{{ flag.unboundGoldReward | number }} Unbound Gold {{ flag.boundGoldReward | number }} Bound Gold" class="info-icon"></span>
+                @if (character.weeklyGold) {
+                  <span class="panel-raids">{{ display.goldRaidCounts[selection.index] }} of {{ maxGoldRaids }} gold raids</span>
+                }
               </div>
-              <div class="checkbox-line">
-                <label
-                  nz-checkbox
-                  [(ngModel)]="flag.takingChest"
-                  nzIndeterminate={{flag.indeterminateTakingChest}}
-                  (ngModelChange)="setChestTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, character, $event)"
-                >
-                  Taking Chest ( -{{ flag.chestPrice | number }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
-                </label>
-              </div>
-            </div>
-          </ng-template>
-
-          <ng-container *ngFor="let row of display.chestsData; trackBy: trackByIndex">
-            <div class="raid-row" *ngIf="!row.line.parent && !row.goldDetails[selection.index].hide">
-              <button type="button" class="expand-button" *ngIf="!row.line.gate"
-                [attr.aria-label]="(row.line.expand ? 'Hide gates of ' : 'Show gates of ') + row.line.name"
-                (click)="row.line.expand = !row.line.expand; setExpandRaidFlag(settings.$key, display.tracking, row.line.gTask, !!row.line.expand)">
-                <span *ngIf="row.line.expand">&minus;</span><span *ngIf="!row.line.expand">+</span>
-              </button>
-              <span class="expand-spacer" *ngIf="row.line.gate"></span>
-              <div class="raid-name">
-                <img *ngIf="row.task?.iconPath" src="./assets/icons/{{ row.task?.iconPath }}" alt="" class="task-icon" />
-                <span>{{ row.line.name }}</span>
-              </div>
-              <div class="raid-controls">
-                <ng-container *ngTemplateOutlet="controls; context: { row: row, flag: row.goldDetails[selection.index] }"></ng-container>
-                <ng-container *ngIf="row.line.expand">
-                  <ng-container *ngFor="let gateRow of row.children; trackBy: trackByIndex">
-                    <div class="gate-block" *ngIf="!gateRow.goldDetails[selection.index].hide">
-                      <div class="gate-label">{{ gateRow.line.name.substring(gateRow.line.name.lastIndexOf(' Gate ') + 1) }}</div>
-                      <ng-container *ngTemplateOutlet="controls; context: { row: gateRow, flag: gateRow.goldDetails[selection.index] }"></ng-container>
+              <ng-template #controls let-row="row" let-flag="flag">
+                <div class="controls">
+                  <nz-radio-group
+                    [(ngModel)]="flag.runningMode"
+                    nzButtonStyle="solid"
+                    nzSize="small"
+                    (ngModelChange)="setRunningModeFlag(settings.$key, display.raidModesForGoldPlanner, row.line, character, $event)"
+                    >
+                    @if (flag.soloModeExists) {
+                      <label nz-radio-button nzValue="Solo">Solo</label>
+                    }
+                    @if (flag.normalModeExists) {
+                      <label nz-radio-button nzValue="NM">Normal</label>
+                    }
+                    @if (flag.hardModeExists) {
+                      <label nz-radio-button nzValue="HM" [nzDisabled]="!flag.canRunHM">Hard</label>
+                    }
+                    @if (flag.nightmareModeExists) {
+                      <label nz-radio-button nzValue="Nightmare" [nzDisabled]="!flag.canRunNightmare">Nightmare</label>
+                    }
+                    <label nz-radio-button nzValue="Mixed" [nzDisabled]="true">Mixed</label>
+                  </nz-radio-group>
+                  <div class="checkbox-line">
+                    <span nz-tooltip [nzTooltipTitle]="flag.goldTakingDisabledReason || ''">
+                      <label
+                        nz-checkbox
+                        [(ngModel)]="flag.takingGold"
+                        [nzDisabled]="!!flag.goldTakingDisabledReason"
+                        nzIndeterminate={{flag.indeterminateTakingGold}}
+                        (ngModelChange)="setGoldTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, character, $event)"
+                        >
+                        Taking Gold ( {{ flag.unboundGoldReward + flag.boundGoldReward | number }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
+                      </label>
+                    </span>
+                    @if (flag.unboundGoldReward === 0 && flag.boundGoldReward > 0) {
+                      <span class="all-bound">all bound</span>
+                    }
+                    @if (flag.unboundGoldReward !== 0 && flag.boundGoldReward !== 0) {
+                      <span nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipOverlayStyle]="{'max-width': '180px'}" nzTooltipTitle="{{ flag.unboundGoldReward | number }} Unbound Gold {{ flag.boundGoldReward | number }} Bound Gold" class="info-icon"></span>
+                    }
+                  </div>
+                  <div class="checkbox-line">
+                    <label
+                      nz-checkbox
+                      [(ngModel)]="flag.takingChest"
+                      nzIndeterminate={{flag.indeterminateTakingChest}}
+                      (ngModelChange)="setChestTakingFlag(settings.$key, display.tracking, display.raidModesForGoldPlanner, row.line, character, $event)"
+                      >
+                      Taking Chest ( -{{ flag.chestPrice | number }}<img src="./assets/icons/gold.png" class="gold-icon" alt="gold" /> )
+                    </label>
+                  </div>
+                </div>
+              </ng-template>
+              @for (row of display.chestsData; track $index) {
+                @if (!row.line.parent && !row.goldDetails[selection.index].hide) {
+                  <div class="raid-row">
+                    @if (!row.line.gate) {
+                      <button type="button" class="expand-button"
+                        [attr.aria-label]="(row.line.expand ? 'Hide gates of ' : 'Show gates of ') + row.line.name"
+                        (click)="row.line.expand = !row.line.expand; setExpandRaidFlag(settings.$key, display.tracking, row.line.gTask, !!row.line.expand)">
+                        @if (row.line.expand) {
+                          <span>&minus;</span>
+                        }
+                        @if (!row.line.expand) {
+                          <span>+</span>
+                        }
+                      </button>
+                    }
+                    @if (row.line.gate) {
+                      <span class="expand-spacer"></span>
+                    }
+                    <div class="raid-name">
+                      @if (row.task?.iconPath) {
+                        <img src="./assets/icons/{{ row.task?.iconPath }}" alt="" class="task-icon" />
+                      }
+                      <span>{{ row.line.name }}</span>
                     </div>
-                  </ng-container>
-                </ng-container>
+                    <div class="raid-controls">
+                      <ng-container *ngTemplateOutlet="controls; context: { row: row, flag: row.goldDetails[selection.index] }"></ng-container>
+                      @if (row.line.expand) {
+                        @for (gateRow of row.children; track $index) {
+                          @if (!gateRow.goldDetails[selection.index].hide) {
+                            <div class="gate-block">
+                              <div class="gate-label">{{ gateRow.line.name.substring(gateRow.line.name.lastIndexOf(' Gate ') + 1) }}</div>
+                              <ng-container *ngTemplateOutlet="controls; context: { row: gateRow, flag: gateRow.goldDetails[selection.index] }"></ng-container>
+                            </div>
+                          }
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+              }
+              <div class="manual-row">
+                <span>Chaos Dungeons</span>
+                <nz-input-number nzChangeOnWheel="false" [nzFormatter]="manualGoldDisplay" [ngModel]="display.chaos[character.name]" (ngModelChange)="setManualGold(settings.$key, 'chaos', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
+                  <img nzInputAddonBefore src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
+                </nz-input-number>
+              </div>
+              <div class="manual-row">
+                <span>Other sources <span nz-icon nzType="message" nzTheme="outline" nz-tooltip nzTooltipTitle="For buses costs you can put negative values like (-1300)" class="info-icon"></span></span>
+                <nz-input-number nzChangeOnWheel="false" [nzFormatter]="manualGoldDisplay" [ngModel]="display.other[character.name]" (ngModelChange)="setManualGold(settings.$key, 'other', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
+                  <img nzInputAddonBefore src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
+                </nz-input-number>
+              </div>
+              <div class="character-total">
+                Total:
+                <img src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
+                <span class="gold-split gold">{{ display.total[selection.index].unboundGold | number }} tradable</span> &middot;
+                <span class="gold-split">{{ display.total[selection.index].boundGold | number }} bound</span>
               </div>
             </div>
-          </ng-container>
-
-          <div class="manual-row">
-            <span>Chaos Dungeons</span>
-            <nz-input-group [nzAddOnBefore]="goldIcon">
-              <nz-input-number [nzFormatter]="manualGoldFormatter" [ngModel]="display.chaos[character.name]" (ngModelChange)="setManualGold(settings.$key, 'chaos', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }"></nz-input-number>
-            </nz-input-group>
-          </div>
-          <div class="manual-row">
-            <span>Other sources <span nz-icon nzType="message" nzTheme="outline" nz-tooltip nzTooltipTitle="For buses costs you can put negative values like (-1300)" class="info-icon"></span></span>
-            <nz-input-group [nzAddOnBefore]="goldIcon">
-              <nz-input-number [nzFormatter]="manualGoldFormatter" [ngModel]="display.other[character.name]" (ngModelChange)="setManualGold(settings.$key, 'other', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }"></nz-input-number>
-            </nz-input-group>
-          </div>
-          <div class="character-total">
-            Total:
-            <img src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
-            <span class="gold-split gold">{{ display.total[selection.index].unboundGold | number }} tradable</span> &middot;
-            <span class="gold-split">{{ display.total[selection.index].boundGold | number }} bound</span>
-          </div>
+          }
         </div>
-      </div>
-    </ng-container>
-  </ng-container>
-</ng-container>
+      }
+    }
+  }
+}

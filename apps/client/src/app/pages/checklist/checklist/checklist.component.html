@@ -13,202 +13,267 @@
 
   <nz-page-header-extra>
     <div class="countdowns-container">
-      <nz-countdown *ngIf="nextDailyReset$ | async as reset" [nzValue]="reset" nzTitle="Next daily reset: "></nz-countdown>
-      <nz-countdown *ngIf="nextWeeklyReset$ | async as reset" [nzValue]="reset" nzTitle="Next weekly reset: "></nz-countdown>
-      <nz-countdown *ngIf="nextBiWeeklyReset$ | async as reset" [nzValue]="reset" nzTitle="Next bi-weekly reset: "></nz-countdown>
-      <nz-countdown *ngIf="nextBiWeeklyOffsetReset$ | async as reset" [nzValue]="reset" nzTitle="Next offset bi-weekly reset (Thaemine reset): "></nz-countdown>
+      @if (nextDailyReset$ | async; as reset) {
+        <nz-countdown [nzValue]="reset" nzTitle="Next daily reset: "></nz-countdown>
+      }
+      @if (nextWeeklyReset$ | async; as reset) {
+        <nz-countdown [nzValue]="reset" nzTitle="Next weekly reset: "></nz-countdown>
+      }
+      @if (nextBiWeeklyReset$ | async; as reset) {
+        <nz-countdown [nzValue]="reset" nzTitle="Next bi-weekly reset: "></nz-countdown>
+      }
+      @if (nextBiWeeklyOffsetReset$ | async; as reset) {
+        <nz-countdown [nzValue]="reset" nzTitle="Next offset bi-weekly reset (Thaemine reset): "></nz-countdown>
+      }
     </div>
   </nz-page-header-extra>
 </nz-page-header>
 
-<nz-collapse *ngIf="rawRoster$ | async as roster">
-  <ng-container *ngIf="characters$ | async as characters">
-    <nz-collapse-panel nzHeader="Tickets tracking" class="tickets-tracker" [(nzActive)]="ticketsTrackingOpened" (nzActiveChange)="ticketsTrackingOpenedChange($event)" *ngIf="characters.length > 0">
-      <nz-table [nzPageSize]="99" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle" [nzData]="[{}]">
-        <thead>
-          <tr>
-            <th>Ticket</th>
-            <th *ngFor="let character of characters; trackBy: trackByCharacter">
-              <div class="character-title">
-                <img src="./assets/icons/classes/class_{{ character.class?.toString()?.padStart(2, '0') }}.png" alt="" class="class-icon" *ngIf="character.class !== null" />
-                {{ character.name }} [{{ character.ilvl }}]
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody *ngIf="tickets$ | async as tickets">
-          <tr *ngFor="let ticket of tickets">
-            <td><img src="./assets/icons/{{ ticket.icon }}" class="ticket-icon icon-rarity icon-rarity-{{ ticket.rarity }}" alt="" />{{ ticket.name }}</td>
-            <td *ngFor="let character of characters; trackBy: trackByCharacter" class="ticket-cell">
-              <nz-input-number [(ngModel)]="character.tickets[ticket.key]" (ngModelChange)="saveRoster(roster)"></nz-input-number>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-    </nz-collapse-panel>
-  </ng-container>
-</nz-collapse>
-
-<ng-container *ngIf="rawRoster$ | async as roster">
-  <label nz-checkbox [(ngModel)]="roster.showAllTasks" class="all-tasks" (ngModelChange)="saveRoster(roster)" *ngIf="roster.characters.length > 0">
-    Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Force to show hidden tasks by days filter."></span>
-  </label>
-</ng-container>
-
-<ng-container *ngIf="roster$ | async as roster">
-  <div class="fullpage-message" *ngIf="roster.length === 0">
-    No characters in your roster, please add some in the roster page
-    <br />
-    <a nz-button nzType="primary" routerLink="/roster">Click here to navigate to the roster manager and add your first character</a>
-  </div>
-  <ng-container *ngIf="roster.length > 0">
-    <ng-container *ngIf="completion$ | async as completion">
-      <ng-container *ngIf="energy$ | async as energy">
-        <ng-container *ngIf="scrolling$ | async as scrolling">
-        <ng-container *ngIf="taskColumnWidth$ | async as taskColumnWidth">
-          <nz-table *ngIf="tableDisplay$ | async as display" class="checklist-table" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
-            <ng-template #empty></ng-template>
-            <table>
-              <thead>
-                <tr>
-                  <th>Task</th>
-                  <th *ngFor="let character of charactersDisplay$ | async">
+@if (rawRoster$ | async; as roster) {
+    @if (characters$ | async; as characters) {
+      @if (characters.length > 0) {
+        <nz-collapse>
+        <nz-collapse-panel nzHeader="Tickets tracking" class="tickets-tracker" [(nzActive)]="ticketsTrackingOpened" (nzActiveChange)="ticketsTrackingOpenedChange($event)">
+          <nz-table [nzPageSize]="99" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle" [nzData]="[{}]">
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                @for (character of characters; track trackByCharacter($index, character)) {
+                  <th>
                     <div class="character-title">
-                      <img src="./assets/icons/classes/class_{{ character.class?.toString()?.padStart(2, '0') }}.png" alt="" class="class-icon" *ngIf="character.class !== null" />
+                      @if (character.class !== null) {
+                        <img src="./assets/icons/classes/class_{{ character.class?.toString()?.padStart(2, '0') }}.png" alt="" class="class-icon" />
+                      }
                       {{ character.name }} [{{ character.ilvl }}]
-                      <span nz-icon nzType="check" nzTheme="outline" *ngIf="character.done"></span>
-                      <span nz-icon nzType="message" nzTheme="outline" *ngIf="character.note" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></span>
-                      <span nz-icon nzType="clock-circle" nzTheme="outline" *ngIf="character.lazy" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
                     </div>
                   </th>
-                </tr>
-              </thead>
+                }
+              </tr>
+            </thead>
+            @if (tickets$ | async; as tickets) {
               <tbody>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.dailyCharacter, title: 'Daily Character', key: 'dailyCharacter' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.dailyRoster, title: 'Daily Roster', key: 'dailyRoster' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.weeklyCharacter, title: 'Weekly Character', key: 'weeklyCharacter' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.biWeeklyCharacter, title: 'Biweekly Character', key: 'biWeeklyCharacter' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.weeklyRoster, title: 'Weekly Roster', key: 'weeklyRoster' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.biWeeklyRoster, title: 'Biweekly Roster', key: 'biWeeklyRoster' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.oneTimeCharacter, title: 'One Time Character', key: 'oneTimeCharacter' }"></ng-container>
-                <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.oneTimeRoster, title: 'One Time Roster', key: 'oneTimeRoster' }"></ng-container>
-
-                <ng-template #rowsDisplay let-entry let-title="title" let-key="key">
-                  <ng-container *ngIf="entry.data.length > 0">
-                    <ng-container *ngIf="categoriesDisplay$ | async as categoriesDisplay">
-                      <tr>
-                        <td
-                          [attr.colspan]="display.roster.length + 1"
-                          class="section-span"
-                          [class.completed]="entry.done"
-                          [class.daily]="entry.data[0].task.frequency === TaskFrequency.DAILY"
-                          [class.weekly]="entry.data[0].task.frequency === TaskFrequency.WEEKLY || entry.data[0].task.frequency === TaskFrequency.BIWEEKLY"
-                        >
-                          <div class="section-span-toggle">
-                            <nz-switch [nzCheckedChildren]="checked" [nzUnCheckedChildren]="unchecked" [(ngModel)]="categoriesDisplay[key]" (ngModelChange)="categoriesDisplay$.next(categoriesDisplay)" nzSize="small" class="visibility-switch">
-                              <ng-template #checked><span nz-icon nzType="eye" nzTheme="outline"></span></ng-template>
-                              <ng-template #unchecked><span nz-icon nzType="eye-invisible" nzTheme="outline"></span></ng-template>
-                            </nz-switch>
-                            {{ title }}
-                          </div>
-                        </td>
-                      </tr>
-                      <ng-container *ngIf="categoriesDisplay[key]">
-                        <tr
-                          *ngFor="let row of entry.data; trackBy: trackByEntry; even as even"
-                          [class.even]="even"
-                          [class.completed]="row.allDone || (!row.available && row.task.scope === TaskScope.ROSTER)"
-                          [class.daily]="row.task.frequency === TaskFrequency.DAILY"
-                          [class.one-time]="row.task.frequency === TaskFrequency.ONE_TIME"
-                          [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
-                        >
-                          <td [style.width.px]="taskColumnWidth" class="task-name" [attr.title]="row.task.label">
-                            <div class="task-name-content" [style.width.px]="taskColumnWidth - 17">
-                              <img *ngIf="row.task.iconPath" src="./assets/icons/{{ row.task.iconPath }}" alt="" class="task-icon" />
-                              <span class="task-label">{{ row.task.label }}</span>
-                            </div>
-                          </td>
-                          <ng-container *ngIf="row.task.scope === TaskScope.ROSTER">
-                            <td colspan="99">
-                              <div class="counter roster" *ngIf="row.available">
-                                <div>
-                                  <button
-                                    nz-button
-                                    nzSize="small"
-                                    nzBlock
-                                    nzType="primary"
-                                    [disabled]="row.completion[0] >= row.task.amount"
-                                    (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
-                                  >
-                                    {{ row.completion[0] }}/{{ row.task.amount }}
-                                  </button>
-                                </div>
-                                <div *ngIf="row.completion[0] > 0" class="reset-button">
-                                  <button nz-button nzSize="small" *ngIf="row.completion[0] >= row.task.amount" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
-                                    <span nz-icon nzType="reload" nzTheme="outline"></span>
-                                  </button>
-                                </div>
-                              </div>
-                              <div class="roster" *ngIf="!row.available">Not available today</div>
-                            </td>
-                          </ng-container>
-                          <ng-container *ngIf="row.task.scope === TaskScope.CHARACTER">
-                            <td
-                              *ngFor="let col of row.completion; index as i; trackBy: trackByIndex"
-                              [class.completed]="col === row.task.amount && !row.allDone"
-                              [class.daily]="row.task.frequency === TaskFrequency.DAILY"
-                              [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
-                            >
-                              <ng-container *ngIf="row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl">
-                                <ng-container *ngIf="row.completionData[i].goldBadge.show">
-                                  <span class="gold-badge">
-                                    <span class="gold-badge-mode" *ngIf="row.completionData[i].modeBadge">{{ row.completionData[i].modeBadge }}</span>
-                                    <img *ngIf="row.completionData[i].goldBadge.coin" src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
-                                  </span>
-                                  <span class="gold-badge-up" *ngIf="row.completionData[i].modeBadge && row.completionData[i].higherModeInfo" role="img" [attr.aria-label]="row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
-                                    <span nz-icon nzType="arrow-up" nzTheme="outline"></span>
-                                  </span>
-                                </ng-container>
-                                <div class="counter" [class.has-gold-badge]="row.completionData[i].goldBadge.show">
-                                  <div>
-                                    <button
-                                      nz-button
-                                      nzSize="small"
-                                      nzType="primary"
-                                      [disabled]="col >= row.task.amount"
-                                      (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
-                                    >
-                                      {{ col }} / {{ row.task.amount }}
-                                    </button>
-                                  </div>
-                                  <div *ngIf="col > 0" class="reset-button">
-                                    <button nz-button nzSize="small" *ngIf="col > 0" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
-                                      <span nz-icon nzType="reload" nzTheme="outline"></span>
-                                    </button>
-                                  </div>
-                                  <div class="energy-bar" *ngIf="row.energy[i].amount && row.task.frequency === TaskFrequency.DAILY && row.hasEnergy" nz-tooltip nzTooltipTitle="Rest bonus: {{ row.energy[i].amount }}">
-                                    <div class="threshold t-20"></div>
-                                    <div class="threshold t-40"></div>
-                                    <div class="threshold t-60"></div>
-                                    <div class="threshold t-80"></div>
-                                    <div class="progress progress-chaos-{{ row.energy[i].amount }}" *ngIf="row.chaosDungeon" style="width:{{ row.energy[i].amount / 2 }}%"></div>
-                                    <div class="progress progress-{{ row.energy[i].amount }}" *ngIf="!row.chaosDungeon" [style.width.%]="row.energy[i].amount"></div>
-                                  </div>
-                                </div>
-                              </ng-container>
-                            </td>
-                          </ng-container>
-                        </tr>
-                      </ng-container>
-                    </ng-container>
-                  </ng-container>
-                </ng-template>
+                @for (ticket of tickets; track ticket) {
+                  <tr>
+                    <td><img src="./assets/icons/{{ ticket.icon }}" class="ticket-icon icon-rarity icon-rarity-{{ ticket.rarity }}" alt="" />{{ ticket.name }}</td>
+                    @for (character of characters; track trackByCharacter($index, character)) {
+                      <td class="ticket-cell">
+                        <nz-input-number nzChangeOnWheel="false" [(ngModel)]="character.tickets[ticket.key]" (ngModelChange)="saveRoster(roster)"></nz-input-number>
+                      </td>
+                    }
+                  </tr>
+                }
               </tbody>
-            </table>
+            }
           </nz-table>
-        </ng-container>
-        </ng-container>
-      </ng-container>
-    </ng-container>
-  </ng-container>
-</ng-container>
+        </nz-collapse-panel>
+        </nz-collapse>
+      }
+    }
+}
+
+@if (rawRoster$ | async; as roster) {
+  @if (roster.characters.length > 0) {
+    <label nz-checkbox [(ngModel)]="roster.showAllTasks" class="all-tasks" (ngModelChange)="saveRoster(roster)">
+      Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Force to show hidden tasks by days filter."></span>
+    </label>
+  }
+}
+
+@if (roster$ | async; as roster) {
+  @if (roster.length === 0) {
+    <div class="fullpage-message">
+      No characters in your roster, please add some in the roster page
+      <br />
+      <a nz-button nzType="primary" routerLink="/roster">Click here to navigate to the roster manager and add your first character</a>
+    </div>
+  }
+  @if (roster.length > 0) {
+    @if (completion$ | async; as completion) {
+      @if (energy$ | async; as energy) {
+        @if (scrolling$ | async; as scrolling) {
+          @if (taskColumnWidth$ | async; as taskColumnWidth) {
+            @if (tableDisplay$ | async; as display) {
+              <nz-table class="checklist-table" [nzNoResult]="empty" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
+                <ng-template #empty></ng-template>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Task</th>
+                      @for (character of charactersDisplay$ | async; track character) {
+                        <th>
+                          <div class="character-title">
+                            @if (character.class !== null) {
+                              <img src="./assets/icons/classes/class_{{ character.class?.toString()?.padStart(2, '0') }}.png" alt="" class="class-icon" />
+                            }
+                            {{ character.name }} [{{ character.ilvl }}]
+                            @if (character.done) {
+                              <span nz-icon nzType="check" nzTheme="outline"></span>
+                            }
+                            @if (character.note) {
+                              <span nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></span>
+                            }
+                            @if (character.lazy) {
+                              <span nz-icon nzType="clock-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
+                            }
+                          </div>
+                        </th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.dailyCharacter, title: 'Daily Character', key: 'dailyCharacter' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.dailyRoster, title: 'Daily Roster', key: 'dailyRoster' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.weeklyCharacter, title: 'Weekly Character', key: 'weeklyCharacter' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.biWeeklyCharacter, title: 'Biweekly Character', key: 'biWeeklyCharacter' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.weeklyRoster, title: 'Weekly Roster', key: 'weeklyRoster' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.biWeeklyRoster, title: 'Biweekly Roster', key: 'biWeeklyRoster' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.oneTimeCharacter, title: 'One Time Character', key: 'oneTimeCharacter' }"></ng-container>
+                    <ng-container *ngTemplateOutlet="rowsDisplay; context: { $implicit: display.data.oneTimeRoster, title: 'One Time Roster', key: 'oneTimeRoster' }"></ng-container>
+                    <ng-template #rowsDisplay let-entry let-title="title" let-key="key">
+                      @if (entry.data.length > 0) {
+                        @if (categoriesDisplay$ | async; as categoriesDisplay) {
+                          <tr>
+                            <td
+                              [attr.colspan]="display.roster.length + 1"
+                              class="section-span"
+                              [class.completed]="entry.done"
+                              [class.daily]="entry.data[0].task.frequency === TaskFrequency.DAILY"
+                              [class.weekly]="entry.data[0].task.frequency === TaskFrequency.WEEKLY || entry.data[0].task.frequency === TaskFrequency.BIWEEKLY"
+                              >
+                              <div class="section-span-toggle">
+                                <nz-switch [nzCheckedChildren]="checked" [nzUnCheckedChildren]="unchecked" [(ngModel)]="categoriesDisplay[key]" (ngModelChange)="categoriesDisplay$.next(categoriesDisplay)" nzSize="small" class="visibility-switch">
+                                  <ng-template #checked><span nz-icon nzType="eye" nzTheme="outline"></span></ng-template>
+                                  <ng-template #unchecked><span nz-icon nzType="eye-invisible" nzTheme="outline"></span></ng-template>
+                                </nz-switch>
+                                {{ title }}
+                              </div>
+                            </td>
+                          </tr>
+                          @if (categoriesDisplay[key]) {
+                            @for (row of entry.data; track trackByEntry($index, row); let even = $even) {
+                              <tr
+                                [class.even]="even"
+                                [class.completed]="row.allDone || (!row.available && row.task.scope === TaskScope.ROSTER)"
+                                [class.daily]="row.task.frequency === TaskFrequency.DAILY"
+                                [class.one-time]="row.task.frequency === TaskFrequency.ONE_TIME"
+                                [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                >
+                                <td [style.width.px]="taskColumnWidth" class="task-name" [attr.title]="row.task.label">
+                                  <div class="task-name-content" [style.width.px]="taskColumnWidth - 17">
+                                    @if (row.task.iconPath) {
+                                      <img src="./assets/icons/{{ row.task.iconPath }}" alt="" class="task-icon" />
+                                    }
+                                    <span class="task-label">{{ row.task.label }}</span>
+                                  </div>
+                                </td>
+                                @if (row.task.scope === TaskScope.ROSTER) {
+                                  <td colspan="99">
+                                    @if (row.available) {
+                                      <div class="counter roster">
+                                        <div>
+                                          <button
+                                            nz-button
+                                            nzSize="small"
+                                            nzBlock
+                                            nzType="primary"
+                                            [disabled]="row.completion[0] >= row.task.amount"
+                                            (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                            >
+                                            {{ row.completion[0] }}/{{ row.task.amount }}
+                                          </button>
+                                        </div>
+                                        @if (row.completion[0] > 0) {
+                                          <div class="reset-button">
+                                            @if (row.completion[0] >= row.task.amount) {
+                                              <button nz-button nzSize="small" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                                <span nz-icon nzType="reload" nzTheme="outline"></span>
+                                              </button>
+                                            }
+                                          </div>
+                                        }
+                                      </div>
+                                    }
+                                    @if (!row.available) {
+                                      <div class="roster">Not available today</div>
+                                    }
+                                  </td>
+                                }
+                                @if (row.task.scope === TaskScope.CHARACTER) {
+                                  @for (col of row.completion; track $index; let i = $index) {
+                                    <td
+                                      [class.completed]="col === row.task.amount && !row.allDone"
+                                      [class.daily]="row.task.frequency === TaskFrequency.DAILY"
+                                      [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                      >
+                                      @if (row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl) {
+                                        @if (row.completionData[i].goldBadge.show) {
+                                          <span class="gold-badge">
+                                            @if (row.completionData[i].modeBadge) {
+                                              <span class="gold-badge-mode">{{ row.completionData[i].modeBadge }}</span>
+                                            }
+                                            @if (row.completionData[i].goldBadge.coin) {
+                                              <img src="./assets/icons/gold.png" class="gold-badge-coin" alt="gold" />
+                                            }
+                                          </span>
+                                          @if (row.completionData[i].modeBadge && row.completionData[i].higherModeInfo) {
+                                            <span class="gold-badge-up" role="img" [attr.aria-label]="row.completionData[i].higherModeInfo" nz-tooltip [nzTooltipTitle]="row.completionData[i].higherModeInfo">
+                                              <span nz-icon nzType="arrow-up" nzTheme="outline"></span>
+                                            </span>
+                                          }
+                                        }
+                                        <div class="counter" [class.has-gold-badge]="row.completionData[i].goldBadge.show">
+                                          <div>
+                                            <button
+                                              nz-button
+                                              nzSize="small"
+                                              nzType="primary"
+                                              [disabled]="col >= row.task.amount"
+                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                              >
+                                              {{ col }} / {{ row.task.amount }}
+                                            </button>
+                                          </div>
+                                          @if (col > 0) {
+                                            <div class="reset-button">
+                                              @if (col > 0) {
+                                                <button nz-button nzSize="small" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                                  <span nz-icon nzType="reload" nzTheme="outline"></span>
+                                                </button>
+                                              }
+                                            </div>
+                                          }
+                                          @if (row.energy[i].amount && row.task.frequency === TaskFrequency.DAILY && row.hasEnergy) {
+                                            <div class="energy-bar" nz-tooltip nzTooltipTitle="Rest bonus: {{ row.energy[i].amount }}">
+                                              <div class="threshold t-20"></div>
+                                              <div class="threshold t-40"></div>
+                                              <div class="threshold t-60"></div>
+                                              <div class="threshold t-80"></div>
+                                              @if (row.chaosDungeon) {
+                                                <div class="progress progress-chaos-{{ row.energy[i].amount }}" style="width:{{ row.energy[i].amount / 2 }}%"></div>
+                                              }
+                                              @if (!row.chaosDungeon) {
+                                                <div class="progress progress-{{ row.energy[i].amount }}" [style.width.%]="row.energy[i].amount"></div>
+                                              }
+                                            </div>
+                                          }
+                                        </div>
+                                      }
+                                    </td>
+                                  }
+                                }
+                              </tr>
+                            }
+                          }
+                        }
+                      }
+                    </ng-template>
+                  </tbody>
+                </table>
+              </nz-table>
+            }
+          }
+        }
+      }
+    }
+  }
+}

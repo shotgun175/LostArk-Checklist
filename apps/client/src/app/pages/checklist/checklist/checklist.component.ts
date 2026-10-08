@@ -344,10 +344,6 @@ export class ChecklistComponent {
     return entry.task.$key;
   }
 
-  trackByIndex(index: number): number {
-    return index;
-  }
-
   trackByCharacter(index: number, character: Character): string {
     return character.name;
   }

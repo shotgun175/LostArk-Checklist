@@ -10,7 +10,7 @@ import { IconsProviderModule } from "../../icons-provider.module";
 import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { NzCollapseModule } from "ng-zorro-antd/collapse";
-import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
+import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzSwitchModule } from "ng-zorro-antd/switch";
 import { NzStatisticModule } from "ng-zorro-antd/statistic";
 
@@ -37,7 +37,7 @@ const routes = [{
     NzTooltipModule,
     NzPageHeaderModule,
     NzCollapseModule,
-    NzInputNumberLegacyModule,
+    NzInputNumberModule,
     NzSwitchModule,
     NzStatisticModule
   ]
