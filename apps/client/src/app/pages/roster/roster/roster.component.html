@@ -27,7 +27,16 @@
         <nz-list-item
           [nzContent]="noteEditor"
           [nzActions]="[setLazyAction, setHideAction,setWeeklyGoldAction, setClassAction, deleteAction]"
-          cdkDrag [cdkDragData]="character">
+          cdkDrag [cdkDragData]="character" cdkDragPreviewClass="drag-preview">
+          <!-- Only the grip starts a drag, so the row's inputs can be clicked and their text selected -->
+          <button type="button" class="drag-handle" cdkDragHandle
+            nz-tooltip nzTooltipTitle="Drag to reorder"
+            [attr.aria-label]="'Move ' + character.name"
+            [attr.data-character-id]="character.id"
+            (keydown.arrowup)="$event.preventDefault(); moveByKeyboard(roster, $index, -1)"
+            (keydown.arrowdown)="$event.preventDefault(); moveByKeyboard(roster, $index, 1)">
+            <span nz-icon nzType="holder" nzTheme="outline"></span>
+          </button>
           <ng-template #noteEditor>
             <div class="note-editor">
               <textarea nz-input
@@ -42,12 +51,12 @@
           <nz-list-item-meta [nzTitle]="title" [nzDescription]="description" class="character-meta"
           nzAvatar="./assets/icons/classes/class_{{character.class?.toString()?.padStart(2,'0')}}.png"></nz-list-item-meta>
           <ng-template #title>
-            <input type="text" nz-input [ngModel]="character.name" [ngModelOptions]="{updateOn: 'blur'}" (ngModelChange)="saveCharacterName(character, roster, $event)" class="character-name-input">
+            <input type="text" nz-input [maxlength]="maxNameLength" [ngModel]="character.name" #nameModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}" (ngModelChange)="saveCharacterName(character, roster, $event, nameModel)" class="character-name-input">
           </ng-template>
           <ng-template #description>
             ilvl
-            <nz-input-number nzChangeOnWheel="false" [(ngModel)]="character.ilvl" [ngModelOptions]="{updateOn: 'blur'}"
-            (ngModelChange)="saveCharacter(character, roster)"></nz-input-number>
+            <nz-input-number nzChangeOnWheel="false" [nzMin]="0" [nzMax]="maxIlvl" [ngModel]="character.ilvl" #ilvlModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
+            (ngModelChange)="saveIlvl(character, roster, $event, ilvlModel)"></nz-input-number>
           </ng-template>
           <ng-template #setWeeklyGoldAction>
             <span nz-tooltip [nzTooltipTitle]="isWeeklyGoldTickDisabled(roster, character) ? '6 weekly gold characters already. Untick one to choose this character.' : ''">
@@ -101,15 +110,15 @@
         <nz-form-control nzErrorTip="Please input a character name">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="user"></span>
-            <input type="text" nz-input formControlName="name" placeholder="Name" />
+            <input type="text" nz-input formControlName="name" placeholder="Name" [maxlength]="maxNameLength" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-control nzErrorTip="Please input an ilvl">
+        <nz-form-control nzErrorTip="Please input an item level from 0 to 2000">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="info"></span>
-            <input nz-input formControlName="ilvl" placeholder="Item Level" type="number" />
+            <input nz-input formControlName="ilvl" placeholder="Item Level" type="number" min="0" [max]="maxIlvl" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>

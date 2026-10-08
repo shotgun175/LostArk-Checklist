@@ -5,6 +5,8 @@ import { UntypedFormControl, Validators } from "@angular/forms";
 export interface TextQuestionPopupData {
   baseText?: string;
   placeholder?: string;
+  /** A line of text shown above the field. */
+  description?: string;
   type?: "textarea" | "input";
 }
 
@@ -22,6 +24,8 @@ export class TextQuestionPopupComponent implements OnInit {
   baseText = this.data.baseText ?? "";
 
   placeholder = this.data.placeholder ?? "";
+
+  description = this.data.description ?? "";
 
   type: "textarea" | "input" = this.data.type ?? "textarea";
 

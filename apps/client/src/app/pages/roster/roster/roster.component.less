@@ -36,3 +36,29 @@
 .weekly-gold-warning {
   margin-bottom: 16px;
 }
+
+// Only the grip at the start of each row starts a drag (same as Tasks Manager), so the inputs can
+// be clicked and their text selected. Arrow Up and Arrow Down on the focused grip move the row.
+.drag-handle {
+  order: -1;
+  flex: none;
+  margin-right: 12px;
+  padding: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  line-height: 1;
+  cursor: grab;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.45);
+
+  &:focus-visible {
+    outline: 2px solid #177ddc;
+    outline-offset: 2px;
+  }
+}
+
+:host ::ng-deep .cdk-drop-list-dragging,
+:host ::ng-deep .cdk-drop-list-dragging * {
+  cursor: grabbing;
+}
