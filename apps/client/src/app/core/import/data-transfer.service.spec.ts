@@ -50,6 +50,8 @@ describe("DataTransferService", () => {
     service = new DataTransferService({} as Firestore, auth, completionService);
   });
 
+  afterEach(() => FirestoreStorage.resumeWrites());
+
   it("puts the previous in-memory completion back when the batch fails", async () => {
     commit.mockRejectedValue(new Error("permission-denied"));
     await expect(service.importExport(file())).rejects.toThrow("permission-denied");
@@ -70,6 +72,19 @@ describe("DataTransferService", () => {
     await service.importExport(file());
     expect(commit).toHaveBeenCalledTimes(1);
     flush.mockRestore();
+  });
+
+  it("pauses service writes for the import, so stale data cannot be written over it before the reload", async () => {
+    commit.mockImplementation(async () => expect(FirestoreStorage.writesArePaused()).toBe(true));
+    await service.importExport(file());
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(FirestoreStorage.writesArePaused()).toBe(true);
+  });
+
+  it("writes again when the import batch fails", async () => {
+    commit.mockRejectedValue(new Error("permission-denied"));
+    await expect(service.importExport(file())).rejects.toThrow("permission-denied");
+    expect(FirestoreStorage.writesArePaused()).toBe(false);
   });
 
   it("backs up an account with no roster or settings document as a restorable file", async () => {

@@ -20,7 +20,7 @@ export class DataTransferService {
   /**
    * Replaces the current user's roster, settings, completion, energy and tasks with an
    * export, in one atomic batch. The page must be reloaded afterwards because roster and
-   * completion streams keep their first snapshot in memory. A Lostark-helper file
+   * completion streams keep their first snapshot in memory, and service writes stay paused. A Lostark-helper file
    * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic.
    */
   public async importExport(data: LostarkExport, fromLostarkHelper = false): Promise<void> {
@@ -48,9 +48,13 @@ export class DataTransferService {
     // Send field changes still waiting in their one-second window now, so they land before the
     // import replaces these documents instead of on top of it.
     FirestoreStorage.flushPending();
+    // Until the reload, the services would answer the new documents with the old task list (for
+    // example the daily rest bonus update for a file saved before the last reset), so they stop writing.
+    FirestoreStorage.pauseWrites();
     try {
       await batch.commit();
     } catch (error) {
+      FirestoreStorage.resumeWrites();
       this.completionService.setLocal(uid, previous);
       throw error;
     }

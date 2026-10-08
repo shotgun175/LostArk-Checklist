@@ -121,8 +121,9 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   /**
    * Stops every write from the data services and drops queued field changes without writing them.
-   * Used only while an account is deleted, so live listeners cannot re-create the deleted documents.
-   * A page reload ends the pause.
+   * Used while an account is deleted, so live listeners cannot re-create the deleted documents, and
+   * after an import, so they cannot rewrite the imported documents from stale data. A page reload
+   * ends the pause.
    */
   public static pauseWrites(): void {
     FirestoreStorage.writesPaused = true;
@@ -133,7 +134,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     FirestoreStorage.writesPaused = false;
   }
 
-  /** True while an account is being deleted, so services can skip prompts that would write. */
+  /** True while writes are paused (account deletion, import), so services can skip prompts that would write. */
   public static writesArePaused(): boolean {
     return FirestoreStorage.writesPaused;
   }
