@@ -1,9 +1,9 @@
 import { Inject, Injectable } from "@angular/core";
-import { catchError, filter, first } from "rxjs/operators";
+import { catchError, distinctUntilChanged, filter, first } from "rxjs/operators";
 import { EMPTY, from, map, mapTo, Observable, shareReplay, switchMap } from "rxjs";
 import { Auth, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail, signInAnonymously, signInWithEmailAndPassword, signOut, UserCredential } from "firebase/auth";
 import { FIREBASE_AUTH } from "../../firebase/firebase.providers";
-import { authState$ } from "../../firebase/rx";
+import { authState$, idTokenState$ } from "../../firebase/rx";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { authErrorMessage, passwordResetMessage } from "../../firebase/auth-errors";
 import { FirestoreStorage } from "../firestore-storage";
@@ -22,9 +22,12 @@ export class AuthService {
     shareReplay(1)
   );
 
-  public isAnonymous$ = this.authState$.pipe(
+  // From the ID token stream: registering a guest links the same user in place, which
+  // onAuthStateChanged does not report, so the header and banner would stay on "guest" until a reload.
+  public isAnonymous$ = idTokenState$(this.auth).pipe(
     filter(Boolean),
     map(state => state.isAnonymous),
+    distinctUntilChanged(),
     shareReplay(1)
   );
 
