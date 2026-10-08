@@ -7,13 +7,14 @@
   "tags": [],
   "targets": {
     "build": {
-      "executor": "@angular-devkit/build-angular:browser",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@angular-devkit/build-angular:application",
+      "outputs": ["{options.outputPath.base}"],
       "options": {
-        "outputPath": "dist/apps/client",
+        "outputPath": {
+          "base": "dist/apps/client"
+        },
         "index": "apps/client/src/index.html",
-        "main": "apps/client/src/main.ts",
-        "polyfills": "apps/client/src/polyfills.ts",
+        "polyfills": ["apps/client/src/polyfills.ts"],
         "tsConfig": "apps/client/tsconfig.app.json",
         "inlineStyleLanguage": "less",
         "assets": [
@@ -26,7 +27,8 @@
           }
         ],
         "styles": ["apps/client/src/styles.less"],
-        "scripts": []
+        "scripts": [],
+        "browser": "apps/client/src/main.ts"
       },
       "configurations": {
         "production": {
@@ -51,17 +53,13 @@
           "outputHashing": "all"
         },
         "development": {
-          "buildOptimizer": false,
           "optimization": false,
-          "vendorChunk": true,
           "extractLicenses": false,
           "sourceMap": true,
           "namedChunks": true
         },
         "emulator": {
-          "buildOptimizer": false,
           "optimization": false,
-          "vendorChunk": true,
           "extractLicenses": false,
           "sourceMap": true,
           "namedChunks": true,

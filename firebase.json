@@ -4,7 +4,7 @@
   },
   "hosting": {
     "target": "client",
-    "public": "dist/apps/client",
+    "public": "dist/apps/client/browser",
     "ignore": [
       "**/.*"
     ],
@@ -19,7 +19,7 @@
         ]
       },
       {
-        "source": "*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].+(css|js)",
+        "regex": "^/[^/]+-[A-Z0-9]{8}\\.(css|js)$",
         "headers": [
           {
             "key": "Cache-Control",
