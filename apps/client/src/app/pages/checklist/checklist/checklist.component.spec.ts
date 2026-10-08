@@ -1,10 +1,12 @@
-import { NEVER, of } from 'rxjs';
+import { ElementRef, NgZone } from '@angular/core';
+import { NEVER, Observable, firstValueFrom, of } from 'rxjs';
 import { ChecklistComponent } from './checklist.component';
 import { tasks } from '../../../core/tasks';
 import { Completion } from '../../../model/completion';
 import { Energy } from '../../../model/energy';
 import { Character } from '../../../model/character/character';
 import { LostarkTask } from '../../../model/lostark-task';
+import { TaskFrequency } from '../../../model/task-frequency';
 import { RosterService } from '../../../core/database/services/roster.service';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { SettingsService } from '../../../core/database/services/settings.service';
@@ -31,12 +33,12 @@ describe('ChecklistComponent', () => {
   let energyService: { patchFields: jest.Mock };
   let completionService: { patchFields: jest.Mock };
 
-  function createComponent(): ChecklistComponent {
+  function createComponent(tasks$: Observable<LostarkTask[]> = NEVER): ChecklistComponent {
     energyService = { patchFields: jest.fn() };
     completionService = { patchFields: jest.fn() };
     return new ChecklistComponent(
       { roster$: NEVER } as unknown as RosterService,
-      { tasks$: NEVER } as unknown as TasksService,
+      { tasks$ } as unknown as TasksService,
       { settings$: NEVER } as unknown as SettingsService,
       energyService as unknown as EnergyService,
       {
@@ -46,7 +48,9 @@ describe('ChecklistComponent', () => {
         lastBiWeeklyOffsetReset$: NEVER
       } as unknown as TimeService,
       completionService as unknown as CompletionService,
-      { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false) } as unknown as LayoutStateService
+      { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false) } as unknown as LayoutStateService,
+      new ElementRef(document.createElement('div')),
+      { run: (fn: () => void) => fn() } as unknown as NgZone
     );
   }
 
@@ -103,6 +107,79 @@ describe('ChecklistComponent', () => {
 
       expect(energy.data['1:una']).toEqual({ amount: 80 });
       expect(completion.data['1:una'].amount).toBe(1);
+    });
+
+    it('does nothing on a finished counter, which stays clickable for keyboard focus', () => {
+      const component = createComponent();
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 3, updated: now - 60000 } } };
+      const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
+        { ctrlKey: true } as MouseEvent);
+
+      expect(completion.data['1:una'].amount).toBe(3);
+      expect(energy.data['1:una']).toEqual({ amount: 100 });
+      expect(completionService.patchFields).not.toHaveBeenCalled();
+      expect(energyService.patchFields).not.toHaveBeenCalled();
+    });
+
+    it('does nothing on a counter shown as finished from yesterday (lazy tracking)', () => {
+      const component = createComponent();
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 3, updated: dailyReset - 3600000 } } };
+      const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
+        {} as MouseEvent, 3);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
+        { ctrlKey: true } as MouseEvent, 3);
+
+      expect(completion.data['1:una'].amount).toBe(3);
+      expect(energy.data['1:una']).toEqual({ amount: 100 });
+      expect(completionService.patchFields).not.toHaveBeenCalled();
+      expect(energyService.patchFields).not.toHaveBeenCalled();
+    });
+
+    it('still resets a finished counter', () => {
+      const component = createComponent();
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 3, updated: now - 60000 } } };
+      const energy: Energy = { $key: 'uid', data: {}, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], false, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+
+      expect(completion.data['1:una'].amount).toBe(0);
+      expect(completionService.patchFields).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('resetFrequenciesInUse$', () => {
+    const task = (frequency: TaskFrequency, enabled = true) => ({ ...unaTask, frequency, enabled });
+
+    it('shows a bi-weekly countdown only while an enabled task uses that reset', async () => {
+      const component = createComponent(of([task(TaskFrequency.DAILY), task(TaskFrequency.BIWEEKLY_OFFSET)]));
+
+      expect(await firstValueFrom(component.resetFrequenciesInUse$)).toEqual({ biWeekly: false, biWeeklyOffset: true });
+    });
+
+    it('ignores disabled tasks', async () => {
+      const component = createComponent(of([task(TaskFrequency.BIWEEKLY, false), task(TaskFrequency.BIWEEKLY_OFFSET, false)]));
+
+      expect(await firstValueFrom(component.resetFrequenciesInUse$)).toEqual({ biWeekly: false, biWeeklyOffset: false });
+    });
+  });
+
+  describe('trackByCharacter', () => {
+    it('tracks by id, so two characters with the same name stay apart', () => {
+      const component = createComponent();
+
+      expect(component.trackByCharacter(0, { ...arwen, id: 1 })).toBe(1);
+      expect(component.trackByCharacter(1, { ...arwen, id: 2 })).toBe(2);
+    });
+
+    it('falls back to the name for a character without an id', () => {
+      const component = createComponent();
+
+      expect(component.trackByCharacter(0, { ...arwen, id: undefined })).toBe('Arwen');
     });
   });
 
