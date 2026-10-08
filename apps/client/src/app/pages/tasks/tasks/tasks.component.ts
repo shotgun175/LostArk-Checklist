@@ -16,7 +16,6 @@ import { customTasksExport, ilvlRangeValidator, nextTaskIndex, parseTasksImport 
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
-
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
 
 @Component({

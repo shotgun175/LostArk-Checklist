@@ -22,7 +22,6 @@ import { characterKeyMigrationWrites } from "../../../core/character-keys";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
-
 @Component({
   selector: "lostark-helper-roster",
   templateUrl: "./roster.component.html",

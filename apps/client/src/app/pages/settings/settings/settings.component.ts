@@ -45,6 +45,7 @@ function readOlderRaidsOpen(): boolean {
     return false;
   }
 }
+
 @Component({
   selector: "lostark-helper-settings",
   templateUrl: "./settings.component.html",
