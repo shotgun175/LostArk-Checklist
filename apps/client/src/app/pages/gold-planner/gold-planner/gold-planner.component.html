@@ -12,10 +12,11 @@
         <nz-page-header-content>
           @if (display.tracking['showExplanations']) {
             <div class="explanations">
-              Pick a character in the list to plan its raids. The list shows each character's gold for the week and the roster total.<br />
+              The card at the top shows the gold your roster has earned so far this week, from the raids ticked done on the <a class='header-link' routerLink="/checklist">Checklist</a>, out of what all planned gold raids can pay before chests.<br />
+              Pick a character in the list to plan its raids. The list shows each character's gold for the week.<br />
               Configure your run by selecting the right mode: <b>Solo</b>, <b>Normal</b>, <b>Hard</b> or <b>Nightmare</b>. Not available modes (based on the raid and your ilvl) are greyed out.<br />
               For each raid you're taking gold in game, tick the <b>Taking Gold</b> checkbox. A character earns gold from at most <b>3 raids</b> a week, and only the 6 weekly gold characters set on the <a class='header-link' routerLink="/roster">Roster</a> page earn gold.<br />
-              If you are buying the chest, tick the <b>Taking Chest</b> checkbox.<br />
+              If you are buying the chest, tick the <b>Taking Chest</b> checkbox. Chests are paid from that character's bound gold first, then from tradable.<br />
               <br />
               You can further customize each gate of a raid by expanding the gates using the <b>+</b> icon. <b>Mixed</b> means that you mixed and matched modes.<br />
               <br />
@@ -30,25 +31,65 @@
           ></nz-switch>
         </nz-page-header-content>
       </nz-page-header>
+      <!-- Stacked bar of a week: earned tradable, earned bound, chests paid so far, not earned yet (the legend carries the numbers) -->
+      <ng-template #goldBar let-bar>
+        <span class="gold-bar" aria-hidden="true">
+          @for (segment of bar; track segment.kind) {
+            <span class="gold-bar-segment" [class]="segment.kind" [style.width.%]="segment.width"></span>
+          }
+        </span>
+      </ng-template>
+      <ng-template #goldLegend let-gold>
+        <div class="gold-legend">
+          <span class="legend-item"><span class="legend-dot tradable"></span>Tradable <b class="gold">{{ gold.tradable | number }}</b></span>
+          <span class="legend-item"><span class="legend-dot bound"></span>Bound <b class="bound">{{ gold.bound | number }}</b></span>
+          <span class="legend-item"><span class="legend-dot chests"></span>Chests <b class="cost">{{ gold.chests ? '-' : '' }}{{ gold.chests | number }}</b></span>
+          <span class="legend-item"><span class="legend-dot rest"></span>Not earned yet</span>
+        </div>
+      </ng-template>
+      <div class="summary-card roster-card">
+        <div class="summary-label">Net gold this week, whole roster</div>
+        <div class="summary-headline">
+          <span class="summary-net gold">{{ display.rosterSummary.net | number }}</span>
+          <span class="summary-possible">/ {{ display.rosterSummary.possible | number }} possible</span>
+          <span class="summary-percent">{{ display.rosterSummary.percent }}% earned</span>
+        </div>
+        <ng-container *ngTemplateOutlet="goldBar; context: { $implicit: display.rosterBar }"></ng-container>
+        <ng-container *ngTemplateOutlet="goldLegend; context: { $implicit: display.rosterSummary.earned }"></ng-container>
+        <div class="summary-note">
+          {{ display.tracking['hideAlreadyDoneTasks'] ? 'Remaining for the week' : 'Full planning' }} after chests:
+          <span class="gold-split gold">{{ display.grandTotal.unboundGold | number }} tradable</span> &middot;
+          <span class="gold-split bound">{{ display.grandTotal.boundGold | number }} bound</span> &middot;
+          <span class="gold-split">{{ display.grandTotal.goldEarners }} gold {{ display.grandTotal.goldEarners === 1 ? 'earner' : 'earners' }}</span>
+        </div>
+      </div>
       @if (selection$ | async; as selection) {
         <div class="planner">
           <div class="character-list">
-            <div class="roster-summary">
-              <div class="summary-label">Roster this week</div>
-              <div class="summary-tradable">{{ display.grandTotal.unboundGold | number }} tradable</div>
-              <div class="summary-rest">{{ display.grandTotal.boundGold | number }} bound &middot; {{ display.grandTotal.goldEarners }} gold {{ display.grandTotal.goldEarners === 1 ? 'earner' : 'earners' }}</div>
-            </div>
             @if (display.groups.goldEarners.length) {
               <div class="list-heading">Gold earners</div>
               @for (i of display.groups.goldEarners; track i) {
-                <button type="button" class="character-item"
+                <button type="button" class="character-item earner"
                   [class.selected]="i === selection.index" (click)="selectCharacter(roster[i])">
                   <span class="character-name">{{ roster[i].name }}</span> <span class="character-ilvl">{{ roster[i].ilvl }}</span>
-                  <span class="character-sub">{{ display.goldRaidCounts[i] }} gold {{ display.goldRaidCounts[i] === 1 ? 'raid' : 'raids' }}</span>
-                  <span class="character-sub">
-                    <span class="gold-split gold">{{ display.total[i].unboundGold | number }} tradable</span> &middot;
-                    <span class="gold-split">{{ display.total[i].boundGold | number }} bound</span>
-                  </span>
+                  @if (display.goldRaidCounts[i] || display.characterSummaries[i].plan.chests) {
+                    <span class="character-sub">
+                      {{ display.goldRaidCounts[i] }} gold {{ display.goldRaidCounts[i] === 1 ? 'raid' : 'raids' }} &middot;
+                      net <span class="gold">{{ compactGold(display.characterSummaries[i].net) }}</span> / {{ compactGold(display.characterSummaries[i].possible) }}
+                    </span>
+                    <span class="character-sub">
+                      <span class="gold-split gold">{{ compactGold(display.total[i].unboundGold) }} tradable</span> &middot;
+                      <span class="gold-split bound">{{ compactGold(display.total[i].boundGold) }} bound</span>
+                      @if (display.chestCosts[i]) {
+                        &middot; <span class="gold-split cost">-{{ compactGold(display.chestCosts[i]) }} chests</span>
+                      }
+                    </span>
+                    <span class="mini-bar">
+                      <ng-container *ngTemplateOutlet="goldBar; context: { $implicit: display.characterBars[i] }"></ng-container>
+                    </span>
+                  } @else {
+                    <span class="character-sub">No gold raids planned</span>
+                  }
                 </button>
               }
             }
@@ -82,6 +123,29 @@
                   <span class="panel-raids">{{ display.goldRaidCounts[selection.index] }} of {{ maxGoldRaids }} gold raids</span>
                 }
               </div>
+              @if (character.weeklyGold) {
+                @let summary = display.characterSummaries[selection.index];
+                <div class="summary-card character-card">
+                  <div class="summary-row">
+                    <div>
+                      <div class="summary-label">Net gold this week</div>
+                      <div class="summary-headline">
+                        <span class="summary-net">{{ summary.net | number }}</span>
+                        <span class="summary-possible">/ {{ summary.possible | number }} possible</span>
+                      </div>
+                      <div class="summary-percent">{{ summary.percent }}% earned</div>
+                    </div>
+                    <div class="summary-detail">
+                      Raw: {{ summary.plan.tradable + summary.plan.fromTradable | number }} tradable + {{ summary.plan.bound + summary.plan.fromBound | number }} bound
+                      @if (summary.plan.chests) {
+                        <br />Chests {{ summary.plan.chests | number }}: {{ summary.plan.fromBound | number }} from bound, {{ summary.plan.fromTradable | number }} from tradable
+                      }
+                    </div>
+                  </div>
+                  <ng-container *ngTemplateOutlet="goldBar; context: { $implicit: display.characterBars[selection.index] }"></ng-container>
+                  <ng-container *ngTemplateOutlet="goldLegend; context: { $implicit: summary.earned }"></ng-container>
+                </div>
+              }
               <ng-template #controls let-row="row" let-flag="flag">
                 <div class="controls">
                   <nz-radio-group
@@ -158,6 +222,9 @@
                         <img src="./assets/icons/{{ row.task?.iconPath }}" alt="" class="task-icon" />
                       }
                       <span>{{ row.line.name }}</span>
+                      @if (row.goldDetails[selection.index].completion; as completion) {
+                        <span class="completion" [class.done]="completion === 'done'">{{ completion }}</span>
+                      }
                     </div>
                     <div class="raid-controls">
                       <ng-container *ngTemplateOutlet="controls; context: { row: row, flag: row.goldDetails[selection.index] }"></ng-container>
@@ -165,7 +232,12 @@
                         @for (gateRow of row.children; track $index) {
                           @if (!gateRow.goldDetails[selection.index].hide) {
                             <div class="gate-block">
-                              <div class="gate-label">{{ gateRow.line.name.substring(gateRow.line.name.lastIndexOf(' Gate ') + 1) }}</div>
+                              <div class="gate-label">
+                                {{ gateRow.line.name.substring(gateRow.line.name.lastIndexOf(' Gate ') + 1) }}
+                                @if (gateRow.goldDetails[selection.index].completion; as completion) {
+                                  <span class="completion" [class.done]="completion === 'done'">{{ completion }}</span>
+                                }
+                              </div>
                               <ng-container *ngTemplateOutlet="controls; context: { row: gateRow, flag: gateRow.goldDetails[selection.index] }"></ng-container>
                             </div>
                           }
@@ -191,7 +263,10 @@
                 Total:
                 <img src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
                 <span class="gold-split gold">{{ display.total[selection.index].unboundGold | number }} tradable</span> &middot;
-                <span class="gold-split">{{ display.total[selection.index].boundGold | number }} bound</span>
+                <span class="gold-split bound">{{ display.total[selection.index].boundGold | number }} bound</span>
+                @if (display.chestCosts[selection.index]) {
+                  <span class="total-note">(after {{ display.chestCosts[selection.index] | number }} in chests)</span>
+                }
               </div>
             </div>
           }

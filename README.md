@@ -27,13 +27,17 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 
 ### Gold Planner
 
-- The page lists your characters on the left: a **Roster this week** total (tradable, bound and how many gold earners), then **Gold earners** (characters with Weekly Gold) with their gold raids and totals, then **Other characters** with their box costs. Hidden characters follow **Show your hidden characters**.
+- A card at the top shows the roster's **net gold this week**: the gold earned so far, after the chests paid so far, out of what is **possible** (the gold of every planned gold raid of the gold earners, before chests), and the **% earned**. "Earned so far" comes from the raids ticked done on the Checklist. A bar splits the possible gold into earned tradable, earned bound, chests paid and not earned yet. Under it, one line gives the roster's tradable and bound after chests for what the **Full Planning** switch shows, and how many gold earners there are.
+- The page lists your characters on the left: **Gold earners** (characters with Weekly Gold), each with its gold raids, net earned out of possible, the tradable / bound / chests split and a small bar ("No gold raids planned" when there is nothing), then **Other characters** with their box costs. Hidden characters follow **Show your hidden characters**.
 - Click a character to plan its raids in the panel on the right. The browser remembers the last character you picked. On narrow screens the list sits above the panel.
+- For a gold earner, the panel starts with the same summary for that character, plus where its chests are paid from (for example "Chests 48,640: 48,640 from bound, 0 from tradable"). Each raid, and each gate when expanded, says **done**, **to do** or how many gates are done, from the Checklist.
 - A character without Weekly Gold can still pick a difficulty and tick **Taking Chest** (ticking a chest on a gate with no difficulty picks the highest one it can run), but **Taking Gold** is disabled; its box costs count against that character's own total and the roster total.
 - The first time you tick **Taking Gold** on a raid or a gate that has no running mode yet, the Gold Planner picks the highest mode the character's item level allows: Nightmare, then Hard, then Normal. It never picks Solo.
 - A mode that is already set (Solo included) is never changed, and unticking then ticking again keeps it.
 - A character earns gold from at most 3 raids a week: once 3 raids have **Taking Gold** ticked, it is disabled on that character's other raids (running mode and **Taking Chest** stay usable) until you untick one. If a character ever has more than 3 (for example from imported data), the Gold Planner keeps the 3 raids that pay the most gold for the selected modes (on a tie, the newer raid), unticks **Taking Gold** on the others, saves that and shows a short message such as "Valtist: gold limit is 3 raids, unticked Echidna". Totals and the checklist gold coin never count more than 3 raids per character.
-- Each character's total and the roster total show two numbers, tradable and bound. Taking Chest costs come out of bound gold (a character's bound can go below zero; in the roster total, bound below zero is taken from tradable instead), and Chaos Dungeons and Other sources count as tradable.
+- Each character's total and the roster total show two numbers, tradable and bound. Taking Chest costs are paid from that character's own bound gold first, then from its tradable gold, so bound never goes below zero. The roster adds up each character's numbers after chests.
+- Chaos Dungeons and Other sources count as tradable gold earned this week; an amount above zero also adds to possible. A negative Other entry (a bus cost) only lowers what is earned.
+- The **Full Planning** / **Remaining for the week** switch changes the raids listed and the totals; the summary cards always show earned so far out of possible for the whole week.
 
 ### Roster
 

@@ -18,6 +18,7 @@ import { isTaskTracked } from "../../../core/task-tracking";
 import { capGoldTracking, formatGoldCapMessage, GoldCapUntick } from "../gold-cap";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { FieldWrite } from "../../../core/database/write-coalescer";
+import { completionLabel, formatCompactGold, getGoldBar, GoldBarSegment, GoldCell, GoldSummary, summarizeCharacterGold, sumGoldSummaries } from "../gold-summary";
 
 interface chestsData {
   task?: LostarkTask,
@@ -40,6 +41,10 @@ interface chestsData {
     boundGoldReward: number,
     chestPrice: number,
     runningMode: string,
+    // Gate line: the gate is done this week on the Checklist
+    done: boolean,
+    // Checklist completion shown next to the raid or gate: done, to do, or how many gates are done
+    completion?: string,
   }[],
   // Gate rows of a raid with several gates, shown under it when expanded
   children?: chestsData[],
@@ -67,6 +72,11 @@ interface GoldPlannerDisplay {
   goldCapUnticked: GoldCapUntick[];
   // The gold cap's unticks as field writes, one per changed flag
   goldCapWrites: FieldWrite[];
+  // Earned so far and possible this week, whatever the Full Planning switch shows
+  characterSummaries: GoldSummary[];
+  characterBars: GoldBarSegment[][];
+  rosterSummary: GoldSummary;
+  rosterBar: GoldBarSegment[];
   groups: { goldEarners: number[], others: number[] };
   plannerLines: PlannerLine[]
 }
@@ -264,6 +274,11 @@ export class GoldPlannerComponent {
               })
             }
 
+            // Done this week on the Checklist, whatever the Full Planning switch shows
+            const gatesInReach = line.gate ? [line.gate] : line.gTask.gates
+            const reachableGates = gatesInReach.filter(gate => this.characterHasRequiredILvlForGate(gate, character, tasks, task))
+            const doneGates = reachableGates.filter(gate => this.isGateDoneThisWeek(gate, character, tasks, completion, lineReset, task)).length
+
             // A character without Weekly Gold never takes gold; a tick stored from before is not shown
             if (!character.weeklyGold) {
               takingGold = false
@@ -298,7 +313,9 @@ export class GoldPlannerComponent {
               nightmareModeExists: line.gTask.gates[0].modes.find(mode => mode.name === 'Nightmare') !== undefined,
               unboundGoldReward,
               boundGoldReward,
-              chestPrice
+              chestPrice,
+              done: !!line.gate && doneGates === 1,
+              completion: task ? completionLabel(doneGates, reachableGates.length) : undefined
             }
 
             return goldDetail;
@@ -347,33 +364,36 @@ export class GoldPlannerComponent {
         };
       }, {});
 
-      const chestCosts: number[] = roster.map(() => 0);
-      const total = chestsData
-        .filter(row => row.task && row.line && row.line.gate)
-        .reduce((acc, row) => {
-          const { goldDetails } = row;
-          goldDetails.forEach((flag, i) => {
-            if (!flag.hide) {
-              if (earnsGold(flag.takingGold, roster[i].weeklyGold)) {
-                acc[i].unboundGold += flag.unboundGoldReward
-                acc[i].boundGold += flag.boundGoldReward
-              }
+      // Every gate cell of each character with its gold, chest and Checklist completion
+      const goldRows = allRows.filter(row => row.task && row.line.gate);
+      const goldCell = (row: chestsData, i: number): GoldCell => {
+        const flag = row.goldDetails[i];
+        const gold = earnsGold(flag.takingGold, roster[i].weeklyGold);
+        return {
+          tradable: gold ? flag.unboundGoldReward : 0,
+          bound: gold ? flag.boundGoldReward : 0,
+          chest: flag.takingChest ? flag.chestPrice : 0,
+          done: flag.done
+        };
+      };
+      const manualGold = (character: Character) => [chaos[character.name], other[character.name]];
 
-              if (flag.takingChest) {
-                acc[i].boundGold -= flag.chestPrice
-                chestCosts[i] += flag.chestPrice
-              }
-            }
-          });
-          return acc;
-        }, new Array(roster.length).fill(undefined).map(u => { return { unboundGold: 0, boundGold: 0 } }));
-
-      roster.forEach((char, i) => {
-        total[i].unboundGold += chaos[char.name];
-        total[i].unboundGold += other[char.name];
-      });
+      // Totals follow the Full Planning switch: the gates shown, chests paid from that character's bound gold first, then tradable
+      const shownTotals = roster.map((character, i) => summarizeCharacterGold(
+        goldRows.filter(row => !row.goldDetails[i].hide).map(row => goldCell(row, i)),
+        manualGold(character)
+      ).plan);
+      const total: GoldTotal[] = shownTotals.map(settled => ({ unboundGold: settled.tradable, boundGold: settled.bound }));
+      const chestCosts: number[] = shownTotals.map(settled => settled.chests);
 
       const grandTotal = getRosterSummary(total, roster)
+
+      // The summary cards ignore the switch: every planned gate (as counted for the gold cap), done or not
+      const characterSummaries = roster.map((character, i) => summarizeCharacterGold(
+        goldRows.filter(row => row.goldDetails[i].countsForGoldCap).map(row => goldCell(row, i)),
+        manualGold(character)
+      ));
+      const rosterSummary = sumGoldSummaries(characterSummaries);
 
       return {
         chestsData: chestsData,
@@ -384,6 +404,10 @@ export class GoldPlannerComponent {
         goldRaidCounts: goldRaids.map(raids => raids.size),
         chestCosts,
         settingsKey: settings.$key,
+        characterSummaries,
+        characterBars: characterSummaries.map(summary => getGoldBar(summary)),
+        rosterSummary,
+        rosterBar: getGoldBar(rosterSummary),
         goldCapUnticked: goldCap.unticked,
         goldCapWrites: tracking === settings.goldPlannerConfiguration ? [] : Object.keys(tracking)
           .filter(key => tracking[key] !== settings.goldPlannerConfiguration[key])
@@ -416,6 +440,9 @@ export class GoldPlannerComponent {
   }
 
   public readonly maxGoldRaids = MAX_GOLD_RAIDS;
+
+  // Short gold amounts in the character list
+  public readonly compactGold = formatCompactGold;
 
   // Character shown in the panel, remembered in this browser (by id, or by name for a character without one)
   private selectedCharacterKey$ = new BehaviorSubject<string | null>(this.readSelectedCharacterKey());
@@ -455,16 +482,19 @@ export class GoldPlannerComponent {
   }
 
   private shouldHideGateBasedOnWeeklyCompletion(gate: Gate, character: Character, taskList: LostarkTask[], tracking: Record<string, boolean>, completion: Completion, weeklyReset: number, task?: LostarkTask): boolean {
-    const tempTask = taskList.find(t => t.label === gate.taskName && !t.custom);
-
     if (!this.characterHasRequiredILvlForGate(gate, character, taskList, task)) {
       return true
     } else {
-      const completionFlag = task && getCompletionEntry(completion.data, character, tempTask ? tempTask : task);
-      const gateAlreadyDone = completionFlag && completionFlag.amount >= parseInt(gate.completionId.substring(gate.completionId.length - 1)) && completionFlag.updated > weeklyReset
-      const hideAlreadyDoneGate = tracking['hideAlreadyDoneTasks'] && gateAlreadyDone === true
+      const hideAlreadyDoneGate = tracking['hideAlreadyDoneTasks'] && this.isGateDoneThisWeek(gate, character, taskList, completion, weeklyReset, task)
       return hideAlreadyDoneGate
     }
+  }
+
+  /** Whether the Checklist has this gate done since its last reset (the raid's count reaches the gate's number). */
+  private isGateDoneThisWeek(gate: Gate, character: Character, taskList: LostarkTask[], completion: Completion, weeklyReset: number, task?: LostarkTask): boolean {
+    const tempTask = taskList.find(t => t.label === gate.taskName && !t.custom);
+    const completionFlag = task && getCompletionEntry(completion.data, character, tempTask ? tempTask : task);
+    return !!completionFlag && completionFlag.amount >= parseInt(gate.completionId.substring(gate.completionId.length - 1)) && completionFlag.updated > weeklyReset
   }
 
   private characterHasRequiredILvlForGate(gate: Gate, character: Character, taskList: LostarkTask[], task?: LostarkTask): boolean {
