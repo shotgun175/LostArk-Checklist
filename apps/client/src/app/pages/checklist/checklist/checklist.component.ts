@@ -327,6 +327,8 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
   @HostListener('window:resize')
   setTableHeight(): void {
     this.windowResize$.next();
+    // A height-only resize does not resize this page, so the observers below would miss it
+    this.scheduleMeasure();
   }
 
   ngAfterViewInit(): void {
