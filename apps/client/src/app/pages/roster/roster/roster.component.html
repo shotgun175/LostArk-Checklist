@@ -10,10 +10,10 @@
         Import from LocalStorage
       </button>
       <button nz-button (click)="exportRoster(roster)" nz-tooltip nzTooltipTitle="Export roster">
-        <i nz-icon nzType="upload" nzTheme="outline"></i>
+        <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
       <button nz-button (click)="importRoster()" nz-tooltip nzTooltipTitle="Import roster">
-        <i nz-icon nzType="download" nzTheme="outline"></i>
+        <span nz-icon nzType="download" nzTheme="outline"></span>
       </button>
     </nz-page-header-extra>
   </nz-page-header>
@@ -51,17 +51,17 @@
             <label nz-checkbox [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
             Weekly Gold
           </span>
-          <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></i>
+          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></span>
         </ng-template>
         <ng-template #setHideAction>
           <label nz-checkbox [(ngModel)]="character.isHide" (ngModelChange)="saveCharacter(character, roster)"></label>
           Hide
-          <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Hide character from the checklist"></i>
+          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Hide character from the checklist"></span>
         </ng-template>
         <ng-template #setLazyAction>
           <label nz-checkbox [(ngModel)]="character.lazy" (ngModelChange)="saveCharacter(character, roster)"></label>
           Lazy
-          <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></i>
+          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
         </ng-template>
         <ng-template #setClassAction>
           <nz-select class="class-selector"
@@ -82,7 +82,7 @@
           <button nz-button nzDanger nz-popconfirm
                   nzPopconfirmTitle="Are you sure?"
                   (nzOnConfirm)="removeCharacter(character, roster)" nzShape="circle">
-            <i nz-icon nzType="delete" nzTheme="outline"></i>
+            <span nz-icon nzType="delete" nzTheme="outline"></span>
           </button>
         </ng-template>
       </nz-list-item>
@@ -124,7 +124,7 @@
       <nz-form-item>
         <label nz-checkbox formControlName="lazy">
           Lazy
-          <i nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></i>
+          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
         </label>
       </nz-form-item>
       <button nz-button [nzType]="'primary'" [disabled]="!form.valid">Add</button>

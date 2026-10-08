@@ -14,13 +14,13 @@
             <ul>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/checklist" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="check-square" nzTheme="outline"></i>
+                  <span nz-icon nzType="check-square" nzTheme="outline"></span>
                   <span>Checklist</span>
                 </a>
               </li>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/gold-planner" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="gold" nzTheme="outline"></i>
+                  <span nz-icon nzType="gold" nzTheme="outline"></span>
                   <span>Gold Planner</span>
                 </a>
               </li>
@@ -30,19 +30,19 @@
             <ul>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/roster" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="user-switch" nzTheme="outline"></i>
+                  <span nz-icon nzType="user-switch" nzTheme="outline"></span>
                   <span>Roster</span>
                 </a>
               </li>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/tasks-manager" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="solution" nzTheme="outline"></i>
+                  <span nz-icon nzType="solution" nzTheme="outline"></span>
                   <span>Tasks Manager</span>
                 </a>
               </li>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/settings" [nzPaddingLeft]="32">
-                  <i nz-icon nzType="setting" nzTheme="outline"></i>
+                  <span nz-icon nzType="setting" nzTheme="outline"></span>
                   <span>Settings</span>
                 </a>
               </li>
@@ -53,7 +53,7 @@
       <div class="bottom-navbar">
         <div class="github-menu-entry" [class.collapsed]="isCollapsed">
           <a href="https://github.com/shotgun175/LostArk-Checklist" target="_blank">
-            <i nz-icon nzType="github" nzTheme="outline" class="icon"></i>
+            <span nz-icon nzType="github" nzTheme="outline" class="icon"></span>
             <span>Github</span>
           </a>
         </div>
@@ -64,7 +64,7 @@
     <nz-header>
       <div class="user-menu" [class.anonymous]="anonymous$ | async" nz-dropdown [nzDropdownMenu]="menu"
            nzOverlayClassName="user-menu">
-        <i nz-icon nzType="user" nzTheme="outline"></i>
+        <span nz-icon nzType="user" nzTheme="outline"></span>
         <ng-container *ngIf="user$ | async as user">
           <ng-container *ngIf="user.notFound">Anonymous</ng-container>
           <ng-container *ngIf="!user.notFound">{{user.name}}</ng-container>
@@ -73,21 +73,21 @@
           <ul nz-menu>
             <ng-container *ngIf="anonymous$ | async">
               <li nz-menu-item class="menu-item" (click)="signIn()">
-                <i nz-icon nzType="login" nzTheme="outline"></i>
+                <span nz-icon nzType="login" nzTheme="outline"></span>
                 Sign in
               </li>
               <li nz-menu-item class="menu-item" (click)="register()">
-                <i nz-icon nzType="form" nzTheme="outline"></i>
+                <span nz-icon nzType="form" nzTheme="outline"></span>
                 Register
               </li>
             </ng-container>
             <ng-container *ngIf="(anonymous$ | async) === false">
               <li nz-menu-item *ngIf="user$ | async as user" (click)="updateUserName(user)" class="menu-item">
-                <i nz-icon nzType="user-switch" nzTheme="outline"></i>
+                <span nz-icon nzType="user-switch" nzTheme="outline"></span>
                 Change user name
               </li>
               <li nz-menu-item nzDanger (click)="disconnect()" class="menu-item">
-                <i nz-icon nzType="logout" nzTheme="outline"></i>
+                <span nz-icon nzType="logout" nzTheme="outline"></span>
                 Log out
               </li>
             </ng-container>

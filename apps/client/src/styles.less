@@ -46,3 +46,12 @@
     background-image: url(./assets/icons/rarity/rarity_5.webp);
   }
 }
+
+// ng-zorro 14 dropped the 12px gap between page-header extra items that 13 had; restore it.
+.ant-page-header-heading-extra > * {
+  margin-left: 12px;
+
+  &:first-child {
+    margin-left: 0;
+  }
+}
