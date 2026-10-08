@@ -16,7 +16,8 @@ import { distinctUntilChanged, map, merge, Subject } from "rxjs";
 @Component({
   selector: "lostark-helper-tasks",
   templateUrl: "./tasks.component.html",
-  styleUrls: ["./tasks.component.less"]
+  styleUrls: ["./tasks.component.less"],
+  standalone: false
 })
 export class TasksComponent {
   public TaskFrequency = TaskFrequency;

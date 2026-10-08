@@ -7,7 +7,8 @@ import { NzMessageService } from "ng-zorro-antd/message";
 @Component({
   selector: "lostark-helper-login-popup",
   templateUrl: "./login-popup.component.html",
-  styleUrls: ["./login-popup.component.less"]
+  styleUrls: ["./login-popup.component.less"],
+  standalone: false
 })
 export class LoginPopupComponent {
   public form = this.fb.group({

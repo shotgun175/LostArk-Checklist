@@ -9,7 +9,7 @@ import { FormsModule } from "@angular/forms";
 import { NzTableModule } from "ng-zorro-antd/table";
 import { NzSwitchModule } from "ng-zorro-antd/switch";
 import { NzCardModule } from "ng-zorro-antd/card";
-import { NzInputNumberModule } from "ng-zorro-antd/input-number";
+import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
 import { NzToolTipModule } from "ng-zorro-antd/tooltip";
@@ -33,7 +33,7 @@ const routes: Routes = [{
     NzTableModule,
     NzSwitchModule,
     NzCardModule,
-    NzInputNumberModule,
+    NzInputNumberLegacyModule,
     NzButtonModule,
     NzPopconfirmModule,
     NzToolTipModule,

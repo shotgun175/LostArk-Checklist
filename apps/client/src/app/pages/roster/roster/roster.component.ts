@@ -20,7 +20,8 @@ import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickD
 @Component({
   selector: "lostark-helper-roster",
   templateUrl: "./roster.component.html",
-  styleUrls: ["./roster.component.less"]
+  styleUrls: ["./roster.component.less"],
+  standalone: false
 })
 export class RosterComponent {
 

@@ -11,7 +11,7 @@ import { NzCardModule } from "ng-zorro-antd/card";
 import { NzDividerModule } from "ng-zorro-antd/divider";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
 import { IconsProviderModule } from "../../icons-provider.module";
-import { NzInputNumberModule } from "ng-zorro-antd/input-number";
+import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzSelectModule } from "ng-zorro-antd/select";
 import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
 import { NzToolTipModule } from "ng-zorro-antd/tooltip";
@@ -40,7 +40,7 @@ const routes = [{
     NzDividerModule,
     NzPopconfirmModule,
     IconsProviderModule,
-    NzInputNumberModule,
+    NzInputNumberLegacyModule,
     FormsModule,
     NzSelectModule,
     NzCheckboxModule,

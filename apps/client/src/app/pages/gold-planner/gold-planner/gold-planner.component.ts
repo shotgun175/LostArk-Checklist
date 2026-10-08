@@ -74,7 +74,8 @@ const SELECTED_CHARACTER_KEY = "gold-planner:selected-character";
 @Component({
   selector: "lostark-helper-gold-planner",
   templateUrl: "./gold-planner.component.html",
-  styleUrls: ["./gold-planner.component.less"]
+  styleUrls: ["./gold-planner.component.less"],
+  standalone: false
 })
 export class GoldPlannerComponent {
   public rawRoster$ = this.rosterService.roster$;

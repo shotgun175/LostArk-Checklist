@@ -47,7 +47,8 @@ function readOlderRaidsOpen(): boolean {
 @Component({
   selector: "lostark-helper-settings",
   templateUrl: "./settings.component.html",
-  styleUrls: ["./settings.component.less"]
+  styleUrls: ["./settings.component.less"],
+  standalone: false
 })
 export class SettingsComponent {
   public uid$ = this.auth.uid$;

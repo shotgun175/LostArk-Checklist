@@ -11,7 +11,8 @@ export interface TextQuestionPopupData {
 @Component({
   selector: "lostark-helper-text-question-popup",
   templateUrl: "./text-question-popup.component.html",
-  styleUrls: ["./text-question-popup.component.less"]
+  styleUrls: ["./text-question-popup.component.less"],
+  standalone: false
 })
 export class TextQuestionPopupComponent implements OnInit {
 

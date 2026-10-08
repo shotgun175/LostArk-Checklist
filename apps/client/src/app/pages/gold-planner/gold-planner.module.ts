@@ -9,7 +9,7 @@ import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
 import { IconsProviderModule } from "../../icons-provider.module";
 import { NzToolTipModule } from "ng-zorro-antd/tooltip";
-import { NzInputNumberModule } from "ng-zorro-antd/input-number";
+import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzMessageModule } from "ng-zorro-antd/message";
@@ -32,7 +32,7 @@ const routes: Routes = [{
     IconsProviderModule,
     NzToolTipModule,
     NzInputModule,
-    NzInputNumberModule,
+    NzInputNumberLegacyModule,
     NzButtonModule,
     NzMessageModule
   ]

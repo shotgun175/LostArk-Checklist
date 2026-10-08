@@ -9,7 +9,7 @@ import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { NzTableModule } from "ng-zorro-antd/table";
 import { NzInputModule } from "ng-zorro-antd/input";
-import { NzInputNumberModule } from "ng-zorro-antd/input-number";
+import { NzInputNumberLegacyModule } from "ng-zorro-antd/input-number-legacy";
 import { NzSelectModule } from "ng-zorro-antd/select";
 import { NzFormModule } from "ng-zorro-antd/form";
 import { NzMessageModule } from "ng-zorro-antd/message";
@@ -39,7 +39,7 @@ const routes: Routes = [{
     NzPageHeaderModule,
     NzTableModule,
     NzInputModule,
-    NzInputNumberModule,
+    NzInputNumberLegacyModule,
     NzSelectModule,
     ReactiveFormsModule,
     NzFormModule,
