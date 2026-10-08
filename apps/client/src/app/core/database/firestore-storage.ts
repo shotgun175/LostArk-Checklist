@@ -127,6 +127,11 @@ export abstract class FirestoreStorage<T extends DataModel> {
     FirestoreStorage.writesPaused = false;
   }
 
+  /** True while an account is being deleted, so services can skip prompts that would write. */
+  public static writesArePaused(): boolean {
+    return FirestoreStorage.writesPaused;
+  }
+
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
     if (window["verboseOperations"] || environment.verboseOperations) {
       console.log("OPERATION", operation, this.getCollectionName(), debugData);

@@ -22,7 +22,9 @@ export class UserService extends FirestoreStorage<LAHUser> {
     switchMap(([uid, anonymous]) => {
       return this.getOne(uid).pipe(
         switchMap(user => {
-          if (!anonymous && !user.name) {
+          // While an account is deleted its users document disappears before the auth account
+          // does; asking for a user name then would open a popup that cannot be closed.
+          if (!anonymous && !user.name && !FirestoreStorage.writesArePaused()) {
             this.updateUserName(user);
           }
           return of(user);
