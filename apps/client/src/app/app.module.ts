@@ -5,7 +5,7 @@ import { AppComponent } from "./app.component";
 import { en_US, NZ_I18N } from "ng-zorro-antd/i18n";
 import { registerLocaleData } from "@angular/common";
 import en from "@angular/common/locales/en";
-import { HttpClientModule } from "@angular/common/http";
+import { provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { AppRoutingModule } from "./app-routing.module";
 import { IconsProviderModule } from "./icons-provider.module";
@@ -24,7 +24,6 @@ registerLocaleData(en);
   declarations: [AppComponent],
   imports: [
     BrowserModule,
-    HttpClientModule,
     BrowserAnimationsModule,
     AppRoutingModule,
     IconsProviderModule,
@@ -37,7 +36,8 @@ registerLocaleData(en);
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },
-    ...provideFirebase(environment)
+    ...provideFirebase(environment),
+    provideHttpClient(withInterceptorsFromDi())
   ],
   bootstrap: [AppComponent]
 })
