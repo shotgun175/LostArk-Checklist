@@ -1,4 +1,4 @@
-import { characterFlagKey, characterKeyMigrationWrites, manualGoldKey, readCharacterFlag, readManualGold } from './character-keys';
+import { characterFlagKey, characterKeyMigrationWrites, manualGoldKey, readCharacterFlag, readManualGold, removedCharacterWrites } from './character-keys';
 import { applyFieldWrites } from './database/write-coalescer';
 
 const elkie = { id: 5, name: 'Elkie' };
@@ -68,5 +68,24 @@ describe('characterKeyMigrationWrites', () => {
 
   it('does nothing for missing maps', () => {
     expect(characterKeyMigrationWrites({}, [elkie])).toEqual([]);
+  });
+});
+
+describe('removedCharacterWrites', () => {
+  const settings = {
+    lazytracking: { '5:task1': false, '15:task1': false, 'Elkie:task1': false },
+    manualGoldEntries: { 'chaos:5': { amount: 1 }, 'chaos:15': { amount: 2 } }
+  };
+
+  it('deletes only the removed id keys, not ids that start with the same digits or name keys', () => {
+    expect(removedCharacterWrites(settings, elkie, [])).toEqual([
+      { path: ['lazytracking', '5:task1'], delete: true },
+      { path: ['manualGoldEntries', 'chaos:5'], delete: true }
+    ]);
+  });
+
+  it('deletes nothing for a character without an id, or when another character keeps the id', () => {
+    expect(removedCharacterWrites(settings, { name: 'Elkie' }, [])).toEqual([]);
+    expect(removedCharacterWrites(settings, elkie, [{ id: 5, name: 'Other' }])).toEqual([]);
   });
 });

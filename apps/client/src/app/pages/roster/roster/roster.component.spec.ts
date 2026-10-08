@@ -3,6 +3,9 @@ import { UntypedFormBuilder } from '@angular/forms';
 import { RosterComponent } from './roster.component';
 import { Roster } from '../../../model/roster';
 import { Character } from '../../../model/character/character';
+import { applyFieldWrites } from '../../../core/database/write-coalescer';
+import { readCharacterFlag, readManualGold } from '../../../core/character-keys';
+import { nextCharacterId } from '../../../core/roster-input';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
 jest.mock('firebase/app', () => ({}));
@@ -21,6 +24,7 @@ describe('RosterComponent', () => {
   let completionSetOne: jest.Mock;
   let energySetOne: jest.Mock;
   let settingsPatch: jest.Mock;
+  let settingsDoc: Record<string, unknown>;
   let component: RosterComponent;
   const roster = (characters: Character[]): Roster => ({ $key: 'uid1', characters, trackedTasks: {}, showAllTasks: false });
 
@@ -33,6 +37,7 @@ describe('RosterComponent', () => {
     completionSetOne = jest.fn(() => of(void 0));
     energySetOne = jest.fn(() => of(void 0));
     settingsPatch = jest.fn();
+    settingsDoc = { $key: 'uid1', lazytracking: {}, goldPlannerConfiguration: {}, raidModesForGoldPlanner: {}, manualGoldEntries: {} };
     component = new RosterComponent(
       rosterService as never,
       { uid$: of('uid1') } as never,
@@ -43,7 +48,7 @@ describe('RosterComponent', () => {
       { energy$: of(energy), setOne: energySetOne } as never,
       // A popup's afterClose emits once: each popup gets its own subject
       { create: () => ({ afterClose: modalClose = new Subject<string | undefined>() }) } as never,
-      { settings$: of({ $key: 'uid1', lazytracking: {}, goldPlannerConfiguration: {}, raidModesForGoldPlanner: {}, manualGoldEntries: {} }), patchFields: settingsPatch } as never
+      { settings$: of(settingsDoc), patchFields: settingsPatch } as never
     );
   });
 
@@ -155,6 +160,31 @@ describe('RosterComponent', () => {
       expect(completion.data).toEqual({ '1:t1': { amount: 1 }, 'Arwenna:t1': { amount: 2 } });
       expect(energy.data).toEqual({ '1:t1': { amount: 40 }, 'Arwenna:t1': { amount: 60 } });
       expect(rosterService.updateOne.mock.calls[0][1].characters[0].name).toBe('Elkie');
+    });
+  });
+
+  describe('deleting a character', () => {
+    it('removes its settings, so a character added later with the same id starts clean', () => {
+      const ana = character(1, 'Arwen');
+      const bree = character(2, 'Brakka');
+      settingsDoc['lazytracking'] = { '2:task1': false, '1:task1': false };
+      settingsDoc['goldPlannerConfiguration'] = { '2:gold:taking:Gate 1': true, '1:gold:taking:Gate 1': true };
+      settingsDoc['raidModesForGoldPlanner'] = { '2:runningMode:Gate 1': 'hard' };
+      settingsDoc['manualGoldEntries'] = { 'chaos:2': { amount: 5 }, 'other:2': { amount: 7 }, 'chaos:1': { amount: 3 } };
+      component.removeCharacter(bree, roster([ana, bree]));
+      expect(rosterService.updateOne).toHaveBeenCalledWith('uid1', { characters: { arrayRemove: bree } });
+      const after = applyFieldWrites(settingsDoc, settingsPatch.mock.calls.flatMap(call => call[1]));
+      const cora = character(nextCharacterId([ana]), 'Celyne');
+      expect(cora.id).toBe(2);
+      expect(readCharacterFlag(after['lazytracking'] as Record<string, boolean>, cora, 'task1')).toBeUndefined();
+      expect(readCharacterFlag(after['goldPlannerConfiguration'] as Record<string, boolean>, cora, 'gold:taking:Gate 1')).toBeUndefined();
+      expect(readCharacterFlag(after['raidModesForGoldPlanner'] as Record<string, string>, cora, 'runningMode:Gate 1')).toBeUndefined();
+      expect(readManualGold(after['manualGoldEntries'] as Record<string, unknown>, 'chaos', cora)).toBeUndefined();
+      expect(readManualGold(after['manualGoldEntries'] as Record<string, unknown>, 'other', cora)).toBeUndefined();
+      // The other character keeps its settings
+      expect(after['lazytracking']).toEqual({ '1:task1': false });
+      expect(after['goldPlannerConfiguration']).toEqual({ '1:gold:taking:Gate 1': true });
+      expect(after['manualGoldEntries']).toEqual({ 'chaos:1': { amount: 3 } });
     });
   });
 

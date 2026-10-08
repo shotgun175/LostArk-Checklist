@@ -47,7 +47,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - A new character gets Weekly Gold only while fewer than 6 characters have it.
 - A roster that already has more than 6 (for example from an import) shows a warning on the Roster page; nothing is unticked for you.
 - Names are trimmed, invisible characters are removed and they are at most 16 characters long. An empty name or a name another character already has is refused, and the old name shows again. Item levels go from 0 to 2000.
-- Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character, not its name, so renaming a character keeps them.
+- Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character, not its name, so renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
 - **Import roster** replaces every character in the roster. It checks each character first (an id, a name, a numeric item level and a known class) and lists what is wrong instead of importing a bad paste.
 
 ### Tasks Manager

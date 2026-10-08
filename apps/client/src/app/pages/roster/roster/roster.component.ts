@@ -18,7 +18,7 @@ import { Character } from "../../../model/character/character";
 import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickDisabled, newCharacterWeeklyGold } from "../../../core/weekly-gold";
 import { characterNameError, cleanCharacterName, MAX_CHARACTER_ILVL, MAX_CHARACTER_NAME_LENGTH, nextCharacterId, parseRosterImport } from "../../../core/roster-input";
 import { SettingsService } from "../../../core/database/services/settings.service";
-import { characterKeyMigrationWrites } from "../../../core/character-keys";
+import { characterKeyMigrationWrites, removedCharacterWrites } from "../../../core/character-keys";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
@@ -104,6 +104,14 @@ export class RosterComponent {
   public removeCharacter(character: Character, roster: Roster): void {
     this.rosterService.updateOne(roster.$key, {
       characters: arrayRemove(character)
+    });
+    // Ids can be reused by a character added later: it must not take over this one's settings
+    this.settings.settings$.pipe(first()).subscribe(settings => {
+      const remaining = roster.characters.filter(c => c !== character);
+      const writes = removedCharacterWrites(settings as unknown as Record<string, unknown>, character, remaining);
+      if (writes.length > 0) {
+        this.settings.patchFields(settings.$key, writes);
+      }
     });
   }
 

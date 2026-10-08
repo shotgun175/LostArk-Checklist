@@ -90,3 +90,32 @@ export function characterKeyMigrationWrites(settings: Record<string, unknown>, c
   });
   return writes;
 }
+
+/**
+ * The field writes that delete a removed character's id keys from the four settings maps, so a
+ * character added later with the same id does not take over its choices. Nothing is deleted for
+ * a character without an id, or when another character still has the same id.
+ *
+ * Args:
+ *   settings: the settings document (only the four maps are read).
+ *   character: the character being removed.
+ *   remaining: the characters that stay in the roster.
+ */
+export function removedCharacterWrites(settings: Record<string, unknown>, character: CharacterRef, remaining: CharacterRef[]): FieldWrite[] {
+  if (!character.id || remaining.some(c => c.id === character.id)) {
+    return [];
+  }
+  const id = String(character.id);
+  const writes: FieldWrite[] = [];
+  PREFIXED_FIELDS.forEach(field => {
+    Object.keys((settings[field] as Record<string, unknown> | undefined) ?? {})
+      .filter(key => key.startsWith(`${id}:`))
+      .forEach(key => writes.push({ path: [field, key], delete: true }));
+  });
+  const manualGold = (settings["manualGoldEntries"] as Record<string, unknown> | undefined) ?? {};
+  MANUAL_GOLD_TYPES
+    .map(type => `${type}:${id}`)
+    .filter(key => manualGold[key] !== undefined)
+    .forEach(key => writes.push({ path: ["manualGoldEntries", key], delete: true }));
+  return writes;
+}
