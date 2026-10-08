@@ -4,6 +4,7 @@ import { FIRESTORE } from "../firebase/firebase.providers";
 import { firstValueFrom } from "rxjs";
 import { AuthService } from "../database/services/auth.service";
 import { CompletionService } from "../database/services/completion.service";
+import { FirestoreStorage } from "../database/firestore-storage";
 import { EXPORT_FORMAT, LostarkExport } from "./lostark-export";
 import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
 
@@ -44,6 +45,9 @@ export class DataTransferService {
     // fails, put the previous ticks back so the next checklist tick cannot write the file's.
     const previous = JSON.parse(JSON.stringify(await firstValueFrom(this.completionService.completion$)));
     this.completionService.setLocal(uid, { ...JSON.parse(JSON.stringify(completion)), $key: uid });
+    // Send field changes still waiting in their one-second window now, so they land before the
+    // import replaces these documents instead of on top of it.
+    FirestoreStorage.flushPending();
     try {
       await batch.commit();
     } catch (error) {

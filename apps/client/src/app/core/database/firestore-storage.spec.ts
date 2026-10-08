@@ -95,6 +95,21 @@ describe("FirestoreStorage field writes", () => {
     expect(setDoc).toHaveBeenCalledTimes(1);
   });
 
+  it("flushPending writes the queued changes of every storage at once", () => {
+    const other = new TestStorage();
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+    other.patchFields("u2", [{ path: ["data", "b"], value: 1 }]);
+    other.patchFields("u2", [{ path: ["data", "b"], value: 2 }]);
+    expect(updateDoc).toHaveBeenCalledTimes(2);
+    FirestoreStorage.flushPending();
+    expect(updateDoc).toHaveBeenCalledTimes(4);
+    expect(updateDoc).toHaveBeenCalledWith(atDoc("completion/u1"), new FieldPath("data", "a"), 2);
+    expect(updateDoc).toHaveBeenCalledWith(atDoc("completion/u2"), new FieldPath("data", "b"), 2);
+    jest.advanceTimersByTime(1000);
+    expect(updateDoc).toHaveBeenCalledTimes(4);
+  });
+
   it("shows field changes at once on a current-user document, even one that did not exist", () => {
     const snapshots = new Subject<TestDoc | undefined>();
     jest.mocked(docData$).mockReturnValue(snapshots as never);

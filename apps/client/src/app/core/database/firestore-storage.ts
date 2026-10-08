@@ -95,14 +95,21 @@ export abstract class FirestoreStorage<T extends DataModel> {
     if (!FirestoreStorage.flushOnHideRegistered) {
       FirestoreStorage.flushOnHideRegistered = true;
       // Write queued field changes before the tab is hidden or closed.
-      const flushAll = (): void => FirestoreStorage.coalescers.forEach(coalescer => coalescer.flush());
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") {
-          flushAll();
+          FirestoreStorage.flushPending();
         }
       });
-      window.addEventListener("pagehide", flushAll);
+      window.addEventListener("pagehide", () => FirestoreStorage.flushPending());
     }
+  }
+
+  /**
+   * Writes every queued field change of every collection now. Call it before a write that must land
+   * after them (import) and before the signed-in user changes, so they are sent as the user who made them.
+   */
+  public static flushPending(): void {
+    FirestoreStorage.coalescers.forEach(coalescer => coalescer.flush());
   }
 
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
