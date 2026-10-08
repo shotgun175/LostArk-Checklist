@@ -1,4 +1,4 @@
-import { Component, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, ChangeDetectionStrategy, NgZone, OnDestroy } from '@angular/core';
 import { BehaviorSubject, combineLatest, map, Observable, pluck, startWith } from 'rxjs';
 import { LostarkTask } from '../../../model/lostark-task';
 import { TaskFrequency } from '../../../model/task-frequency';
@@ -23,7 +23,7 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge, isWeeklyFrequency } from './checklist-layout';
+import { checklistBodyHeight, checklistTaskColumnWidth, computeChecklistScroll, formatCountdown, formatModeBadge, getGoldBadge, goldBadgeTooltip, isWeeklyFrequency } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
 
 interface CategoriesDisplay {
@@ -55,11 +55,12 @@ const CATEGORIES_DISPLAY_DEFAULT: CategoriesDisplay = {
   changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
-export class ChecklistComponent {
+export class ChecklistComponent implements AfterViewInit, OnDestroy {
 
   public TaskFrequency = TaskFrequency;
   public TaskScope = TaskScope;
   public isWeeklyFrequency = isWeeklyFrequency;
+  public formatCountdown = formatCountdown;
 
   public rawRoster$ = this.rosterService.roster$;
   public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
@@ -119,6 +120,17 @@ export class ChecklistComponent {
     })
   );
 
+  // Each bi-weekly countdown only shows while an enabled task resets on it
+  public resetFrequenciesInUse$ = this.tasksService.tasks$.pipe(
+    map(tasks => {
+      const enabled = tasks.filter(task => task.enabled);
+      return {
+        biWeekly: enabled.some(task => task.frequency === TaskFrequency.BIWEEKLY),
+        biWeeklyOffset: enabled.some(task => task.frequency === TaskFrequency.BIWEEKLY_OFFSET)
+      };
+    })
+  );
+
   public tasks$: Observable<LostarkTask[]> = combineLatest([
     this.rawRoster$,
     this.tasksService.tasks$,
@@ -168,9 +180,11 @@ export class ChecklistComponent {
             .map(character => {
               let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character.name, task.label);
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
+              const modeBadge = formatModeBadge(runningMode);
+              const goldBadge = getGoldBadge(modeBadge, this.getGoldTakingInfoForTask(character.name, task.label, goldTracking), character.weeklyGold);
               return {
                 runningMode,
-                modeBadge: formatModeBadge(runningMode),
+                modeBadge,
                 higherModeInfo: this.getHigherModeInfoForTask(raidModesForGoldPlanner, character, task.label),
                 done: Math.min(isTaskDone(
                   task,
@@ -185,7 +199,8 @@ export class ChecklistComponent {
                 tracked: isTaskTracked(roster.trackedTasks, character, task, allTasks),
                 doable: character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity),
                 energy: getCompletionEntry(energy.data, character, task) || 0,
-                goldBadge: getGoldBadge(formatModeBadge(runningMode), this.getGoldTakingInfoForTask(character.name, task.label, goldTracking), character.weeklyGold)
+                goldBadge,
+                goldBadgeTooltip: goldBadgeTooltip(modeBadge, goldBadge.coin)
               };
             });
 
@@ -264,6 +279,9 @@ export class ChecklistComponent {
 
   private windowResize$ = new BehaviorSubject<void>(void 0);
 
+  // Measured table body: the height that fits the window and the visible width (null until rendered)
+  public tableBox$ = new BehaviorSubject<{ height: number | null, width: number | null }>({ height: null, width: null });
+
   public characters$ = combineLatest([this.roster$, this.showHiddenCharacters$]).pipe(
     map(([roster, showHidden]) => filterVisibleCharacters(roster, showHidden))
   );
@@ -272,24 +290,35 @@ export class ChecklistComponent {
     map(([display, showHidden]) => filterVisibleCharacters(display.roster, showHidden))
   );
 
-  public taskColumnWidth$ = this.layoutState.sidebarCollapsed$.pipe(
-    map(sidebarCollapsed => checklistTaskColumnWidth(sidebarCollapsed))
-  );
-
-  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$]).pipe(
-    map(([characters, sidebarCollapsed]) => computeChecklistScroll({
+  public taskColumnWidth$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$]).pipe(
+    map(([characters, sidebarCollapsed]) => checklistTaskColumnWidth({
       innerWidth: window.innerWidth,
       innerHeight: window.innerHeight,
       visibleCharacterCount: characters.length,
       sidebarCollapsed
+    }))
+  );
+
+  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$, this.tableBox$]).pipe(
+    map(([characters, sidebarCollapsed, , tableBox]) => computeChecklistScroll({
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visibleCharacterCount: characters.length,
+      sidebarCollapsed,
+      bodyHeight: tableBox.height
     })),
     startWith({ x: null, y: null })
   );
 
+  private resizeObserver?: ResizeObserver;
+  private mutationObserver?: MutationObserver;
+  private measurePending = false;
+
   constructor(private rosterService: RosterService, private tasksService: TasksService,
     private settings: SettingsService, private energyService: EnergyService,
     private timeService: TimeService, private completionService: CompletionService,
-    private layoutState: LayoutStateService) {
+    private layoutState: LayoutStateService, private host: ElementRef<HTMLElement>,
+    private zone: NgZone) {
     // A choice saved before a section existed has no value for it, so that section starts visible
     this.categoriesDisplay$.next({ ...CATEGORIES_DISPLAY_DEFAULT, ...this.categoriesDisplay$.value });
     this.setTableHeight();
@@ -298,6 +327,64 @@ export class ChecklistComponent {
   @HostListener('window:resize')
   setTableHeight(): void {
     this.windowResize$.next();
+  }
+
+  ngAfterViewInit(): void {
+    // The table body is sized from where it really starts, so it is measured again whenever
+    // something above it changes height: the page header, the Tickets panel, the table itself
+    // (host resize) or the guest banner, which sits next to this page (the parent's children change).
+    const host = this.host.nativeElement;
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.scheduleMeasure());
+      this.resizeObserver.observe(host);
+    }
+    if (host.parentElement && typeof MutationObserver !== 'undefined') {
+      this.mutationObserver = new MutationObserver(() => this.scheduleMeasure());
+      this.mutationObserver.observe(host.parentElement, { childList: true });
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+    this.mutationObserver?.disconnect();
+  }
+
+  private scheduleMeasure(): void {
+    if (this.measurePending) {
+      return;
+    }
+    this.measurePending = true;
+    // Next frame, so the new height is not applied inside the observer callback
+    requestAnimationFrame(() => {
+      this.measurePending = false;
+      this.measureTable();
+    });
+  }
+
+  private measureTable(): void {
+    const host = this.host.nativeElement;
+    const body = host.querySelector<HTMLElement>('.checklist-table .ant-table-body');
+    const pageContent = host.parentElement;
+    const scroller = pageContent?.parentElement;
+    if (!body || !pageContent || !scroller) {
+      return;
+    }
+    const bodyRect = body.getBoundingClientRect();
+    // Under the body: the rest of this page (the table border), the page's bottom padding and the footer
+    let belowBody = host.getBoundingClientRect().bottom - bodyRect.bottom + parseFloat(getComputedStyle(pageContent).paddingBottom || '0');
+    for (let element = pageContent.nextElementSibling; element; element = element.nextElementSibling) {
+      belowBody += element.getBoundingClientRect().height;
+    }
+    const height = checklistBodyHeight({
+      viewportHeight: scroller.clientHeight,
+      bodyTop: bodyRect.top - scroller.getBoundingClientRect().top + scroller.scrollTop,
+      belowBody
+    });
+    const width = body.clientWidth;
+    const current = this.tableBox$.value;
+    if (current.height !== height || current.width !== width) {
+      this.zone.run(() => this.tableBox$.next({ height, width }));
+    }
   }
 
   public ticketsTrackingOpenedChange(opened: boolean): void {
@@ -328,6 +415,10 @@ export class ChecklistComponent {
         existingEntry.amount = 0;
       }
       const currentAmount = existingEntry?.amount || 0;
+      // A finished counter stays focusable (aria-disabled), so a click on it must not count past the amount
+      if (currentAmount >= task.amount) {
+        return;
+      }
       // Ctrl+click fills only the runs left, so rest bonus is spent for those runs only
       const runs = setAllDone ? Math.max(task.amount - currentAmount, 0) : 1;
 
@@ -366,8 +457,13 @@ export class ChecklistComponent {
     return entry.task.$key;
   }
 
-  trackByCharacter(index: number, character: Character): string {
-    return character.name;
+  trackByCharacter(index: number, character: Character): number | string {
+    // Names can repeat and ids cannot; a character saved before ids existed falls back to its name
+    return character.id ?? character.name;
+  }
+
+  showHiddenCharacters(): void {
+    this.showHiddenCharacters$.next(true);
   }
 
   saveRoster(roster: Roster): void {

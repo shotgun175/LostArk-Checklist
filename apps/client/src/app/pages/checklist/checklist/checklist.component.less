@@ -1,8 +1,57 @@
+:host {
+  display: block;
+}
+
+// The Checklist is the glance page. On this page only: a slimmer page gutter leaves more room
+// for the character columns, and the footer sits at the bottom of the window instead of just
+// below it, so the page does not scroll when the table fits (the table body is sized to end
+// above the footer, see measureTable in checklist.component.ts).
+::ng-deep {
+  nz-content:has(> .inner-content > lostark-helper-checklist) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // The class is doubled to outrank the shell's own .inner-content rule (min-height: 100%, padding: 24px)
+  .inner-content.inner-content:has(> lostark-helper-checklist) {
+    flex: 1 0 auto;
+    min-height: 0;
+    padding: 16px 12px;
+  }
+}
+
 :host ::ng-deep {
   .ant-table-thead > tr > th {
     text-align: center;
     background-color: #001529 !important;
     color: white;
+  }
+
+  // Slimmer cell padding: more room inside the 115px character columns. The task column keeps
+  // its padding (taskColumnWidth - 17 in the template).
+  .checklist-table {
+    .ant-table-thead > tr > th:not(:first-child),
+    .ant-table-tbody > tr > td:not(.task-name) {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+  }
+
+  // Tickets: scrolls sideways inside its panel, with the ticket name pinned
+  .tickets-table {
+    .ticket-name {
+      min-width: 180px;
+      white-space: nowrap;
+    }
+
+    nz-input-number {
+      width: 64px;
+    }
+
+    // The columns size to their content here, so long names are capped like in the checklist
+    .character-name {
+      max-width: 75px;
+    }
   }
 
   .ant-table-body {
@@ -83,6 +132,50 @@
 
     .ant-statistic-content-value {
       font-size: 1.1rem;
+    }
+
+    .label-short {
+      display: none;
+    }
+  }
+
+  // Phones: the countdowns go under the title, left-aligned and wrapping, with short labels
+  @media screen and (max-width: 575px) {
+    .checklist-header {
+      .ant-page-header-heading {
+        flex-wrap: wrap;
+      }
+
+      .ant-page-header-heading-extra {
+        width: 100%;
+        margin-left: 0;
+        white-space: normal;
+      }
+    }
+
+    .countdowns-container {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 4px 16px;
+
+      .ant-statistic {
+        .ant-statistic-title {
+          margin-right: 6px;
+        }
+
+        &:first-child {
+          margin-right: 0;
+        }
+      }
+
+      .label-long {
+        display: none;
+      }
+
+      .label-short {
+        display: inline;
+      }
     }
   }
 }
@@ -170,11 +263,15 @@ table {
       flex-shrink: 0;
     }
 
+    // Up to 2 lines, then an ellipsis; the full label is in the cell's title
     .task-label {
       min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      line-height: 16px;
+      overflow-wrap: anywhere;
     }
   }
 
@@ -275,16 +372,6 @@ table {
     }
   }
 
-  .character-title {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    > [nz-icon] {
-      margin: 0 3px;
-    }
-  }
-
   td {
     position: relative;
     border-right: 1px solid #666;
@@ -292,8 +379,9 @@ table {
     text-align: center;
     min-width: 115px;
 
+    // Room for the counter and its reset button (checklist-layout.ts uses 76px)
     @media screen and (max-width: 992px) {
-      min-width: 60px;
+      min-width: 76px;
     }
   }
 
@@ -305,15 +393,54 @@ table {
     &.roster > div:first-child {
       width: 50%;
     }
+
+    // A block of the column's minimum content width, centered in the cell, so the badge,
+    // counter, reset button and rest bonus bar stay together in wide columns
+    &:not(.roster) {
+      width: 107px;
+      max-width: 100%;
+      margin: 0 auto;
+
+      @media screen and (max-width: 992px) {
+        width: 68px;
+        justify-content: flex-start;
+      }
+    }
   }
 
   .reset-button {
     position: absolute;
-    right: 5px;
+    right: 4px;
 
+    // Narrow columns: a small reset button in the cell's right corner, beside the counter
     @media screen and (max-width: 992px) {
-      display: none;
+      right: 0;
+
+      button {
+        display: block;
+        width: 20px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0;
+        font-size: 12px;
+
+        > * {
+          font-size: 12px;
+        }
+      }
     }
+  }
+
+  // Roster rows span every character column. The block holding the counter stays beside the
+  // pinned task column, as wide as the visible part of the table, with the reset button next
+  // to the counter.
+  .roster-block {
+    position: sticky;
+  }
+
+  .counter.roster .reset-button {
+    right: auto;
+    left: calc(75% + 5px);
   }
 
   // Row tints, shared by the row rules and the pinned task cell below
@@ -366,6 +493,37 @@ table {
     }
   }
 
+  // A finished row tints its cells too: the row's own background is not painted under its
+  // cells (they are position: relative), so a finished row looked less finished than a partly
+  // finished one. The pinned task cell has its own background (--pinned-tint above).
+  tr.completed {
+    &.weekly > td:not(.task-name) {
+      background-color: @tint-weekly;
+    }
+
+    &.daily > td:not(.task-name) {
+      background-color: @tint-daily;
+    }
+
+    &.one-time > td:not(.task-name) {
+      background-color: @tint-one-time;
+    }
+
+    &.even {
+      &.weekly > td:not(.task-name) {
+        background-color: @tint-weekly-even;
+      }
+
+      &.daily > td:not(.task-name) {
+        background-color: @tint-daily-even;
+      }
+
+      &.one-time > td:not(.task-name) {
+        background-color: @tint-one-time-even;
+      }
+    }
+  }
+
   tr, td {
     &.completed {
       &.weekly {
@@ -401,18 +559,64 @@ table {
   }
 }
 
-.fullpage-message {
-  font-size: 32px;
-  text-align: center;
+.checklist-empty {
+  margin: 48px auto;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+// Long button text wraps on a narrow screen instead of running off it
+.wrapping-button {
+  height: auto;
+  max-width: 100%;
+  white-space: normal;
+}
+
+// Character headers (the header table is drawn by nz-table, so these rules sit outside the table block)
+.character-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  @media screen and (max-width: 992px) {
+    flex-direction: column;
+  }
+}
+
+.character-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.character-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-ilvl {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100%;
+  gap: 0 4px;
 }
 
 .class-icon {
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
 }
 
 .all-tasks {
@@ -426,11 +630,12 @@ table {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 3px;
+  left: -1px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  cursor: help;
 
   .gold-badge-mode {
     font-size: 12px;
@@ -446,9 +651,10 @@ table {
     margin-top: 1px;
   }
 
-  // Narrow cells (66px) have no room left of the counter button, so the badge
+  // Narrow cells (76px) have no room left of the counter button, so the badge
   // becomes one small row in the cell's 12px top padding, above the button
   @media screen and (max-width: 992px) {
+    top: -12px;
     bottom: auto;
     right: 0;
     left: 0;
@@ -469,34 +675,41 @@ table {
   }
 }
 
-.counter.has-gold-badge > div:first-child button {
+.counter.has-gold-badge > div:first-of-type button {
   padding: 0 3px;
 }
 
-// A higher mode is available: small green arrow in the cell's top right corner
+// A higher mode is available: green arrow in the top right corner of the counter block,
+// in the cell's top padding. The hover area reaches 4px past the dot.
 .gold-badge-up {
   position: absolute;
-  top: 1px;
-  right: 3px;
-  width: 10px;
-  height: 10px;
+  top: -13px;
+  right: -1px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background-color: #52c41a;
   color: #fff;
-  font-size: 7px;
-  line-height: 10px;
+  font-size: 9px;
+  line-height: 14px;
   text-align: center;
   cursor: help;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
 
   .anticon {
     display: inline-block; // ng-zorro 17 made icons inline-flex, which centres the arrow about 1px higher
     vertical-align: top;
-    line-height: 10px;
+    line-height: 14px;
   }
 }
 
 // With the arrow above it, the reset button shrinks to 20px so they stay apart
-.gold-badge-up ~ .counter .reset-button button {
+.gold-badge-up ~ .reset-button button {
   display: block; // no line box around it, so it stays vertically centered
   width: 20px;
   min-width: 20px;
@@ -506,6 +719,36 @@ table {
   > * {
     font-size: 12px;
   }
+}
+
+.checklist-table button:focus-visible {
+  outline: 2px solid #177ddc;
+  outline-offset: 1px;
+}
+
+// Same look as ng-zorro's disabled primary button
+.counter button[aria-disabled=true] {
+  &,
+  &:hover,
+  &:focus,
+  &:active {
+    color: rgba(255, 255, 255, .3);
+    border-color: #434343;
+    background: rgba(255, 255, 255, .08);
+    text-shadow: none;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+}
+
+// Read by screen readers only
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .header-link {
