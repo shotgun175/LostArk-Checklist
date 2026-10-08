@@ -60,3 +60,39 @@
 .grecaptcha-badge {
   visibility: hidden;
 }
+
+// Drag and drop on Roster and Tasks Manager. The row being dragged (cdkDragPreviewClass="drag-preview")
+// is a copy appended to body, so these rules are global: a solid panel with a shadow instead of a
+// see-through copy. The placeholder marks where the row will land.
+.drag-preview {
+  background: @component-background;
+  border: 1px solid @primary-color;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.45);
+  opacity: 1;
+  cursor: grabbing;
+}
+
+// A table row outside its table: tasks.component copies each cell's width from the placeholder
+tr.drag-preview {
+  display: table;
+  table-layout: fixed;
+
+  > td {
+    padding: 8px;
+    vertical-align: middle;
+  }
+}
+
+.ant-list-item.drag-preview {
+  padding: 12px 16px;
+}
+
+.cdk-drop-list .cdk-drag-placeholder {
+  outline: 1px dashed @primary-color;
+  outline-offset: -1px;
+  background: fade(@primary-color, 12%);
+
+  > td {
+    background: fade(@primary-color, 12%);
+  }
+}

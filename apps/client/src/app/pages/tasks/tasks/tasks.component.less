@@ -43,9 +43,32 @@ nz-card {
 }
 
 .drag-handle {
+  padding: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  line-height: 1;
   cursor: grab;
   font-size: 16px;
   color: rgba(255, 255, 255, 0.45);
+
+  // Arrow Up and Arrow Down on the focused grip move the row
+  &:focus-visible {
+    outline: 2px solid #177ddc;
+    outline-offset: 2px;
+  }
+}
+
+// A task just added, so it can be found in a long list
+:host ::ng-deep tr.new-task > td {
+  background: rgba(23, 125, 220, 0.25);
+  transition: background 0.3s;
+}
+
+.form-error {
+  align-self: center;
+  margin-left: 12px;
+  color: #a61d24;
 }
 
 :host ::ng-deep tbody.cdk-drop-list-dragging,
