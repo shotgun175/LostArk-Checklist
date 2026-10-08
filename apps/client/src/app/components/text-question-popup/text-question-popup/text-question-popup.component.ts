@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from "@angular/core";
+import { Component, inject, OnInit, ChangeDetectionStrategy } from "@angular/core";
 import { NZ_MODAL_DATA, NzModalRef } from "ng-zorro-antd/modal";
 import { UntypedFormControl, Validators } from "@angular/forms";
 
@@ -12,6 +12,7 @@ export interface TextQuestionPopupData {
   selector: "lostark-helper-text-question-popup",
   templateUrl: "./text-question-popup.component.html",
   styleUrls: ["./text-question-popup.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class TextQuestionPopupComponent implements OnInit {

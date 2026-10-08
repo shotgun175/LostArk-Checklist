@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { AuthService } from "./core/database/services/auth.service";
 import { UserService } from "./core/database/services/user.service";
 import { LayoutStateService } from "./core/services/layout-state.service";
@@ -12,6 +12,7 @@ import { LAHUser } from "./model/lah-user";
   selector: "lostark-helper-root",
   templateUrl: "./app.component.html",
   styleUrls: ["./app.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class AppComponent {

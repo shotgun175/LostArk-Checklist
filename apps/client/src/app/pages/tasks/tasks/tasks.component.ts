@@ -1,4 +1,4 @@
-import { Component, HostListener } from "@angular/core";
+import { Component, HostListener, ChangeDetectionStrategy } from "@angular/core";
 import { createTask, LostarkTask } from "../../../model/lostark-task";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
@@ -17,6 +17,7 @@ import { distinctUntilChanged, map, merge, Subject } from "rxjs";
   selector: "lostark-helper-tasks",
   templateUrl: "./tasks.component.html",
   styleUrls: ["./tasks.component.less"],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
 export class TasksComponent {
