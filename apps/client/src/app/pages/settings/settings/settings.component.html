@@ -1,231 +1,286 @@
 <nz-page-header nzTitle="Settings" nzSubtitle="Configure your experience">
-  <nz-page-header-extra *ngIf="(anonymous$ | async) === false">
-    <i nz-tooltip nzTooltipTitle="You can share this freely, it won't compromise your account">User ID: {{uid$ | async}}</i>
-  </nz-page-header-extra>
+  @if ((anonymous$ | async) === false) {
+    <nz-page-header-extra>
+      <i nz-tooltip nzTooltipTitle="You can share this freely, it won't compromise your account">User ID: {{uid$ | async}}</i>
+    </nz-page-header-extra>
+  }
 </nz-page-header>
-<div *ngIf="settings$ | async as settings">
-  <div nz-row [nzGutter]="[10, 10]">
-    <div nz-col nzMd="24">
-      <label nz-checkbox [(ngModel)]="settings.crystallineAura"
-             (ngModelChange)="saveSettings(settings)"></label> Crystalline Aura
-    </div>
-    <div nz-col nzMd="24">
-      <label nz-checkbox [(ngModel)]="settings.hiddenOnCompletion" (ngModelChange)="saveSettings(settings)">
-        Hide on completion <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide task when it has been completed, instead of mark it only visually completed"></span>
-      </label>
-    </div>
-  </div>
-  <div nz-row class="lazy-matrix">
-    <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">
-      <input #importFile type="file" accept=".json,application/json" hidden
-             (change)="onImportFileSelected(importFile)">
-      <div nz-row [nzGutter]="[10, 10]">
-        <div nz-col>
-          <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFromLostarkHelper = true; importFile.click()">Import from Lostark-helper</button>
-        </div>
-        <div nz-col>
-          <button nz-button [nzLoading]="transferBusy" (click)="downloadBackup()">Download backup</button>
-        </div>
-        <div nz-col>
-          <button nz-button [disabled]="transferBusy" (click)="importFromLostarkHelper = false; importFile.click()">Restore backup</button>
-        </div>
+@if (settings$ | async; as settings) {
+  <div>
+    <div nz-row [nzGutter]="[10, 10]">
+      <div nz-col nzMd="24">
+        <label nz-checkbox [(ngModel)]="settings.crystallineAura"
+        (ngModelChange)="saveSettings(settings)"></label> Crystalline Aura
       </div>
-      <div *ngIf="pendingImport as pending" class="import-summary">
-        <p>
-          {{pending.fileName}}: {{pending.validation.counts.characters}} characters,
-          {{pending.validation.counts.tasks}} tasks,
-          {{pending.validation.counts.completion}} completion entries
-        </p>
-        <ul *ngIf="!pending.validation.ok" class="import-errors">
-          <li *ngFor="let error of pending.validation.errors">{{error}}</li>
-        </ul>
-        <button *ngIf="pending.validation.data as data" nz-button nzType="primary" nzDanger
-                [nzLoading]="transferBusy"
-                nz-popconfirm
-                nzPopconfirmTitle="This replaces the roster, tasks, ticks, rest bonus and settings of this account. Continue?"
-                (nzOnConfirm)="confirmImport(data, pending.fromLostarkHelper)">Import this file
-        </button>
+      <div nz-col nzMd="24">
+        <label nz-checkbox [(ngModel)]="settings.hiddenOnCompletion" (ngModelChange)="saveSettings(settings)">
+          Hide on completion <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide task when it has been completed, instead of mark it only visually completed"></span>
+        </label>
       </div>
-    </nz-card>
-  </div>
-  <ng-container *ngIf="lazyTracking$ | async as tracking">
-    <ng-container *ngIf="roster$ | async as roster">
-      <ng-container *ngIf="lazyFlags$ | async as lazyFlags">
-        <div nz-row class="lazy-matrix">
-          <nz-card nz-col nzMd="24" nzTitle="Lazy tasks" nzSize="small">
-            <ng-container *ngIf="hasLazyCharacters$ | async; else noLazyCharacters">
-              <div *ngIf="lazyFlags.length > 0">
-                <nz-table #tasksTable [nzData]="lazyFlags"
+    </div>
+    <div nz-row class="lazy-matrix">
+      <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">
+        <input #importFile type="file" accept=".json,application/json" hidden
+          (change)="onImportFileSelected(importFile)">
+          <div nz-row [nzGutter]="[10, 10]">
+            <div nz-col>
+              <button nz-button nzType="primary" [disabled]="transferBusy" (click)="importFromLostarkHelper = true; importFile.click()">Import from Lostark-helper</button>
+            </div>
+            <div nz-col>
+              <button nz-button [nzLoading]="transferBusy" (click)="downloadBackup()">Download backup</button>
+            </div>
+            <div nz-col>
+              <button nz-button [disabled]="transferBusy" (click)="importFromLostarkHelper = false; importFile.click()">Restore backup</button>
+            </div>
+          </div>
+          @if (pendingImport; as pending) {
+            <div class="import-summary">
+              <p>
+                {{pending.fileName}}: {{pending.validation.counts.characters}} characters,
+                {{pending.validation.counts.tasks}} tasks,
+                {{pending.validation.counts.completion}} completion entries
+              </p>
+              @if (!pending.validation.ok) {
+                <ul class="import-errors">
+                  @for (error of pending.validation.errors; track error) {
+                    <li>{{error}}</li>
+                  }
+                </ul>
+              }
+              @if (pending.validation.data; as data) {
+                <button nz-button nzType="primary" nzDanger
+                  [nzLoading]="transferBusy"
+                  nz-popconfirm
+                  nzPopconfirmTitle="This replaces the roster, tasks, ticks, rest bonus and settings of this account. Continue?"
+                  (nzOnConfirm)="confirmImport(data, pending.fromLostarkHelper)">Import this file
+                </button>
+              }
+            </div>
+          }
+        </nz-card>
+      </div>
+      @if (lazyTracking$ | async; as tracking) {
+        @if (roster$ | async; as roster) {
+          @if (lazyFlags$ | async; as lazyFlags) {
+            <div nz-row class="lazy-matrix">
+              <nz-card nz-col nzMd="24" nzTitle="Lazy tasks" nzSize="small">
+                @if (hasLazyCharacters$ | async) {
+                  @if (lazyFlags.length > 0) {
+                    <div>
+                      <nz-table #tasksTable [nzData]="lazyFlags"
+                        [nzPageSize]="999"
+                        nzHideOnSinglePage
+                        nzSize="middle">
+                        <thead>
+                          <tr>
+                            <th>Task</th>
+                            @for (character of roster; track character) {
+                              <th>{{character.name}}[{{character.ilvl}}]</th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of tasksTable.data; track trackByTask($index, row)) {
+                            <tr>
+                              <td class="task-name">
+                                @if (row.task.iconPath) {
+                                  <img src="./assets/icons/{{row.task.iconPath}}" alt="" class="task-icon">
+                                }
+                                {{row.task.label}}
+                              </td>
+                              @for (flag of row.flags; track $index; let i = $index) {
+                                <td>
+                                  <nz-switch nzCheckedChildren="Lazy"
+                                    nzUnCheckedChildren="Not Lazy"
+                                    [ngModel]="flag"
+                                  (ngModelChange)="setLazyFlag(settings.$key, tracking, row.task, roster[i], $event)"></nz-switch>
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </nz-table>
+                    </div>
+                  }
+                } @else {
+                  <nz-empty nzNotFoundContent="No lazy characters"></nz-empty>
+                }
+              </nz-card>
+            </div>
+            @if (energy$ | async; as energy) {
+              @if (fullRoster$ | async; as fullRoster) {
+                @if (restBonus$ | async; as restBonus) {
+                  <div nz-row>
+                    <nz-card nz-col nzMd="24" nzTitle="Rest bonus" [nzExtra]="reset" nzSize="small" class="lazy-matrix">
+                      <ng-template #reset>
+                        <button nz-button nz-popconfirm nzPopconfirmTitle="Are you sure?"
+                          (nzOnConfirm)="resetBonuses(energy.$key)">Reset
+                          all bonuses
+                        </button>
+                      </ng-template>
+                      <div class="lazy-matrix">
+                        <nz-table #tasksTable [nzData]="restBonus"
                           [nzPageSize]="999"
                           nzHideOnSinglePage
                           nzSize="middle">
-                  <thead>
-                  <tr>
-                    <th>Task</th>
-                    <th *ngFor="let character of roster">{{character.name}}[{{character.ilvl}}]</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                  <tr *ngFor="let row of tasksTable.data; trackBy: trackByTask">
-                    <td class="task-name">
-                      <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt="" class="task-icon">
-                      {{row.task.label}}
-                    </td>
-                    <td *ngFor="let flag of row.flags; index as i; trackBy: trackByIndex">
-                      <nz-switch nzCheckedChildren="Lazy"
-                                 nzUnCheckedChildren="Not Lazy"
-                                 [ngModel]="flag"
-                                 (ngModelChange)="setLazyFlag(settings.$key, tracking, row.task, roster[i], $event)"></nz-switch>
-                    </td>
-                  </tr>
-                  </tbody>
-                </nz-table>
-              </div>
-            </ng-container>
-            <ng-template #noLazyCharacters>
-              <nz-empty nzNotFoundContent="No lazy characters"></nz-empty>
-            </ng-template>
-          </nz-card>
-        </div>
-        <ng-container *ngIf="energy$ | async as energy">
-          <ng-container *ngIf="fullRoster$ | async as fullRoster">
-            <div nz-row *ngIf="restBonus$ | async as restBonus">
-              <nz-card nz-col nzMd="24" nzTitle="Rest bonus" [nzExtra]="reset" nzSize="small" class="lazy-matrix">
-                <ng-template #reset>
-                  <button nz-button nz-popconfirm nzPopconfirmTitle="Are you sure?"
-                          (nzOnConfirm)="resetBonuses(energy.$key)">Reset
-                    all bonuses
-                  </button>
-                </ng-template>
-                <div class="lazy-matrix">
-                  <nz-table #tasksTable [nzData]="restBonus"
-                            [nzPageSize]="999"
-                            nzHideOnSinglePage
-                            nzSize="middle">
-                    <thead>
-                    <tr>
-                      <th>Task</th>
-                      <th *ngFor="let character of fullRoster">{{character.name}}[{{character.ilvl}}]</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr *ngFor="let row of tasksTable.data; trackBy: trackByTask">
-                      <td class="task-name">
-                        <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
-                             class="task-icon">
-                        {{row.task.label}}
-                      </td>
-                      <td *ngFor="let bonus of row.energy; index as i; trackBy: trackByIndex">
-                        <nz-input-number [ngModel]="bonus"
-                                         [nzMin]="0"
-                                         [nzStep]="10"
-                                         [nzMax]="row.task.label === 'Chaos Dungeon' ? 200 : 100"
-                                         [ngModelOptions]="{updateOn: 'blur'}"
-                                         (ngModelChange)="setRestBonus(energy, row.task, fullRoster[i], $event)"></nz-input-number>
-                      </td>
-                    </tr>
-                    </tbody>
-                  </nz-table>
-                </div>
-              </nz-card>
-            </div>
-          </ng-container>
-        </ng-container>
-
-        <ng-container *ngIf="rawRoster$ | async as rawRoster">
-          <nz-card nz-col nzMd="24" nzTitle="Task tracking" [nzExtra]="trackingExtra" nzSize="small" *ngIf="taskTracking$ | async as taskTracking" class="lazy-matrix tracking-card">
-            <ng-template #trackingExtra>
-              <span class="set-count">{{taskTracking.setByYou}} set by you</span>
-              <button nz-button nzSize="small" [disabled]="taskTracking.setByYou === 0"
+                          <thead>
+                            <tr>
+                              <th>Task</th>
+                              @for (character of fullRoster; track character) {
+                                <th>{{character.name}}[{{character.ilvl}}]</th>
+                              }
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (row of tasksTable.data; track trackByTask($index, row)) {
+                              <tr>
+                                <td class="task-name">
+                                  @if (row.task.iconPath) {
+                                    <img src="./assets/icons/{{row.task.iconPath}}" alt=""
+                                      class="task-icon">
+                                  }
+                                  {{row.task.label}}
+                                </td>
+                                @for (bonus of row.energy; track $index; let i = $index) {
+                                  <td>
+                                    <nz-input-number [ngModel]="bonus"
+                                      [nzMin]="0"
+                                      [nzStep]="10"
+                                      [nzMax]="row.task.label === 'Chaos Dungeon' ? 200 : 100"
+                                      [ngModelOptions]="{updateOn: 'blur'}"
+                                    (ngModelChange)="setRestBonus(energy, row.task, fullRoster[i], $event)"></nz-input-number>
+                                  </td>
+                                }
+                              </tr>
+                            }
+                          </tbody>
+                        </nz-table>
+                      </div>
+                    </nz-card>
+                  </div>
+                }
+              }
+            }
+            @if (rawRoster$ | async; as rawRoster) {
+              @if (taskTracking$ | async; as taskTracking) {
+                <nz-card nz-col nzMd="24" nzTitle="Task tracking" [nzExtra]="trackingExtra" nzSize="small" class="lazy-matrix tracking-card">
+                  <ng-template #trackingExtra>
+                    <span class="set-count">{{taskTracking.setByYou}} set by you</span>
+                    <button nz-button nzSize="small" [disabled]="taskTracking.setByYou === 0"
                       nz-popconfirm
                       [nzPopconfirmTitle]="'Reset ' + taskTracking.setByYou + (taskTracking.setByYou === 1 ? ' tracking choice' : ' tracking choices') + ' for all characters back to automatic?'"
                       (nzOnConfirm)="resetAllTracking(rawRoster)">Reset all to auto
-              </button>
-            </ng-template>
-            <div class="lazy-matrix tracking-table">
-              <nz-table #tasksTable [nzData]="taskTracking.rows"
-                        [nzPageSize]="999"
-                        nzHideOnSinglePage
-                        [nzScroll]="taskTracking.scroll"
-                        nzSize="small">
-                <thead>
-                <tr>
-                  <th [nzWidth]="taskTracking.taskColumnWidth">Task</th>
-                  <th *ngFor="let character of rawRoster.characters; index as i" [nzWidth]="taskTracking.characterColumnWidth" class="character-head">
-                    <span class="character-name">{{character.name}}</span>
-                    <span class="character-ilvl">{{character.ilvl}}</span>
-                    <a *ngIf="taskTracking.perCharacter[i] > 0" class="tracking-reset" nz-tooltip nzTooltipTitle="Send all of this character's choices back to automatic"
-                       (click)="resetCharacterTracking(rawRoster, character)">reset</a>
-                  </th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr *ngIf="taskTracking.raidRows.length > 0 || taskTracking.olderRows.length > 0" class="tracking-section">
-                  <td class="task-name">Raids</td>
-                  <td [attr.colspan]="rawRoster.characters.length"></td>
-                </tr>
-                <tr *ngFor="let row of taskTracking.raidRows; trackBy: trackByTask">
-                  <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
-                </tr>
-                <tr *ngIf="taskTracking.olderRows.length > 0" class="older-raids-toggle">
-                  <td class="task-name">
-                    <a tabindex="0" role="button" (click)="toggleOlderRaids()" (keydown.enter)="toggleOlderRaids()"
-                       (keydown.space)="$event.preventDefault(); toggleOlderRaids()" [attr.aria-expanded]="olderRaidsOpen">
-                      <span class="older-raids-caret" [class.open]="olderRaidsOpen">&#9656;</span>
-                      Older raids ({{taskTracking.olderRows.length}})
-                    </a>
-                  </td>
-                  <td [attr.colspan]="rawRoster.characters.length"></td>
-                </tr>
-                <ng-container *ngIf="olderRaidsOpen">
-                  <tr *ngFor="let row of taskTracking.olderRows; trackBy: trackByTask" class="older-raid-row">
-                    <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
-                  </tr>
-                </ng-container>
-                <tr *ngIf="taskTracking.otherRows.length > 0" class="tracking-section">
-                  <td class="task-name">Other tasks</td>
-                  <td [attr.colspan]="rawRoster.characters.length"></td>
-                </tr>
-                <tr *ngFor="let row of taskTracking.otherRows; trackBy: trackByTask">
-                  <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
-                </tr>
-                </tbody>
-              </nz-table>
-            </div>
-            <div class="tracking-legend">Faded = auto, Solid = set by you, dash = item level too low</div>
-            <ng-template #trackingRow let-row>
-              <td class="task-name">
-                <div class="task-name-line">
-                  <img *ngIf="row.task.iconPath" src="./assets/icons/{{row.task.iconPath}}" alt=""
-                       class="task-icon">
-                  <span class="task-label">{{row.task.label}}</span>
-                  <button class="task-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="taskMenu" nzPlacement="bottomLeft"
-                          [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
-                </div>
-                <nz-dropdown-menu #taskMenu="nzDropdownMenu">
-                  <ul nz-menu class="task-menu">
-                    <li nz-menu-item nzDisabled class="task-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
-                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)">Track for all</li>
-                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)">Ignore for all</li>
-                    <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)">Back to auto for all</li>
-                  </ul>
-                </nz-dropdown-menu>
-              </td>
-              <td *ngFor="let flag of row.data; index as i; trackBy: trackByIndex" class="tracking-cell">
-                <ng-container *ngIf="flag.inIlvlRange; else ilvlTooLow">
-                  <nz-switch nzSize="small" [class.auto-tracking]="flag.auto"
-                             [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
-                  <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
-                </ng-container>
-                <ng-template #ilvlTooLow>
-                  <span class="ilvl-too-low">-</span>
-                  <a *ngIf="!flag.auto" class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you before the item level stopped fitting. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
-                </ng-template>
-              </td>
-            </ng-template>
-          </nz-card>
-        </ng-container>
-      </ng-container>
-    </ng-container>
-  </ng-container>
-</div>
+                    </button>
+                  </ng-template>
+                  <div class="lazy-matrix tracking-table">
+                    <nz-table #tasksTable [nzData]="taskTracking.rows"
+                      [nzPageSize]="999"
+                      nzHideOnSinglePage
+                      [nzScroll]="taskTracking.scroll"
+                      nzSize="small">
+                      <thead>
+                        <tr>
+                          <th [nzWidth]="taskTracking.taskColumnWidth">Task</th>
+                          @for (character of rawRoster.characters; track character; let i = $index) {
+                            <th [nzWidth]="taskTracking.characterColumnWidth" class="character-head">
+                              <span class="character-name">{{character.name}}</span>
+                              <span class="character-ilvl">{{character.ilvl}}</span>
+                              @if (taskTracking.perCharacter[i] > 0) {
+                                <a class="tracking-reset" nz-tooltip nzTooltipTitle="Send all of this character's choices back to automatic"
+                                (click)="resetCharacterTracking(rawRoster, character)">reset</a>
+                              }
+                            </th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @if (taskTracking.raidRows.length > 0 || taskTracking.olderRows.length > 0) {
+                          <tr class="tracking-section">
+                            <td class="task-name">Raids</td>
+                            <td [attr.colspan]="rawRoster.characters.length"></td>
+                          </tr>
+                        }
+                        @for (row of taskTracking.raidRows; track trackByTask($index, row)) {
+                          <tr>
+                            <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
+                          </tr>
+                        }
+                        @if (taskTracking.olderRows.length > 0) {
+                          <tr class="older-raids-toggle">
+                            <td class="task-name">
+                              <a tabindex="0" role="button" (click)="toggleOlderRaids()" (keydown.enter)="toggleOlderRaids()"
+                                (keydown.space)="$event.preventDefault(); toggleOlderRaids()" [attr.aria-expanded]="olderRaidsOpen">
+                                <span class="older-raids-caret" [class.open]="olderRaidsOpen">&#9656;</span>
+                                Older raids ({{taskTracking.olderRows.length}})
+                              </a>
+                            </td>
+                            <td [attr.colspan]="rawRoster.characters.length"></td>
+                          </tr>
+                        }
+                        @if (olderRaidsOpen) {
+                          @for (row of taskTracking.olderRows; track trackByTask($index, row)) {
+                            <tr class="older-raid-row">
+                              <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
+                            </tr>
+                          }
+                        }
+                        @if (taskTracking.otherRows.length > 0) {
+                          <tr class="tracking-section">
+                            <td class="task-name">Other tasks</td>
+                            <td [attr.colspan]="rawRoster.characters.length"></td>
+                          </tr>
+                        }
+                        @for (row of taskTracking.otherRows; track trackByTask($index, row)) {
+                          <tr>
+                            <ng-container *ngTemplateOutlet="trackingRow; context: {$implicit: row}"></ng-container>
+                          </tr>
+                        }
+                      </tbody>
+                    </nz-table>
+                  </div>
+                  <div class="tracking-legend">Faded = auto, Solid = set by you, dash = item level too low</div>
+                  <ng-template #trackingRow let-row>
+                    <td class="task-name">
+                      <div class="task-name-line">
+                        @if (row.task.iconPath) {
+                          <img src="./assets/icons/{{row.task.iconPath}}" alt=""
+                            class="task-icon">
+                        }
+                        <span class="task-label">{{row.task.label}}</span>
+                        <button class="task-menu-button" nz-dropdown nzTrigger="click" [nzDropdownMenu]="taskMenu" nzPlacement="bottomLeft"
+                        [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
+                      </div>
+                      <nz-dropdown-menu #taskMenu="nzDropdownMenu">
+                        <ul nz-menu class="task-menu">
+                          <li nz-menu-item nzDisabled class="task-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
+                          <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)">Track for all</li>
+                          <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)">Ignore for all</li>
+                          <li nz-menu-item [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)">Back to auto for all</li>
+                        </ul>
+                      </nz-dropdown-menu>
+                    </td>
+                    @for (flag of row.data; track $index; let i = $index) {
+                      <td class="tracking-cell">
+                        @if (flag.inIlvlRange) {
+                          <nz-switch nzSize="small" [class.auto-tracking]="flag.auto"
+                          [ngModel]="flag.tracked" (ngModelChange)="setTrackedTask(rawRoster, row.task, rawRoster.characters[i], $event)"></nz-switch>
+                          @if (!flag.auto) {
+                            <a class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                          }
+                        } @else {
+                          <span class="ilvl-too-low">-</span>
+                          @if (!flag.auto) {
+                            <a class="tracking-reset" nz-tooltip nzTooltipTitle="Set by you before the item level stopped fitting. Click to go back to automatic" (click)="resetTrackedTask(rawRoster, row.task, rawRoster.characters[i])">reset</a>
+                          }
+                        }
+                      </td>
+                    }
+                  </ng-template>
+                </nz-card>
+              }
+            }
+          }
+        }
+      }
+    </div>
+  }

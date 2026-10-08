@@ -13,7 +13,7 @@ import { NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMenuModule } from "ng-zorro-antd/menu";
 import { environment } from "../environments/environment";
 import { provideFirebase } from "./core/firebase/firebase.providers";
-import { NzDropDownModule } from "ng-zorro-antd/dropdown";
+import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 
@@ -28,7 +28,7 @@ registerLocaleData(en);
     IconsProviderModule,
     NzLayoutModule,
     NzMenuModule,
-    NzDropDownModule,
+    NzDropdownModule,
     AuthPopupsModule,
     NzModalModule
   ],

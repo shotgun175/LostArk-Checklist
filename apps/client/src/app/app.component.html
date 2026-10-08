@@ -1,8 +1,8 @@
 <nz-layout class="app-layout">
   <nz-sider class="menu-sidebar"
-            nzCollapsible
-            [(nzCollapsed)]="isCollapsed"
-            (nzCollapsedChange)="saveCollapsed($event)">
+    nzCollapsible
+    [(nzCollapsed)]="isCollapsed"
+    (nzCollapsedChange)="saveCollapsed($event)">
     <div class="sidebar-logo">
       <img src="./assets/logo.png" alt="logo">
       <h1>Lost Ark Checklist</h1>
@@ -63,15 +63,19 @@
   <nz-layout>
     <nz-header>
       <div class="user-menu" [class.anonymous]="anonymous$ | async" nz-dropdown [nzDropdownMenu]="menu"
-           nzOverlayClassName="user-menu">
+        nzOverlayClassName="user-menu">
         <span nz-icon nzType="user" nzTheme="outline"></span>
-        <ng-container *ngIf="user$ | async as user">
-          <ng-container *ngIf="user.notFound">Anonymous</ng-container>
-          <ng-container *ngIf="!user.notFound">{{user.name}}</ng-container>
-        </ng-container>
+        @if (user$ | async; as user) {
+          @if (user.notFound) {
+            Anonymous
+          }
+          @if (!user.notFound) {
+            {{user.name}}
+          }
+        }
         <nz-dropdown-menu #menu="nzDropdownMenu">
           <ul nz-menu>
-            <ng-container *ngIf="anonymous$ | async">
+            @if (anonymous$ | async) {
               <li nz-menu-item class="menu-item" (click)="signIn()">
                 <span nz-icon nzType="login" nzTheme="outline"></span>
                 Sign in
@@ -80,17 +84,19 @@
                 <span nz-icon nzType="form" nzTheme="outline"></span>
                 Register
               </li>
-            </ng-container>
-            <ng-container *ngIf="(anonymous$ | async) === false">
-              <li nz-menu-item *ngIf="user$ | async as user" (click)="updateUserName(user)" class="menu-item">
-                <span nz-icon nzType="user-switch" nzTheme="outline"></span>
-                Change user name
-              </li>
+            }
+            @if ((anonymous$ | async) === false) {
+              @if (user$ | async; as user) {
+                <li nz-menu-item (click)="updateUserName(user)" class="menu-item">
+                  <span nz-icon nzType="user-switch" nzTheme="outline"></span>
+                  Change user name
+                </li>
+              }
               <li nz-menu-item nzDanger (click)="disconnect()" class="menu-item">
                 <span nz-icon nzType="logout" nzTheme="outline"></span>
                 Log out
               </li>
-            </ng-container>
+            }
           </ul>
         </nz-dropdown-menu>
       </div>

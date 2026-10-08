@@ -1,4 +1,4 @@
-<ng-container *ngIf="tasks$ | async as tasks">
+@if (tasks$ | async; as tasks) {
   <nz-page-header nzTitle="Task Manager" nzSubtitle="Manage custom tasks, enable/disable existing ones">
     <nz-page-header-extra>
       <button nz-button nzType="primary" (click)="setTrackAll(tasks, true)">Track all tasks</button>
@@ -6,86 +6,93 @@
       <button nz-button (click)="exportTasks(tasks)" nz-tooltip nzTooltipTitle="Export custom tasks">
         <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
-      <ng-container *ngIf="uid$ | async as uid">
+      @if (uid$ | async; as uid) {
         <button nz-button (click)="importTasks(uid)" nz-tooltip nzTooltipTitle="Import custom tasks">
           <span nz-icon nzType="download" nzTheme="outline"></span>
         </button>
-      </ng-container>
+      }
     </nz-page-header-extra>
   </nz-page-header>
   <nz-card nzTitle="Tasks">
     <nz-table #tasksTable [nzData]="tasks"
-              [nzScroll]="{y:tableHeight + 'px'}" [nzPageSize]="999" nzHideOnSinglePage
-              nzSize="middle">
+      [nzScroll]="{y:tableHeight + 'px'}" [nzPageSize]="999" nzHideOnSinglePage
+      nzSize="middle">
       <thead>
-      <tr>
-        <th>Name</th>
-        <th>Icon</th>
-        <th>Frequency</th>
-        <th>Scope</th>
-        <th>Repetitions</th>
-        <th>Min ilvl</th>
-        <th>Max ilvl</th>
-        <th>Tracked</th>
-        <th>Days <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Select the days for task appear on checklist. Leave blank for all days."></span></th>
-        <th>Manage</th>
-      </tr>
+        <tr>
+          <th>Name</th>
+          <th>Icon</th>
+          <th>Frequency</th>
+          <th>Scope</th>
+          <th>Repetitions</th>
+          <th>Min ilvl</th>
+          <th>Max ilvl</th>
+          <th>Tracked</th>
+          <th>Days <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Select the days for task appear on checklist. Leave blank for all days."></span></th>
+          <th>Manage</th>
+        </tr>
       </thead>
       <tbody cdkDropList
-             (cdkDropListDropped)="dropTask(tasks, $event)"
-             [cdkDropListData]="tasks">
-      <tr *ngFor="let task of tasksTable.data, trackBy: trackByTask" cdkDrag [cdkDragData]="task">
-        <td>
-          <input type="text" [(ngModel)]="task.label" (ngModelChange)="updateTask(task)" [disabled]="!task.custom"
-                   nz-input>
-        </td>
-        <td>
-          <div class="task-icon-wrapper">
-            <img *ngIf="task.iconPath" src="./assets/icons/{{task.iconPath}}" alt="" class="task-icon">
-            <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task)"
-                       nzAllowClear
-                       class="icon-select"
-                       *ngIf="task.custom">
-              <nz-option *ngFor="let icon of icons" [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
-                <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
-              </nz-option>
-            </nz-select>
-          </div>
-        </td>
-        <td>
-          <nz-select [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
-            <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.BIWEEKLY_OFFSET" nzLabel="Biweekly offset"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
-          </nz-select>
-        </td>
-        <td>
-          <nz-select [(ngModel)]="task.scope" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
-            <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
-            <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
-          </nz-select>
-        </td>
-        <td>
-          <nz-input-number [(ngModel)]="task.amount" (ngModelChange)="updateTask(task)"
-                           [nzDisabled]="!task.custom"></nz-input-number>
-        </td>
-        <td>
-          <nz-input-number [(ngModel)]="task.minIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
-        </td>
-        <td>
-          <nz-input-number [(ngModel)]="task.maxIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
-        </td>
-        <td><label nz-checkbox [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task)"></label></td>
-        <td>
+        (cdkDropListDropped)="dropTask(tasks, $event)"
+        [cdkDropListData]="tasks">
+        @for (task of tasksTable.data; track trackByTask($index, task)) {
+          <tr cdkDrag [cdkDragData]="task">
+            <td>
+              <input type="text" [(ngModel)]="task.label" (ngModelChange)="updateTask(task)" [disabled]="!task.custom"
+                nz-input>
+              </td>
+              <td>
+                <div class="task-icon-wrapper">
+                  @if (task.iconPath) {
+                    <img src="./assets/icons/{{task.iconPath}}" alt="" class="task-icon">
+                  }
+                  @if (task.custom) {
+                    <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task)"
+                      nzAllowClear
+                      class="icon-select"
+                      >
+                      @for (icon of icons; track icon) {
+                        <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
+                          <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
+                        </nz-option>
+                      }
+                    </nz-select>
+                  }
+                </div>
+              </td>
+              <td>
+                <nz-select [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
+                  <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
+                  <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
+                  <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
+                  <nz-option [nzValue]="TaskFrequency.BIWEEKLY_OFFSET" nzLabel="Biweekly offset"></nz-option>
+                  <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
+                </nz-select>
+              </td>
+              <td>
+                <nz-select [(ngModel)]="task.scope" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
+                  <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
+                  <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
+                </nz-select>
+              </td>
+              <td>
+                <nz-input-number [(ngModel)]="task.amount" (ngModelChange)="updateTask(task)"
+                [nzDisabled]="!task.custom"></nz-input-number>
+              </td>
+              <td>
+                <nz-input-number [(ngModel)]="task.minIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
+              </td>
+              <td>
+                <nz-input-number [(ngModel)]="task.maxIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
+              </td>
+              <td><label nz-checkbox [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task)"></label></td>
+              <td>
                 <nz-select [nzDisabled]="task.canEditDaysFilter === false"
-                           [nzMode]="'multiple'"
-                           [nzMaxMultipleCount]="6"
-                           nzAllowClear
-                           class="td-select-box"
-                           [(ngModel)]="task.daysFilter"
-                           (ngModelChange)="updateTask(task)">
+                  [nzMode]="'multiple'"
+                  [nzMaxMultipleCount]="6"
+                  nzAllowClear
+                  class="td-select-box"
+                  [(ngModel)]="task.daysFilter"
+                  (ngModelChange)="updateTask(task)">
                   <nz-option [nzValue]="0" nzLabel="Sunday"></nz-option>
                   <nz-option [nzValue]="1" nzLabel="Monday"></nz-option>
                   <nz-option [nzValue]="2" nzLabel="Tuesday"></nz-option>
@@ -94,21 +101,21 @@
                   <nz-option [nzValue]="5" nzLabel="Friday"></nz-option>
                   <nz-option [nzValue]="6" nzLabel="Saturday"></nz-option>
                 </nz-select>
-        </td>
-        <td>
-          <button nz-button nzDanger [disabled]="!task.custom" nz-popconfirm nzPopconfirmTitle="Are you sure?"
+              </td>
+              <td>
+                <button nz-button nzDanger [disabled]="!task.custom" nz-popconfirm nzPopconfirmTitle="Are you sure?"
                   (nzOnConfirm)="removeTask(task)">
-            Delete
-          </button>
-        </td>
-      </tr>
-      </tbody>
-    </nz-table>
+                  Delete
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    </nz-card>
+}
 
-  </nz-card>
-</ng-container>
-
-<ng-container *ngIf="uid$ | async as uid">
+@if (uid$ | async; as uid) {
   <nz-card nzTitle="Add a custom task">
     <form nz-form [formGroup]="form" (ngSubmit)="addTask(uid)" nzLayout="inline">
       <nz-form-item>
@@ -122,16 +129,22 @@
         <nz-form-control nzErrorTip="Please input a task frequency">
           <nz-input-group [nzAddOnBefore]="imagePreview">
             <ng-template #imagePreview>
-              <img *ngIf="form.value.iconPath" src="./assets/icons/{{form.value.iconPath}}" alt=""
-                   class="task-icon preview">
-              <span *ngIf="!form.value.iconPath">Icon</span>
+              @if (form.value.iconPath) {
+                <img src="./assets/icons/{{form.value.iconPath}}" alt=""
+                  class="task-icon preview">
+              }
+              @if (!form.value.iconPath) {
+                <span>Icon</span>
+              }
             </ng-template>
             <nz-select formControlName="iconPath"
-                       nzAllowClear
-                       class="icon-select">
-              <nz-option *ngFor="let icon of icons" [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
-                <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
-              </nz-option>
+              nzAllowClear
+              class="icon-select">
+              @for (icon of icons; track icon) {
+                <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
+                  <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
+                </nz-option>
+              }
             </nz-select>
           </nz-input-group>
         </nz-form-control>
@@ -182,4 +195,4 @@
       <button nz-button [nzType]="'primary'" [disabled]="form.invalid">Add</button>
     </form>
   </nz-card>
-</ng-container>
+}

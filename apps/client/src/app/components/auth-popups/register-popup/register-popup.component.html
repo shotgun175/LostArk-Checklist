@@ -25,7 +25,9 @@
       <input formControlName="confirmPassword" id="confirmPassword" nz-input type="password">
     </nz-form-control>
   </nz-form-item>
-  <nz-alert *ngIf="form.errors && form.errors['matchPassword']" nzType="error" nzShowIcon nzMessage="Passwords do not match"></nz-alert>
+  @if (form.errors && form.errors['matchPassword']) {
+    <nz-alert nzType="error" nzShowIcon nzMessage="Passwords do not match"></nz-alert>
+  }
   <nz-form-item nz-row>
     <nz-form-control [nzOffset]="6" [nzSpan]="14">
       <button [disabled]="!form.valid" nz-button nzType="primary" type="submit">Create an account</button>

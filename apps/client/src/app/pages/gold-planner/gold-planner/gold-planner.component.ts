@@ -630,16 +630,15 @@ export class GoldPlannerComponent {
   }
 
   //Miscellaneous
-  trackByIndex(index: number): number {
-    return index;
-  }
-
   manualGoldFormatter(value: number | string): number {
     if (!value || typeof value === 'string') {
       return 0;
     }
     return Math.floor(value);
   }
+
+  // nz-input-number formatter: shows the same whole-gold value that setManualGold stores.
+  manualGoldDisplay = (value: number): string => String(this.manualGoldFormatter(value));
 
   constructor(private rosterService: RosterService,
     private tasksService: TasksService,
