@@ -139,8 +139,10 @@ describe('getGoldBar', () => {
 });
 
 describe('formatCompactGold', () => {
-  it('shortens thousands to k with one decimal below 100k and none above', () => {
-    expect(formatCompactGold(69360)).toBe('69.4k');
+  it('shortens thousands to k with one decimal below 10k and none above', () => {
+    expect(formatCompactGold(69360)).toBe('69k');
+    expect(formatCompactGold(17360)).toBe('17k');
+    expect(formatCompactGold(32640)).toBe('33k');
     expect(formatCompactGold(152000)).toBe('152k');
     expect(formatCompactGold(102000)).toBe('102k');
     expect(formatCompactGold(1360)).toBe('1.4k');
