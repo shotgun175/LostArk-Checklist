@@ -30,9 +30,9 @@
 </nz-page-header>
 
 @if (rawRoster$ | async; as roster) {
-  <nz-collapse>
     @if (characters$ | async; as characters) {
       @if (characters.length > 0) {
+        <nz-collapse>
         <nz-collapse-panel nzHeader="Tickets tracking" class="tickets-tracker" [(nzActive)]="ticketsTrackingOpened" (nzActiveChange)="ticketsTrackingOpenedChange($event)">
           <nz-table [nzPageSize]="99" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle" [nzData]="[{}]">
             <thead>
@@ -66,9 +66,9 @@
             }
           </nz-table>
         </nz-collapse-panel>
+        </nz-collapse>
       }
     }
-  </nz-collapse>
 }
 
 @if (rawRoster$ | async; as roster) {
