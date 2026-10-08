@@ -29,6 +29,6 @@ describe("PrivacyComponent", () => {
   it("lists no contact email and no long dashes", () => {
     const text = renderText();
     expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.\w+/);
-    expect(text).not.toMatch(/[–—]/);
+    expect(text).not.toMatch(/[\u2013\u2014]/);
   });
 });
