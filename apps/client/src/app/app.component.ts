@@ -11,7 +11,8 @@ import { LAHUser } from "./model/lah-user";
 @Component({
   selector: "lostark-helper-root",
   templateUrl: "./app.component.html",
-  styleUrls: ["./app.component.less"]
+  styleUrls: ["./app.component.less"],
+  standalone: false
 })
 export class AppComponent {
   isCollapsed = localStorage.getItem("sidebar:collapsed") === "true";

@@ -29,7 +29,8 @@ import { capGoldTracking } from "../../gold-planner/gold-cap";
 @Component({
   selector: 'lostark-helper-checklist',
   templateUrl: './checklist.component.html',
-  styleUrls: ['./checklist.component.less']
+  styleUrls: ['./checklist.component.less'],
+  standalone: false
 })
 export class ChecklistComponent {
 

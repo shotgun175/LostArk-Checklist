@@ -9,7 +9,8 @@ import { LostarkRegion } from "../../../model/lostark-region";
 @Component({
   selector: "lostark-helper-register-popup",
   templateUrl: "./register-popup.component.html",
-  styleUrls: ["./register-popup.component.less"]
+  styleUrls: ["./register-popup.component.less"],
+  standalone: false
 })
 export class RegisterPopupComponent {
   public form = this.fb.group({

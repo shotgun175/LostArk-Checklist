@@ -49,5 +49,6 @@
     "production": ["default", "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)", "!{projectRoot}/tsconfig.spec.json", "!{projectRoot}/jest.config.[jt]s", "!{projectRoot}/.eslintrc.json", "!{projectRoot}/src/test-setup.[jt]s"]
   },
   "useInferencePlugins": false,
-  "defaultBase": "master"
+  "defaultBase": "master",
+  "useLegacyCache": true
 }
