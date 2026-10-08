@@ -284,3 +284,20 @@
       }
     </div>
   }
+<div nz-row class="lazy-matrix">
+  <nz-card nz-col nzMd="24" nzTitle="Delete my account and data" nzSize="small">
+    @if (anonymous$ | async) {
+      <p>This deletes the roster, tasks, ticks, rest bonus and settings of this browser's guest account, then starts a new empty guest account. Download a backup first if you may want the data back.</p>
+    } @else {
+      <p>This permanently deletes your account and its roster, tasks, ticks, rest bonus and settings. Download a backup first if you may want the data back. Enter your password to confirm.</p>
+      <input nz-input class="delete-password" type="password" autocomplete="current-password" placeholder="Password"
+             [ngModel]="deletePassword()" (ngModelChange)="deletePassword.set($event)">
+    }
+    <button nz-button nzType="primary" nzDanger
+            [nzLoading]="deleteBusy()"
+            [disabled]="(anonymous$ | async) === false && !deletePassword()"
+            nz-popconfirm nzPopconfirmTitle="Delete everything? This cannot be undone."
+            (nzOnConfirm)="deleteAccount()">Delete my account and data
+    </button>
+  </nz-card>
+</div>

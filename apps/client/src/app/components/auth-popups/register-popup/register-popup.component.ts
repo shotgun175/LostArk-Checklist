@@ -4,7 +4,6 @@ import { AuthService } from "../../../core/database/services/auth.service";
 import { NzModalRef } from "ng-zorro-antd/modal";
 import { switchMap } from "rxjs";
 import { UserService } from "../../../core/database/services/user.service";
-import { LostarkRegion } from "../../../model/lostark-region";
 
 @Component({
   selector: "lostark-helper-register-popup",
@@ -42,7 +41,7 @@ export class RegisterPopupComponent {
     this.auth.register(creds.email, creds.password)
       .pipe(
         switchMap((res) => {
-          return this.userService.setOne(res.user.uid, { name: creds.username, friends: [], region: LostarkRegion.EUROPE_CENTRAL });
+          return this.userService.setOne(res.user.uid, { name: creds.username });
         })
       )
       .subscribe(() => {

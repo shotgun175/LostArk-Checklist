@@ -4,11 +4,9 @@ import { LAHUser } from "../../../model/lah-user";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { AuthService } from "./auth.service";
-import { combineLatest, map, Observable, of, shareReplay, switchMap } from "rxjs";
+import { combineLatest, Observable, of, shareReplay, switchMap } from "rxjs";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
 import { NzModalService } from "ng-zorro-antd/modal";
-import { LostarkRegion } from "../../../model/lostark-region";
-import { emptyAvailability } from "../../../model/availability/availability";
 
 @Injectable({
   providedIn: "root"
@@ -24,21 +22,14 @@ export class UserService extends FirestoreStorage<LAHUser> {
     switchMap(([uid, anonymous]) => {
       return this.getOne(uid).pipe(
         switchMap(user => {
-          if (!anonymous && !user.name) {
+          // While an account is deleted its users document disappears before the auth account
+          // does; asking for a user name then would open a popup that cannot be closed.
+          if (!anonymous && !user.name && !FirestoreStorage.writesArePaused()) {
             this.updateUserName(user);
           }
           return of(user);
         })
       );
-    }),
-    map(user => {
-      if (!user.region) {
-        user.region = LostarkRegion.EUROPE_CENTRAL;
-      }
-      if (!user.availability) {
-        user.availability = emptyAvailability();
-      }
-      return user;
     }),
     shareReplay(1)
   );
@@ -60,7 +51,7 @@ export class UserService extends FirestoreStorage<LAHUser> {
       .pipe(
         switchMap((name: string) => {
           this.updatingUserName = false;
-          return this.setOne(user.$key, { ...user, name });
+          return this.setOne(user.$key, { name });
         })
       );
   }

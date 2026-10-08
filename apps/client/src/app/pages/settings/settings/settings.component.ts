@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from "@angular/core";
+import { Component, ChangeDetectionStrategy, inject, signal } from "@angular/core";
 import { combineLatest, map, Observable, pluck } from "rxjs";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
@@ -27,6 +27,8 @@ import {
   isTaskInIlvlRange,
   isTaskTracked
 } from "../../../core/task-tracking";
+import { AccountDeletionService } from "../../../core/account/account-deletion.service";
+import { authErrorMessage } from "../../../core/firebase/auth-errors";
 
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
@@ -163,6 +165,12 @@ export class SettingsComponent {
 
   public transferBusy = false;
 
+  private readonly accountDeletion = inject(AccountDeletionService);
+
+  public readonly deletePassword = signal("");
+
+  public readonly deleteBusy = signal(false);
+
   public olderRaidsOpen = readOlderRaidsOpen();
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
@@ -279,5 +287,20 @@ export class SettingsComponent {
       console.error(error);
       this.message.error(`Backup failed: ${error.message}`);
     });
+  }
+
+  async deleteAccount(): Promise<void> {
+    this.deleteBusy.set(true);
+    try {
+      const result = await this.accountDeletion.deleteAccountAndData(this.deletePassword());
+      this.message.success(result === "account-deleted"
+        ? "Your account and data were deleted. Starting a new guest account."
+        : "Your guest data was deleted. Starting a new guest account.");
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      this.deleteBusy.set(false);
+      console.error(error);
+      this.message.error(authErrorMessage(error));
+    }
   }
 }
