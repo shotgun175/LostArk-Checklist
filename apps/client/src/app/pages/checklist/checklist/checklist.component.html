@@ -138,7 +138,7 @@
                               class="section-span"
                               [class.completed]="entry.done"
                               [class.daily]="entry.data[0].task.frequency === TaskFrequency.DAILY"
-                              [class.weekly]="entry.data[0].task.frequency === TaskFrequency.WEEKLY || entry.data[0].task.frequency === TaskFrequency.BIWEEKLY"
+                              [class.weekly]="isWeeklyFrequency(entry.data[0].task.frequency)"
                               >
                               <div class="section-span-toggle">
                                 <nz-switch [nzCheckedChildren]="checked" [nzUnCheckedChildren]="unchecked" [(ngModel)]="categoriesDisplay[key]" (ngModelChange)="categoriesDisplay$.next(categoriesDisplay)" nzSize="small" class="visibility-switch">
@@ -156,7 +156,7 @@
                                 [class.completed]="row.allDone || (!row.available && row.task.scope === TaskScope.ROSTER)"
                                 [class.daily]="row.task.frequency === TaskFrequency.DAILY"
                                 [class.one-time]="row.task.frequency === TaskFrequency.ONE_TIME"
-                                [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                [class.weekly]="isWeeklyFrequency(row.task.frequency)"
                                 >
                                 <td [style.width.px]="taskColumnWidth" class="task-name" [attr.title]="row.task.label">
                                   <div class="task-name-content" [style.width.px]="taskColumnWidth - 17">
@@ -203,7 +203,7 @@
                                     <td
                                       [class.completed]="col === row.task.amount && !row.allDone"
                                       [class.daily]="row.task.frequency === TaskFrequency.DAILY"
-                                      [class.weekly]="row.task.frequency === TaskFrequency.WEEKLY"
+                                      [class.weekly]="isWeeklyFrequency(row.task.frequency)"
                                       >
                                       @if (row.completionData[i].tracked && display.roster[i].ilvl >= row.task.minIlvl && display.roster[i].ilvl < row.task.maxIlvl) {
                                         @if (row.completionData[i].goldBadge.show) {

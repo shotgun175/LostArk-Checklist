@@ -1,4 +1,5 @@
 import { earnsGold } from "../../gold-planner/gold-task";
+import { TaskFrequency } from "../../../model/task-frequency";
 
 export interface ChecklistScroll {
   x?: string | null;
@@ -76,4 +77,9 @@ export function formatModeBadge(runningMode: string | undefined): string {
 export function getGoldBadge(modeBadge: string, takingGold: boolean | undefined, weeklyGold: boolean | undefined): { show: boolean, coin: boolean } {
   const coin = earnsGold(takingGold, weeklyGold);
   return { show: !!modeBadge || coin, coin };
+}
+
+/** Weekly and bi-weekly (including the Thaemine offset) rows share the weekly tint. */
+export function isWeeklyFrequency(frequency: TaskFrequency): boolean {
+  return frequency === TaskFrequency.WEEKLY || frequency === TaskFrequency.BIWEEKLY || frequency === TaskFrequency.BIWEEKLY_OFFSET;
 }

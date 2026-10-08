@@ -1,4 +1,5 @@
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge, isWeeklyFrequency } from './checklist-layout';
+import { TaskFrequency } from '../../../model/task-frequency';
 
 describe('checklistTaskColumnWidth', () => {
   it('is 180px with the sidebar collapsed', () => {
@@ -99,5 +100,18 @@ describe('getGoldBadge', () => {
   it('shows nothing without a mode or gold', () => {
     expect(getGoldBadge('', false, true)).toEqual({ show: false, coin: false });
     expect(getGoldBadge('', true, false)).toEqual({ show: false, coin: false });
+  });
+});
+
+describe('isWeeklyFrequency', () => {
+  it('treats weekly and both bi-weekly frequencies as weekly', () => {
+    expect(isWeeklyFrequency(TaskFrequency.WEEKLY)).toBe(true);
+    expect(isWeeklyFrequency(TaskFrequency.BIWEEKLY)).toBe(true);
+    expect(isWeeklyFrequency(TaskFrequency.BIWEEKLY_OFFSET)).toBe(true);
+  });
+
+  it('does not treat daily or one-time tasks as weekly', () => {
+    expect(isWeeklyFrequency(TaskFrequency.DAILY)).toBe(false);
+    expect(isWeeklyFrequency(TaskFrequency.ONE_TIME)).toBe(false);
   });
 });

@@ -23,7 +23,7 @@ import { goldTasks } from "../../gold-planner/gold-tasks";
 import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
-import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge } from './checklist-layout';
+import { checklistTaskColumnWidth, computeChecklistScroll, formatModeBadge, getGoldBadge, isWeeklyFrequency } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
 
 interface CategoriesDisplay {
@@ -59,6 +59,7 @@ export class ChecklistComponent {
 
   public TaskFrequency = TaskFrequency;
   public TaskScope = TaskScope;
+  public isWeeklyFrequency = isWeeklyFrequency;
 
   public rawRoster$ = this.rosterService.roster$;
   public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
