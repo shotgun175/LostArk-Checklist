@@ -1,5 +1,5 @@
 import { DataModel } from "./data-model";
-import { catchError, distinctUntilChanged, EMPTY, finalize, first, from, map, merge, Observable, shareReplay, Subject, tap } from "rxjs";
+import { catchError, distinctUntilChanged, EMPTY, finalize, first, from, map, merge, Observable, of, shareReplay, Subject, tap } from "rxjs";
 import {
   addDoc,
   collection,
@@ -63,6 +63,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   private static readonly coalescers: WriteCoalescer[] = [];
   private static flushOnHideRegistered = false;
+  private static writesPaused = false;
   private readonly coalescer = new WriteCoalescer((key, writes) => this.commitFieldWrites(key, writes));
   protected setSources: Record<string, Subject<T>> = {};
 
@@ -110,6 +111,20 @@ export abstract class FirestoreStorage<T extends DataModel> {
    */
   public static flushPending(): void {
     FirestoreStorage.coalescers.forEach(coalescer => coalescer.flush());
+  }
+
+  /**
+   * Stops every write from the data services and drops queued field changes without writing them.
+   * Used only while an account is deleted, so live listeners cannot re-create the deleted documents.
+   * A page reload ends the pause.
+   */
+  public static pauseWrites(): void {
+    FirestoreStorage.writesPaused = true;
+    FirestoreStorage.coalescers.forEach(coalescer => coalescer.discard());
+  }
+
+  public static resumeWrites(): void {
+    FirestoreStorage.writesPaused = false;
   }
 
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
@@ -197,6 +212,9 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * together when that second is over.
    */
   public patchFields(key: string, writes: FieldWrite[]): void {
+    if (FirestoreStorage.writesPaused) {
+      return;
+    }
     (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
     this.coalescer.enqueue(key, writes);
   }
@@ -207,6 +225,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
     const [field, value, ...more] = writes.flatMap(write => [new FieldPath(...write.path), "delete" in write ? deleteField() : write.value]);
     updateDoc(ref, field as FieldPath, value, ...more)
       .catch((error: { code?: string }) => {
+        if (FirestoreStorage.writesPaused) {
+          // The document was deleted with the account; creating it again would undo that.
+          return;
+        }
         if (error?.code === "not-found") {
           // First write for this document: create it with the same fields.
           return setDoc(ref, applyFieldWrites({}, writes), { merge: true });
@@ -224,6 +246,9 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public addOne(row: Omit<T, "$key">): Observable<string> {
+    if (FirestoreStorage.writesPaused) {
+      return EMPTY;
+    }
     return from(addDoc(this.collection, row)).pipe(
       tap(() => this.recordOperation("write")),
       map(ref => ref.id)
@@ -231,11 +256,17 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public deleteOne(key: string): Observable<void> {
+    if (FirestoreStorage.writesPaused) {
+      return of(void 0);
+    }
     this.recordOperation("delete", key);
     return from(deleteDoc(this.docRef(key)));
   }
 
   public setOne(key: string, row: Omit<T, "$key" | "notFound">): Observable<void> {
+    if (FirestoreStorage.writesPaused) {
+      return of(void 0);
+    }
     this.coalescer.discard(key);
     this.recordOperation("write", key);
     if (this.setSources[key]) {
@@ -245,6 +276,9 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public updateOne(key: string, row: UpdateData<T>): Observable<void> {
+    if (FirestoreStorage.writesPaused) {
+      return of(void 0);
+    }
     this.recordOperation("write", key);
     if (this.updateSources[key]) {
       this.updateSources[key].next(Object.entries(row as Record<string, unknown>)
@@ -260,6 +294,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   protected batch(): WriteBatch {
+    if (FirestoreStorage.writesPaused) {
+      const paused = { set: () => paused, update: () => paused, delete: () => paused, commit: () => Promise.resolve() };
+      return paused as unknown as WriteBatch;
+    }
     return writeBatch(this.firestore);
   }
 

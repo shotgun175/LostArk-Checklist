@@ -1,5 +1,5 @@
 import { Subject } from "rxjs";
-import { FieldPath, setDoc, updateDoc } from "firebase/firestore";
+import { FieldPath, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { docData$ } from "../firebase/rx";
 import { DataModel } from "./data-model";
 import { FirestoreStorage } from "./firestore-storage";
@@ -131,5 +131,63 @@ describe("FirestoreStorage field writes", () => {
     storage.patchFields("u2", [{ path: ["data", "mine"], value: 2 }]);
     snapshots.next({ $key: "u2", data: { other: 3, first: 1 } });
     expect(seen[seen.length - 1]).toEqual({ $key: "u2", data: { other: 3, first: 1, mine: 2 } });
+  });
+});
+
+describe("FirestoreStorage.pauseWrites", () => {
+  let storage: TestStorage;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    storage = new TestStorage();
+  });
+
+  afterEach(() => {
+    FirestoreStorage.resumeWrites();
+    jest.useRealTimers();
+  });
+
+  it("drops field changes that were queued, so they are never written", () => {
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+    FirestoreStorage.pauseWrites();
+    jest.advanceTimersByTime(1000);
+    FirestoreStorage.flushPending();
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not create the document when a write sent before the pause finds it deleted", async () => {
+    jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    FirestoreStorage.pauseWrites();
+    await settle();
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it("turns sets, updates, adds, deletes, field changes and batches into no-ops", async () => {
+    FirestoreStorage.pauseWrites();
+    storage.setOne("u1", { data: {} }).subscribe();
+    storage.updateOne("u1", { data: {} }).subscribe();
+    storage.addOne({ data: {} }).subscribe();
+    storage.deleteOne("u1").subscribe();
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    await storage.batchForTest().set({} as never, {}).commit();
+    jest.advanceTimersByTime(1000);
+    await settle();
+    expect(setDoc).not.toHaveBeenCalled();
+    expect(updateDoc).not.toHaveBeenCalled();
+    expect(writeBatch).not.toHaveBeenCalled();
+    const { addDoc, deleteDoc } = jest.requireMock("firebase/firestore");
+    expect(addDoc).not.toHaveBeenCalled();
+    expect(deleteDoc).not.toHaveBeenCalled();
+  });
+
+  it("writes again after resumeWrites", () => {
+    FirestoreStorage.pauseWrites();
+    FirestoreStorage.resumeWrites();
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    expect(updateDoc).toHaveBeenCalledTimes(1);
   });
 });
