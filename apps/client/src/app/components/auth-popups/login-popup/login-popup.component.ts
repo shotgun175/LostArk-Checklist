@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { UntypedFormBuilder, Validators } from "@angular/forms";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { NzModalRef } from "ng-zorro-antd/modal";
-import { NzMessageService } from "ng-zorro-antd/message";
 
 @Component({
   selector: "lostark-helper-login-popup",
@@ -18,13 +17,11 @@ export class LoginPopupComponent {
   });
 
   constructor(private fb: UntypedFormBuilder, private auth: AuthService,
-              private modalRef: NzModalRef, private message: NzMessageService) {
+              private modalRef: NzModalRef) {
   }
 
-  public sendResetPassword(): void {
-    const email = this.form.getRawValue().email;
-    this.auth.sendResetPassword(email);
-    this.message.success("Reset password email sent");
+  public async sendResetPassword(): Promise<void> {
+    await this.auth.sendResetPassword(this.form.getRawValue().email ?? "");
     this.modalRef.close();
   }
 

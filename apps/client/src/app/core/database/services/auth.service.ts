@@ -5,6 +5,7 @@ import { Auth, EmailAuthProvider, linkWithCredential, sendPasswordResetEmail, si
 import { FIREBASE_AUTH } from "../../firebase/firebase.providers";
 import { authState$ } from "../../firebase/rx";
 import { NzMessageService } from "ng-zorro-antd/message";
+import { authErrorMessage, passwordResetMessage } from "../../firebase/auth-errors";
 
 @Injectable({
   providedIn: "root"
@@ -42,7 +43,7 @@ export class AuthService {
         return from(linkWithCredential(user, EmailAuthProvider.credential(email, password)));
       }),
       catchError((err) => {
-        this.message.error(err);
+        this.message.error(authErrorMessage(err));
         return EMPTY;
       })
     );
@@ -51,7 +52,7 @@ export class AuthService {
   public login(email: string, password: string): Observable<void> {
     return from(signInWithEmailAndPassword(this.auth, email, password)).pipe(
       catchError((err) => {
-        this.message.error(err);
+        this.message.error(authErrorMessage(err));
         return EMPTY;
       }),
       mapTo(void 0)
@@ -63,7 +64,13 @@ export class AuthService {
     signOut(this.auth);
   }
 
-  sendResetPassword(email: string): void {
-    sendPasswordResetEmail(this.auth, email);
+  async sendResetPassword(email: string): Promise<void> {
+    const error = await sendPasswordResetEmail(this.auth, email).then(() => null, (err: unknown) => err);
+    const outcome = passwordResetMessage(error);
+    if (outcome.ok) {
+      this.message.success(outcome.text);
+    } else {
+      this.message.error(outcome.text);
+    }
   }
 }
