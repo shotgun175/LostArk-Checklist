@@ -51,13 +51,18 @@ export class EnergyService extends FirestoreStorage<Energy> {
                 .filter(task => ["Una", "Guardian", "Chaos"].some(n => task.label?.startsWith(n)) && !task.custom)
                 .forEach(task => {
                   const completionEntry = getCompletionEntry(completion.data, character, task);
-                  const entry = getCompletionEntry(energy.data, character, task) || {
+                  const storedEntry = getCompletionEntry(energy.data, character, task);
+                  const entry = storedEntry || {
                     amount: 0
                   };
                   if (completionEntry) {
                     setCompletionEntry(energy.data, character, task, this.getEnergyUpdate(reset, completionEntry, energy, task, entry));
                   } else if (!completionEntry && !newEnergy) {
-                    setCompletionEntry(energy.data, character, task, { amount: 0 });
+                    // No completion entry (a restored backup or a bonus typed in Settings): keep the stored bonus
+                    // and grow it as "not done since the last energy update" instead of wiping it.
+                    setCompletionEntry(energy.data, character, task, storedEntry
+                      ? this.getEnergyUpdate(reset, { amount: 0, updated: energy.updated }, energy, task, storedEntry)
+                      : { amount: 0 });
                     setCompletionEntry(completion.data, character, task, {
                       amount: 0,
                       updated: Date.now()

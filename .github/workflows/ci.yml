@@ -21,10 +21,5 @@ jobs:
         run: npm ci
       - name: Build
         run: npx nx build client
-      # The upstream baseline (phase 1) has failing tests that predate this fork.
-      # They are excluded here by exact name so every other test still gates merges:
-      #   EnergyService: the four tests listed in the name pattern below
       - name: Unit tests
-        run: >-
-          npx nx test client
-          --testNamePattern='^(?!EnergyService (should update energy properly|should update energy properly with partially done task|should update energy properly with partially done task on last day only|should not update energy if task was completed yesterday)$)'
+        run: npx nx test client
