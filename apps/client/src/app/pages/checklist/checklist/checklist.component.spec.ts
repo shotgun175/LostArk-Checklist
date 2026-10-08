@@ -24,6 +24,7 @@ describe('ChecklistComponent', () => {
   const dailyReset = now - 3600000;
   const weeklyReset = now - 2 * day;
   const biWeeklyReset = now - 3 * day;
+  const biWeeklyOffsetReset = now - 10 * day;
   const unaTask: LostarkTask = { ...tasks.find(task => task.label === "Una's Task"), $key: 'una' };
   const arwen = { id: 1, name: 'Arwen', ilvl: 1700 } as Character;
 
@@ -59,7 +60,7 @@ describe('ChecklistComponent', () => {
       const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 1, updated: now - 60000 } } };
       const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
 
-      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset,
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
         { ctrlKey: true } as MouseEvent);
 
       // 2 runs left at 1/3: 100 - 2 x 20
@@ -74,7 +75,7 @@ describe('ChecklistComponent', () => {
       const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 2, updated: dailyReset - 60000 } } };
       const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
 
-      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset,
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
         { ctrlKey: true } as MouseEvent);
 
       // Yesterday's 2/3 is stale, so all 3 runs are filled: 100 - 3 x 20
@@ -82,12 +83,23 @@ describe('ChecklistComponent', () => {
       expect(completion.data['1:una'].amount).toBe(3);
     });
 
+    it('resets a Thaemine G4 entry from the last cycle before counting the click', () => {
+      const component = createComponent();
+      const thaemineG4: LostarkTask = { ...tasks.find(task => task.label === 'Thaemine G4'), $key: 'thaemine-g4' };
+      const completion: Completion = { $key: 'uid', data: { '1:thaemine-g4': { amount: 1, updated: biWeeklyOffsetReset - day } } };
+      const energy: Energy = { $key: 'uid', data: {}, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, thaemineG4, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+
+      expect(completion.data['1:thaemine-g4'].amount).toBe(1);
+    });
+
     it('a plain click spends rest bonus for one run', () => {
       const component = createComponent();
       const completion: Completion = { $key: 'uid', data: {} };
       const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
 
-      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
 
       expect(energy.data['1:una']).toEqual({ amount: 80 });
       expect(completion.data['1:una'].amount).toBe(1);

@@ -255,6 +255,7 @@ export class ChecklistComponent {
         dailyReset,
         weeklyReset,
         biWeeklyReset,
+        biWeeklyOffsetReset,
         data
       };
     })
@@ -303,7 +304,7 @@ export class ChecklistComponent {
     this.ticketsTrackingOpened = opened;
   }
 
-  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, clickEvent?: MouseEvent): void {
+  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent): void {
     let reset = Infinity;
     switch (task.frequency) {
       case TaskFrequency.DAILY:
@@ -314,6 +315,9 @@ export class ChecklistComponent {
         break;
       case TaskFrequency.BIWEEKLY:
         reset = biWeeklyReset;
+        break;
+      case TaskFrequency.BIWEEKLY_OFFSET:
+        reset = biWeeklyOffsetReset;
         break;
     }
     if (done) {

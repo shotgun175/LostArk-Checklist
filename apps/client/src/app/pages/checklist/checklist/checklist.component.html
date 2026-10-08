@@ -177,7 +177,7 @@
                                             nzBlock
                                             nzType="primary"
                                             [disabled]="row.completion[0] >= row.task.amount"
-                                            (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                            (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
                                             >
                                             {{ row.completion[0] }}/{{ row.task.amount }}
                                           </button>
@@ -185,7 +185,7 @@
                                         @if (row.completion[0] > 0) {
                                           <div class="reset-button">
                                             @if (row.completion[0] >= row.task.amount) {
-                                              <button nz-button nzSize="small" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                              <button nz-button nzSize="small" (click)="markAsDone(completion, energy, roster[0], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset)">
                                                 <span nz-icon nzType="reload" nzTheme="outline"></span>
                                               </button>
                                             }
@@ -228,7 +228,7 @@
                                               nzSize="small"
                                               nzType="primary"
                                               [disabled]="col >= row.task.amount"
-                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, $event)"
+                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
                                               >
                                               {{ col }} / {{ row.task.amount }}
                                             </button>
@@ -236,7 +236,7 @@
                                           @if (col > 0) {
                                             <div class="reset-button">
                                               @if (col > 0) {
-                                                <button nz-button nzSize="small" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset)">
+                                                <button nz-button nzSize="small" (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, false, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset)">
                                                   <span nz-icon nzType="reload" nzTheme="outline"></span>
                                                 </button>
                                               }
