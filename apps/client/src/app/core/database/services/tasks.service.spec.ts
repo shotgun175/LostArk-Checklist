@@ -1,5 +1,7 @@
 import { renameUserTask, upgradeUserTask } from "./tasks.service";
-import { retiredTaskLabels, tasks } from "../../tasks";
+import { defaultOffTaskLabels, tasks } from "../../tasks";
+import { isRaidTask } from "../../task-tracking";
+import { TaskScope } from "../../../model/task-scope";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 
 // No real Firebase in unit tests (same as energy.service.spec.ts); only the pure upgrade step is tested here.
@@ -19,18 +21,24 @@ const userCopy = (label: string, frequency = defaultTasks[0].frequency): Lostark
 });
 
 describe("upgradeUserTask", () => {
-  it("keeps a retired task built-in, with its own fields, when the task version goes up", () => {
-    retiredTaskLabels.forEach(label => {
-      const upgraded = upgradeUserTask(userCopy(label), defaultTasks, "uid");
-      expect(upgraded).toEqual({ ...userCopy(label), custom: false, authorId: "uid", version: TASKS_VERSION });
+  it("lists the default-off tasks among the default tasks, as character tasks that are not raids", () => {
+    defaultOffTaskLabels.forEach(label => {
+      const def = defaultTasks.find(t => t.label === label);
+      expect(def).toMatchObject({ scope: TaskScope.CHARACTER, enabled: true, custom: false });
+      expect(isRaidTask(def as LostarkTask)).toBe(false);
     });
   });
 
-  it("does not list retired tasks among the default tasks, so new accounts never get them", () => {
-    expect(defaultTasks.filter(t => retiredTaskLabels.includes(t.label))).toEqual([]);
+  it("refreshes an existing copy of a default-off task as a built-in task, keeping the user's key, switch and order", () => {
+    defaultOffTaskLabels.forEach(label => {
+      const def = defaultTasks.find(t => t.label === label) as LostarkTask;
+      const upgraded = upgradeUserTask(userCopy(label, def.frequency), defaultTasks, "uid");
+      expect(upgraded).toMatchObject({ label, amount: def.amount, iconPath: def.iconPath, $key: `key-${label}`, enabled: false, index: 7, version: TASKS_VERSION });
+      expect(upgraded?.custom).toBe(false);
+    });
   });
 
-  it("turns a removed task that is not retired into a custom task", () => {
+  it("turns a task that no longer has a default task into a custom task", () => {
     expect(upgradeUserTask(userCopy("Some Removed Task"), defaultTasks, "uid")?.custom).toBe(true);
   });
 

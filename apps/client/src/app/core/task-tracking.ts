@@ -1,7 +1,7 @@
 import { LostarkTask } from "../model/lostark-task";
 import { Character } from "../model/character/character";
 import { TaskScope } from "../model/task-scope";
-import { raidReleaseOrder } from "./tasks";
+import { defaultOffTaskLabels, raidReleaseOrder } from "./tasks";
 import { getCompletionEntry, getCompletionEntryKey } from "./get-completion-entry-key";
 
 /** How many of the newest enterable raids a character tracks by default. */
@@ -10,6 +10,8 @@ export const DEFAULT_TRACKED_RAIDS = 3;
 const raidIndexByLabel = new Map<string, number>(
   raidReleaseOrder.flatMap((labels, index) => labels.map(label => [label.toLowerCase(), index] as [string, number]))
 );
+
+const defaultOffLabels = new Set(defaultOffTaskLabels.map(label => label.toLowerCase()));
 
 function raidIndex(task: LostarkTask): number | undefined {
   return task.custom ? undefined : raidIndexByLabel.get(task.label?.toLowerCase());
@@ -39,7 +41,8 @@ export function getTrackedTaskOverride(trackedTasks: Record<string, boolean | un
 
 /**
  * Whether a character tracks a task: the explicit choice from Settings > Task tracking when set,
- * otherwise raid tasks are tracked only for the character's newest raids and other tasks are tracked.
+ * otherwise raid tasks are tracked only for the character's newest raids, the built-in tasks in
+ * defaultOffTaskLabels are not tracked, and other tasks are tracked.
  *
  * Args:
  *   trackedTasks: roster.trackedTasks (explicit choices).
@@ -51,6 +54,9 @@ export function isTaskTracked(trackedTasks: Record<string, boolean | undefined> 
   const override = getTrackedTaskOverride(trackedTasks, character, task);
   if (override !== undefined) {
     return override;
+  }
+  if (!task.custom && defaultOffLabels.has(task.label?.toLowerCase())) {
+    return false;
   }
   if (raidIndex(task) === undefined) {
     return true;

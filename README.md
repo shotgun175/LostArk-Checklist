@@ -16,7 +16,7 @@ All you have to do is configure your roster, manage the tasks you want to track,
 
 ### Which raids are tracked
 
-- Each character tracks the 3 newest raids it can enter (by item level) by default. Older raids are not tracked for that character. Every task that is not a raid stays tracked by default.
+- Each character tracks the 3 newest raids it can enter (by item level) by default. Older raids are not tracked for that character. Every task that is not a raid stays tracked by default, except **Kalthertz Slaves** and **Una's Task**, which are off by default.
 - The default follows the character's item level, so it moves to newer raids as the character levels up.
 - **Settings, Task tracking** shows every character with a small switch per task, in two sections: **Raids** first, then **Other tasks** (every other character task, your own Tasks Manager tasks included). Tasks switched off in Tasks Manager are not listed. Faded switches follow the default, solid ones are your own choice, which always wins over the default, and a dash means the character's item level does not fit that task. The grid scrolls sideways with the Task column pinned.
 - Click **reset** under a cell to send it back to automatic, **reset** under a character's name to do that for all of its cells, or **Reset all to auto** (it asks first) to clear every choice. The card header counts how many choices you have set, including choices for tasks switched off in Tasks Manager, which the resets clear too.
@@ -49,7 +49,7 @@ All you have to do is configure your roster, manage the tasks you want to track,
 - On the checklist, a raid of a character without Weekly Gold now shows its mode in the corner badge (no gold coin).
 - A character saved without a Weekly Gold setting now gets it only while fewer than 6 characters have it, not by its place in the roster. A roster with more than 6 shows a warning on the Roster page; nothing is unticked.
 - A character with **Taking Gold** on more than 3 raids gets the lowest-paying extras unticked the next time you open the Gold Planner, with a message naming them. Characters with 3 or fewer are not touched.
-- **Kalthertz Slaves** and **Una's Task** are no longer added for new accounts. If you have them, they stay; switch them off in Tasks Manager to hide them everywhere, Task tracking included.
+- **Kalthertz Slaves** and **Una's Task** are still tasks (new accounts get them too, and an account missing one gets it back), but they are off by default for every character, so they no longer show on the checklist. To track one, switch it on per character in Settings, Task tracking (or use the **&#8942;** menu on its row for every character). Cells you already switched on or off keep your choice.
 - **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 
 

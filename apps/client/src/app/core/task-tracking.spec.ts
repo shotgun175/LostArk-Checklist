@@ -89,6 +89,26 @@ describe('isTaskTracked', () => {
     expect(isTaskTracked({}, c, { ...task('Valtan'), custom: true, $key: 'custom' }, tasks)).toBe(true);
   });
 
+  it("does not track Kalthertz Slaves or Una's Task by default, for any character", () => {
+    [c, character(500, 7), character(1780, 8)].forEach(ch => {
+      expect(isTaskTracked({}, ch, task('Kalthertz Slaves'), tasks)).toBe(false);
+      expect(isTaskTracked({}, ch, task("Una's Task"), tasks)).toBe(false);
+      expect(isTaskTracked(undefined, ch, task("Una's Task"), tasks)).toBe(false);
+    });
+  });
+
+  it('lets an explicit true switch a default-off task on for that character only', () => {
+    const tracked = { "42:Una's Task": true };
+    expect(isTaskTracked(tracked, c, task("Una's Task"), tasks)).toBe(true);
+    expect(isTaskTracked(tracked, character(1780, 7), task("Una's Task"), tasks)).toBe(false);
+    expect(isTaskTracked(tracked, c, task('Kalthertz Slaves'), tasks)).toBe(false);
+    expect(isTaskTracked({ '42:Kalthertz Slaves': true }, c, task('Kalthertz Slaves'), tasks)).toBe(true);
+  });
+
+  it('keeps a custom task named like a default-off task tracked by default', () => {
+    expect(isTaskTracked({}, c, { ...task("Una's Task"), custom: true, $key: 'my-una' }, tasks)).toBe(true);
+  });
+
   it('lets an explicit false win over a default-tracked raid', () => {
     expect(isTaskTracked({ '42:Serca': false }, c, task('Serca'), tasks)).toBe(false);
   });
