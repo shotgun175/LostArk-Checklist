@@ -99,7 +99,7 @@
                   <thead>
                     <tr>
                       <th>Task</th>
-                      @for (character of charactersDisplay$ | async; track character) {
+                      @for (character of charactersDisplay$ | async; track trackByCharacter($index, character)) {
                         <th>
                           <div class="character-title">
                             @if (character.class !== null) {

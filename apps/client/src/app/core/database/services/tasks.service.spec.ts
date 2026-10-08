@@ -1,4 +1,5 @@
-import { renameUserTask, upgradeUserTask } from "./tasks.service";
+import { from, toArray, firstValueFrom } from "rxjs";
+import { renameUserTask, skipDeletedTaskList, upgradeUserTask } from "./tasks.service";
 import { defaultOffTaskLabels, tasks } from "../../tasks";
 import { isRaidTask } from "../../task-tracking";
 import { TaskScope } from "../../../model/task-scope";
@@ -72,5 +73,18 @@ describe("renameUserTask", () => {
     const other = userCopy("Guardian");
     expect(renameUserTask(custom)).toBe(custom);
     expect(renameUserTask(other)).toBe(other);
+  });
+});
+
+describe("skipDeletedTaskList", () => {
+  const list = (n: number): LostarkTask[] => Array.from({ length: n }, (_, i) => userCopy(`T${i}`));
+  const run = (lists: LostarkTask[][]) => firstValueFrom(from(lists).pipe(skipDeletedTaskList(), toArray()));
+
+  it("passes the first empty list of a new user, so the default tasks are created", async () => {
+    expect((await run([[], list(2)])).map(l => l.length)).toEqual([0, 2]);
+  });
+
+  it("drops an empty list after tasks were seen, so the defaults are not created for a deleted account", async () => {
+    expect((await run([list(2), list(1), [], list(3)])).map(l => l.length)).toEqual([2, 1, 3]);
   });
 });

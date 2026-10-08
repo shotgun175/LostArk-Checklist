@@ -1,5 +1,5 @@
 import { DataModel } from "./data-model";
-import { catchError, distinctUntilChanged, EMPTY, finalize, first, from, map, merge, Observable, of, shareReplay, Subject, tap } from "rxjs";
+import { catchError, distinctUntilChanged, EMPTY, filter, finalize, first, from, map, merge, Observable, of, shareReplay, Subject, tap } from "rxjs";
 import {
   addDoc,
   collection,
@@ -60,6 +60,12 @@ export abstract class FirestoreStorage<T extends DataModel> {
   protected updateSources: Record<string, Subject<FieldWrite[]>> = {};
   /** Local field changes for documents read with a live listener (not the current-user path). */
   private fieldWriteSources: Record<string, Subject<FieldWrite[]>> = {};
+  /**
+   * Documents this page has read as existing. These per-user documents are only ever removed by
+   * account deletion (possibly in another tab, where pauseWrites does not reach), so one that
+   * disappears must not be treated as missing and re-created with defaults or local data.
+   */
+  private readonly seenPresent = new Set<string>();
 
   private static readonly coalescers: WriteCoalescer[] = [];
   private static flushOnHideRegistered = false;
@@ -115,8 +121,9 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   /**
    * Stops every write from the data services and drops queued field changes without writing them.
-   * Used only while an account is deleted, so live listeners cannot re-create the deleted documents.
-   * A page reload ends the pause.
+   * Used while an account is deleted, so live listeners cannot re-create the deleted documents, and
+   * after an import, so they cannot rewrite the imported documents from stale data. A page reload
+   * ends the pause.
    */
   public static pauseWrites(): void {
     FirestoreStorage.writesPaused = true;
@@ -127,7 +134,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     FirestoreStorage.writesPaused = false;
   }
 
-  /** True while an account is being deleted, so services can skip prompts that would write. */
+  /** True while writes are paused (account deletion, import), so services can skip prompts that would write. */
   public static writesArePaused(): boolean {
     return FirestoreStorage.writesPaused;
   }
@@ -160,6 +167,13 @@ export abstract class FirestoreStorage<T extends DataModel> {
       const source$ = docData$(this.docRef(key)).pipe(
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
         tap(() => this.recordOperation("read", "wtf")),
+        tap(res => {
+          if (res) {
+            this.seenPresent.add(key);
+          }
+        }),
+        // A document seen before that is now gone was deleted with the account: keep the last copy.
+        filter(res => !!res || !this.seenPresent.has(key)),
         map(res => {
           if (!res) {
             return {
@@ -235,6 +249,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
           return;
         }
         if (error?.code === "not-found") {
+          if (this.seenPresent.has(key)) {
+            // It existed before, so it was deleted with the account (in another tab).
+            return;
+          }
           // First write for this document: create it with the same fields.
           return setDoc(ref, applyFieldWrites({}, writes), { merge: true });
         }

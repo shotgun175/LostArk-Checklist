@@ -30,7 +30,7 @@
   }
   <nz-form-item nz-row>
     <nz-form-control [nzOffset]="6" [nzSpan]="14">
-      <button [disabled]="!form.valid" nz-button nzType="primary" type="submit">Create an account</button>
+      <button [disabled]="!form.valid || busy()" [nzLoading]="busy()" nz-button nzType="primary" type="submit">Create an account</button>
     </nz-form-control>
   </nz-form-item>
 </form>

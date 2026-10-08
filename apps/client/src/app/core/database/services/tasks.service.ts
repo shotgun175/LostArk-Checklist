@@ -4,7 +4,7 @@ import { FIRESTORE } from "../../firebase/firebase.providers";
 import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
-import { combineLatest, debounceTime, from, map, mapTo, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
+import { combineLatest, debounceTime, from, map, mapTo, MonoTypeOperatorFunction, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
 import { tasks, oldTaskNames, renamedTaskLabels } from "../../tasks";
 import { catchError, filter } from "rxjs/operators";
 import { SettingsService } from "./settings.service";
@@ -53,6 +53,21 @@ export function renameUserTask(t: LostarkTask): LostarkTask {
   return newLabel ? { ...t, label: newLabel } : t;
 }
 
+/**
+ * Drops an empty task list that follows a non-empty one. A user's whole task list only disappears
+ * when the account is deleted (possibly in another tab), and the default tasks must not be created
+ * again for it. Import replaces the tasks in one batch, so it never shows an empty list.
+ */
+export function skipDeletedTaskList(): MonoTypeOperatorFunction<LostarkTask[]> {
+  return source => {
+    let hadTasks = false;
+    return source.pipe(filter(list => {
+      hadTasks = hadTasks || list.length > 0;
+      return list.length > 0 || !hadTasks;
+    }));
+  };
+}
+
 @Injectable({
   providedIn: "root"
 })
@@ -68,6 +83,7 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
   public baseData$ = this.auth.uid$.pipe(
     switchMap(uid => {
       return this.getUserTasks(uid).pipe(
+        skipDeletedTaskList(),
         debounceTime(100),
         map(storedTasks => {
           const userTasks = storedTasks.map(renameUserTask);
