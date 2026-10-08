@@ -1,4 +1,4 @@
-import { completionLabel, formatCompactGold, getGoldBar, settleChests, summarizeCharacterGold, sumGoldSummaries } from './gold-summary';
+import { addSettled, completionLabel, formatCompactGold, getGoldBar, settleChests, summarizeCharacterGold, sumGoldSummaries } from './gold-summary';
 
 describe('settleChests', () => {
   it('pays chests from bound first when bound covers them', () => {
@@ -11,7 +11,7 @@ describe('settleChests', () => {
       .toEqual({ tradable: 89760, bound: 0, chests: 42240, fromBound: 40000, fromTradable: 2240 });
   });
 
-  it('pays everything from tradable when there is no bound gold (the Valhuggin case)', () => {
+  it('pays everything from tradable when there is no bound gold (the Brakka case)', () => {
     expect(settleChests({ tradable: 102000, bound: 0, chests: 32640 }))
       .toEqual({ tradable: 69360, bound: 0, chests: 32640, fromBound: 0, fromTradable: 32640 });
   });
@@ -50,8 +50,12 @@ describe('summarizeCharacterGold', () => {
     expect(summary.percent).toBe(67);
   });
 
-  it('plan settles every planned cell, done or not', () => {
-    expect(summarizeCharacterGold(cells, []).plan).toEqual({ tradable: 102000, bound: 1360, chests: 48640, fromBound: 48640, fromTradable: 0 });
+  it('plan settles the done cells and the cells still to do apart, so bound gold not earned yet never pays chests already bought (Arwen)', () => {
+    expect(summarizeCharacterGold(cells, []).plan).toEqual({ tradable: 69360, bound: 34000, chests: 48640, fromBound: 16000, fromTradable: 32640 });
+  });
+
+  it('remaining settles only the cells still to do', () => {
+    expect(summarizeCharacterGold(cells, []).remaining).toEqual({ tradable: 0, bound: 34000, chests: 16000, fromBound: 16000, fromTradable: 0 });
   });
 
   it('counts Chaos and Other entries as earned tradable and adds them to possible', () => {
@@ -94,8 +98,32 @@ describe('summarizeCharacterGold', () => {
       net: 0,
       percent: 0,
       earned: { tradable: 0, bound: 0, chests: 0, fromBound: 0, fromTradable: 0 },
+      remaining: { tradable: 0, bound: 0, chests: 0, fromBound: 0, fromTradable: 0 },
       plan: { tradable: 0, bound: 0, chests: 0, fromBound: 0, fromTradable: 0 }
     });
+  });
+});
+
+describe('earned plus remaining equals full planning', () => {
+  // The gate cells of each character of the synthetic-gold-summary fixture, with their Chaos and Other entries
+  const cell = (tradable: number, bound: number, chest: number, done: boolean) => ({ tradable, bound, chest, done });
+  const fixture: Record<string, [ReturnType<typeof cell>[], number[]]> = {
+    Arwen: [[cell(16000, 0, 5120, true), cell(32000, 0, 10240, true), cell(21000, 0, 6720, true), cell(33000, 0, 10560, true), cell(0, 20000, 6400, false), cell(0, 30000, 9600, false)], [0, 0]],
+    Brakka: [[cell(16000, 0, 5120, true), cell(32000, 0, 10240, true), cell(21000, 0, 6720, true), cell(33000, 0, 10560, true)], [0, 0]],
+    Celyne: [[cell(5500, 5500, 0, false), cell(10500, 10500, 0, false), cell(0, 16000, 5120, true), cell(0, 24000, 7680, false)], [2000, 0]],
+    Doranth: [[cell(16000, 0, 5120, true), cell(32000, 0, 10240, true), cell(17500, 0, 5600, false), cell(26500, 0, 8480, false), cell(0, 16000, 5120, true), cell(0, 24000, 7680, true)], [0, 0]],
+    Elkie: [[], [0, 0]],
+    Fenwick: [[cell(0, 0, 750, true), cell(0, 0, 1780, true)], [0, 0]],
+    Gorrim: [[cell(0, 0, 310, true), cell(0, 0, 700, true)], [0, 0]]
+  };
+
+  it.each(Object.keys(fixture))('for %s', name => {
+    const summary = summarizeCharacterGold(...fixture[name]);
+    expect(addSettled(summary.earned, summary.remaining)).toEqual(summary.plan);
+  });
+
+  it('Doranth keeps the bound gold of Horizon Cathedral, done, for its own chests and pays for Serca from tradable', () => {
+    expect(summarizeCharacterGold(...fixture['Doranth']).plan).toEqual({ tradable: 77920, bound: 11840, chests: 42240, fromBound: 28160, fromTradable: 14080 });
   });
 });
 
@@ -147,6 +175,14 @@ describe('formatCompactGold', () => {
     expect(formatCompactGold(102000)).toBe('102k');
     expect(formatCompactGold(1360)).toBe('1.4k');
     expect(formatCompactGold(74000)).toBe('74k');
+  });
+
+  it('shortens millions to M and billions to B, so a huge entry still fits the list', () => {
+    expect(formatCompactGold(1250000)).toBe('1.3M');
+    expect(formatCompactGold(10000000)).toBe('10M');
+    expect(formatCompactGold(-10000000)).toBe('-10M');
+    expect(formatCompactGold(100000068000)).toBe('100B');
+    expect(formatCompactGold(999950)).toBe('1M');
   });
 
   it('keeps small numbers and the sign', () => {

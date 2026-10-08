@@ -14,7 +14,7 @@ jest.mock('firebase/auth', () => ({}));
 jest.mock('firebase/firestore', () => ({}));
 
 const tasks: LostarkTask[] = defaultTasks.map(task => ({ ...task, $key: task.label }));
-const character = { id: 1, name: 'Valtist', ilvl: 1800, weeklyGold: true } as Character;
+const character = { id: 1, name: 'Arwen', ilvl: 1800, weeklyGold: true } as Character;
 
 // Every gold raid ticked for Taking Gold and switched on in Task tracking, so the character is well over the cap
 const allRaidsTicked: Record<string, boolean> = Object.fromEntries(
@@ -68,12 +68,14 @@ describe('GoldPlannerComponent gold cap', () => {
 
     expect(patchFields).toHaveBeenCalledTimes(1);
     expect(info).toHaveBeenCalledTimes(1);
-    expect(info.mock.calls[0][0]).toMatch(/^Valtist: gold limit is 3 raids, unticked /);
+    expect(info.mock.calls[0][0]).toMatch(/^Arwen can take gold from 3 raids a week\. Kept .+; unticked .+\.$/);
+    // Stays long enough to read
+    expect(info.mock.calls[0][1]).toEqual({ nzDuration: 10000 });
     expect(patchFields.mock.calls[0][0]).toBe('settings-key');
     // Only unticked Taking Gold flags are written, each as its own field
     const writes: FieldWrite[] = patchFields.mock.calls[0][1];
     expect(writes.length).toBeGreaterThan(0);
-    writes.forEach(write => expect(write).toEqual({ path: ['goldPlannerConfiguration', expect.stringMatching(/^Valtist:gold:taking:/)], value: false }));
+    writes.forEach(write => expect(write).toEqual({ path: ['goldPlannerConfiguration', expect.stringMatching(/^Arwen:gold:taking:/)], value: false }));
     const saved = savedConfiguration();
     // Raids the character cannot enter stay ticked but never count, so check the saved data is within the cap
     expect(capGoldTracking([character], saved, {}, tasks, allRaidsTracked).unticked).toEqual([]);
@@ -100,23 +102,23 @@ describe('GoldPlannerComponent gold cap', () => {
 describe('GoldPlannerComponent gold this week', () => {
   // Kazeros on Hard: gate 1 pays 16,000 tradable (chest 5,120), gate 2 pays 32,000 tradable (chest 10,240), no bound gold
   const kazerosHard: Record<string, boolean> = {
-    'Valtist:gold:taking:Kazeros Gate 1': true,
-    'Valtist:gold:taking:Kazeros Gate 2': true,
-    'Valtist:gold:Kazeros Gate 1': true,
-    'Valtist:gold:Kazeros Gate 2': true
+    'Arwen:gold:taking:Kazeros Gate 1': true,
+    'Arwen:gold:taking:Kazeros Gate 2': true,
+    'Arwen:gold:Kazeros Gate 1': true,
+    'Arwen:gold:Kazeros Gate 2': true
   };
 
   // The display for Kazeros Hard with gate 1 ticked done on the Checklist this week (weekly reset at 0)
-  const displayFor = (hideAlreadyDoneTasks: boolean) => {
+  const displayFor = (hideAlreadyDoneTasks: boolean, planned: Character = character) => {
     let display: unknown;
     const component = new GoldPlannerComponent(
-      { roster$: of({ $key: 'roster-key', characters: [character], trackedTasks: allRaidsTracked }) } as never,
+      { roster$: of({ $key: 'roster-key', characters: [planned], trackedTasks: allRaidsTracked }) } as never,
       { tasks$: of(tasks) } as never,
       {
         settings$: of({
           $key: 'settings-key',
           goldPlannerConfiguration: { ...kazerosHard, hideAlreadyDoneTasks },
-          raidModesForGoldPlanner: { 'Valtist:runningMode:Kazeros Gate 1': 'HM', 'Valtist:runningMode:Kazeros Gate 2': 'HM' },
+          raidModesForGoldPlanner: { 'Arwen:runningMode:Kazeros Gate 1': 'HM', 'Arwen:runningMode:Kazeros Gate 2': 'HM' },
           manualGoldEntries: {}
         }),
         patchFields: jest.fn(),
@@ -133,7 +135,7 @@ describe('GoldPlannerComponent gold this week', () => {
       rosterSummary: { net: number, possible: number },
       total: { unboundGold: number, boundGold: number }[],
       chestCosts: number[],
-      chestsData: { line: { name: string }, goldDetails: { completion?: string }[] }[]
+      chestsData: { line: { name: string }, goldDetails: { completion?: string, runningMode: string, modeNotes: string[], unboundGoldReward: number }[] }[]
     };
   };
 
@@ -158,6 +160,14 @@ describe('GoldPlannerComponent gold this week', () => {
     expect(display.rosterSummary).toEqual(expect.objectContaining({ net: 10880, possible: 48000 }));
     expect(display.total[0]).toEqual({ unboundGold: 21760, boundGold: 0 });
     expect(display.chestCosts[0]).toBe(10240);
+  });
+
+  it('counts a saved Hard the item level cannot run as Normal, shows Normal selected and says why, without saving anything', () => {
+    // The same Kazeros Hard plan on a 1712 character: Normal pays 5,500 + 10,500 tradable and the same again bound
+    const display = displayFor(false, { ...character, ilvl: 1712 } as Character);
+    const kazeros = display.chestsData.find(row => row.line.name === 'Kazeros');
+    expect(kazeros?.goldDetails[0]).toEqual(expect.objectContaining({ runningMode: 'NM', modeNotes: ['Hard needs 1730, counted as Normal'], unboundGoldReward: 16000 }));
+    expect(display.characterSummaries[0].possible).toBe(32000);
   });
 
   it('labels the raid and each gate with their Checklist completion', () => {

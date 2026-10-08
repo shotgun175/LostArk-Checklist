@@ -10,6 +10,43 @@
   margin-bottom: 12px;
 }
 
+// Phones: no subtitle, the title wraps instead of being cut, and the switch label stays on one line
+@media screen and (max-width: 575px) {
+  :host ::ng-deep .planner-header {
+    .ant-page-header-heading-sub-title {
+      display: none;
+    }
+
+    .ant-page-header-heading-left,
+    .ant-page-header-heading-title {
+      white-space: normal;
+      overflow: visible;
+    }
+
+    .ant-switch {
+      white-space: nowrap;
+    }
+  }
+}
+
+// No characters (or all hidden): the shared empty-state pattern
+.planner-empty {
+  margin: 48px auto;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.wrapping-button {
+  height: auto;
+  max-width: 100%;
+  white-space: normal;
+}
+
 // Character list on the left, selected character's panel on the right; stacked on narrow screens
 .planner {
   display: flex;
@@ -224,12 +261,24 @@
     border-left-color: @blue;
   }
 
+  // A long name is cut with an ellipsis (full name in its title); the item level always shows
+  .character-line {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+  }
+
   .character-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: #fff;
     font-weight: 500;
   }
 
   .character-ilvl {
+    flex: none;
     margin-left: 6px;
     color: #999;
     font-size: 12px;
@@ -348,6 +397,13 @@
   }
 }
 
+// The raid name with its Checklist status always on its own line below
+.raid-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .controls {
   display: flex;
   flex-direction: column;
@@ -358,6 +414,38 @@
     display: flex;
     flex-wrap: wrap;
   }
+}
+
+// Mode buttons with the Mixed tag and any "counted as" note beside them
+.mode-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.mixed-tag,
+.mode-tag {
+  padding: 0 6px;
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.mixed-tag {
+  color: #8fb3e0;
+  border: 1px solid #2b4a6b;
+}
+
+.mode-tag {
+  color: #e0b060;
+  border: 1px solid #5c4720;
+}
+
+.save-mode {
+  padding: 0;
+  height: 20px;
+  line-height: 20px;
 }
 
 .checkbox-line {
@@ -434,6 +522,15 @@
 .gold-icon {
   width: 24px;
   height: 24px;
+}
+
+// Inline with text: sits on the baseline at the text's size (the input addon keeps the 24px icon)
+label .gold-icon,
+.character-total .gold-icon {
+  height: 1em;
+  width: auto;
+  vertical-align: -0.15em;
+  margin-left: 2px;
 }
 
 .header-link {

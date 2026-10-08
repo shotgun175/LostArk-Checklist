@@ -61,6 +61,43 @@ export function pickDefaultRunningMode(gate: Gate, character: Character): string
     ?? (gate.modes.some(mode => mode.name === 'NM') ? 'NM' : undefined)
 }
 
+const MODE_LABELS: Record<string, string> = { Solo: 'Solo', NM: 'Normal', HM: 'Hard', Nightmare: 'Nightmare' };
+
+/** A mode as the planner's buttons name it: NM is Normal, HM is Hard. */
+export function getModeLabel(mode: string): string {
+  return MODE_LABELS[mode] ?? mode;
+}
+
+/** The mode a gate counts as for gold, chests and the gold cap, and the item level the saved mode needs when it cannot count. */
+export interface CountedMode {
+  mode: string | undefined;
+  /** Set only when the saved Hard or Nightmare cannot count: the item level that mode needs. */
+  needsIlvl?: number;
+}
+
+/**
+ * The mode a gate counts as: the saved mode, unless it is Hard or Nightmare and the character's item level
+ * cannot run it; then the mode pickDefaultRunningMode would pick. The saved mode itself is not changed.
+ */
+export function getCountedRunningMode(gate: Gate, character: Character, savedMode: string | undefined): CountedMode {
+  if (savedMode === 'HM' && !canRunHardModeForGateAndCharacter(gate, character)) {
+    return { mode: pickDefaultRunningMode(gate, character), needsIlvl: gate.modes.find(mode => mode.name === 'NM')?.HMThreashold };
+  }
+  if (savedMode === 'Nightmare' && !canRunNightmareModeForGateAndCharacter(gate, character)) {
+    return { mode: pickDefaultRunningMode(gate, character), needsIlvl: gate.modes.find(mode => mode.name === 'HM')?.NightmareThreashold };
+  }
+  return { mode: savedMode };
+}
+
+/** The tag shown next to a raid whose saved mode the character cannot run, for example "Hard needs 1730, counted as Normal". */
+export function getCountedModeNote(savedMode: string | undefined, counted: CountedMode): string | undefined {
+  if (!savedMode || counted.mode === savedMode) {
+    return undefined;
+  }
+  const needs = counted.needsIlvl !== undefined && Number.isFinite(counted.needsIlvl) ? `needs ${counted.needsIlvl}` : 'is not available';
+  return `${getModeLabel(savedMode)} ${needs}, counted as ${counted.mode ? getModeLabel(counted.mode) : 'no mode'}`;
+}
+
 /** Auto-pick only when gold is being ticked and the gate has no running mode yet (any set mode, Solo included, is kept). */
 export function shouldAutoPickRunningMode(takingGold: boolean, currentMode: string | undefined): boolean {
   return takingGold && !currentMode

@@ -3,12 +3,13 @@ import { LostarkTask } from "../../model/lostark-task";
 import { isTaskInIlvlRange, isTaskTracked } from "../../core/task-tracking";
 import { raidReleaseOrder } from "../../core/tasks";
 import { goldTasks } from "./gold-tasks";
-import { GoldTask, MAX_GOLD_RAIDS } from "./gold-task";
+import { getCountedRunningMode, GoldTask, MAX_GOLD_RAIDS } from "./gold-task";
 
-/** The raids unticked for one character by capGoldTracking. */
+/** The raids unticked for one character by capGoldTracking, and the ones it kept. */
 export interface GoldCapUntick {
   characterName: string;
   raids: string[];
+  kept: string[];
 }
 
 /** Position of a raid in raidReleaseOrder (0 is the newest); raids not listed sort as oldest. */
@@ -25,6 +26,7 @@ function releaseIndex(gTask: GoldTask): number {
  * Gold Planner counts it: Taking Gold ticked on a gate whose task is enabled, tracked and in the
  * character's item level range. When more raids count, the ones paying the most gold for the
  * selected modes stay (ties go to the newer raid) and Taking Gold is unticked on every gate of the rest.
+ * A saved Hard or Nightmare the character's item level cannot run is ranked by the mode it counts as (getCountedRunningMode).
  * Without the task list nothing is capped, since tracking and item level ranges are unknown then.
  *
  * Args:
@@ -58,7 +60,8 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
             return;
           }
           takingGold = true;
-          const mode = gate.modes.find(m => m.name === raidModes?.[`${character.name}:runningMode:${gate.name}`]);
+          const countedMode = getCountedRunningMode(gate, character, raidModes?.[`${character.name}:runningMode:${gate.name}`]).mode;
+          const mode = gate.modes.find(m => m.name === countedMode);
           gold += mode && mode.goldILvlLimit > character.ilvl ? mode.unboundGoldReward + mode.boundGoldReward : 0;
         });
         return { gTask, gold, takingGold, releaseIndex: releaseIndex(gTask) };
@@ -67,9 +70,8 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
     if (goldRaids.length <= MAX_GOLD_RAIDS) {
       return;
     }
-    const dropped = [...goldRaids]
-      .sort((a, b) => b.gold - a.gold || a.releaseIndex - b.releaseIndex)
-      .slice(MAX_GOLD_RAIDS);
+    const ranked = [...goldRaids].sort((a, b) => b.gold - a.gold || a.releaseIndex - b.releaseIndex);
+    const dropped = ranked.slice(MAX_GOLD_RAIDS);
     if (capped === tracking) {
       capped = { ...tracking };
     }
@@ -79,14 +81,19 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
         capped[key] = false;
       }
     }));
-    unticked.push({ characterName: character.name, raids: dropped.map(raid => raid.gTask.name) });
+    unticked.push({
+      characterName: character.name,
+      raids: dropped.map(raid => raid.gTask.name),
+      kept: ranked.slice(0, MAX_GOLD_RAIDS).map(raid => raid.gTask.name)
+    });
   });
   return { tracking: capped, unticked };
 }
 
-/** The message shown after unticking, for example "Valtist: gold limit is 3 raids, unticked Echidna". */
+/** The message shown after unticking, for example "Brakka can take gold from 3 raids a week. Kept Kazeros, Serca, Horizon Cathedral; unticked Armoche." */
 export function formatGoldCapMessage(unticked: GoldCapUntick[]): string {
   return unticked
-    .map(({ characterName, raids }) => `${characterName}: gold limit is ${MAX_GOLD_RAIDS} raids, unticked ${raids.join(", ")}`)
-    .join(". ");
+    .map(({ characterName, raids, kept }) =>
+      `${characterName} can take gold from ${MAX_GOLD_RAIDS} raids a week. Kept ${kept.join(", ")}; unticked ${raids.join(", ")}.`)
+    .join(" ");
 }
