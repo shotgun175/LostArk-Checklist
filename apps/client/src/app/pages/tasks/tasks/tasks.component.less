@@ -28,3 +28,9 @@ nz-card {
 :host ::ng-deep .td-select-box.ant-select-multiple nz-select-arrow {
   display: none;
 }
+
+// ng-zorro 18 gives the empty search box a 4px width, which pushed it onto its own line
+// below the day tags and made those rows taller; 17 left it at 0
+:host ::ng-deep .td-select-box.ant-select-multiple .ant-select-selection-search {
+  width: 0 !important;
+}
