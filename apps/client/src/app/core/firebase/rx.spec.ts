@@ -1,16 +1,18 @@
 import { Auth, User } from "firebase/auth";
 import { DocumentReference, Query } from "firebase/firestore";
-import { authState$, collectionData$, docData$ } from "./rx";
+import { authState$, collectionData$, docData$, idTokenState$ } from "./rx";
 
 const mockOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
+const mockOnIdTokenChanged = jest.fn();
 
 // Factories only: the real Node build of firebase/auth 10 cannot load on Node 16.
 jest.mock("firebase/firestore", () => ({
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args)
 }));
 jest.mock("firebase/auth", () => ({
-  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args)
+  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args),
+  onIdTokenChanged: (...args: unknown[]) => mockOnIdTokenChanged(...args)
 }));
 
 interface TestZone {
@@ -175,6 +177,49 @@ describe("authState$", () => {
     const appZone = zones.current.fork({ name: "app" });
     const emittedIn: string[] = [];
     appZone.run(() => authState$(auth).subscribe(() => emittedIn.push(zones.current.name)));
+    zones.root.run(() => handlers().next(null));
+    expect(emittedIn).toEqual(["app"]);
+  });
+});
+
+describe("idTokenState$", () => {
+  let unsubscribe: jest.Mock;
+
+  beforeEach(() => {
+    unsubscribe = jest.fn();
+    mockOnIdTokenChanged.mockReset().mockReturnValue(unsubscribe);
+  });
+
+  function handlers(): { next: (user: User | null) => void; error: (err: unknown) => void } {
+    const call = mockOnIdTokenChanged.mock.calls[mockOnIdTokenChanged.mock.calls.length - 1];
+    return { next: call[1], error: call[2] };
+  }
+
+  it("emits the user again when a guest is upgraded in place", () => {
+    const values: unknown[] = [];
+    idTokenState$(auth).subscribe(value => values.push(value));
+    expect(mockOnIdTokenChanged.mock.calls[0][0]).toBe(auth);
+    const guest = { uid: "uid-1", isAnonymous: true } as unknown as User;
+    const registered = { uid: "uid-1", isAnonymous: false } as unknown as User;
+    handlers().next(guest);
+    handlers().next(registered);
+    expect(values).toEqual([guest, registered]);
+  });
+
+  it("passes errors to the subscriber and stops listening on unsubscribe", () => {
+    const errors: unknown[] = [];
+    const subscription = idTokenState$(auth).subscribe({ error: err => errors.push(err) });
+    const failure = new Error("network-request-failed");
+    handlers().error(failure);
+    expect(errors).toEqual([failure]);
+    subscription.unsubscribe();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("emits in the subscriber's zone", () => {
+    const appZone = zones.current.fork({ name: "app" });
+    const emittedIn: string[] = [];
+    appZone.run(() => idTokenState$(auth).subscribe(() => emittedIn.push(zones.current.name)));
     zones.root.run(() => handlers().next(null));
     expect(emittedIn).toEqual(["app"]);
   });

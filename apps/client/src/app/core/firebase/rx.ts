@@ -1,5 +1,5 @@
 import { Observable } from "rxjs";
-import { Auth, onAuthStateChanged, User } from "firebase/auth";
+import { Auth, onAuthStateChanged, onIdTokenChanged, User } from "firebase/auth";
 import { DocumentReference, DocumentSnapshot, onSnapshot, Query } from "firebase/firestore";
 
 export interface DataOptions {
@@ -47,6 +47,14 @@ function snapshotData<T>(snapshot: DocumentSnapshot<T>, options: DataOptions): T
 /** Emits the signed-in user on sign-in and sign-out (not on token refresh). */
 export function authState$(auth: Auth): Observable<User | null> {
   return fromListener<User | null>((next, error) => onAuthStateChanged(auth, next, error));
+}
+
+/**
+ * Emits the signed-in user on sign-in, sign-out and every ID token change. Unlike authState$, it
+ * also fires when a guest registers, because linking keeps the same user and only refreshes the token.
+ */
+export function idTokenState$(auth: Auth): Observable<User | null> {
+  return fromListener<User | null>((next, error) => onIdTokenChanged(auth, next, error));
 }
 
 /** Live document data, including metadata changes; undefined while the document does not exist. */

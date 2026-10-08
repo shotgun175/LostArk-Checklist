@@ -1,5 +1,5 @@
 import { TestBed } from "@angular/core/testing";
-import { of, Subject } from "rxjs";
+import { BehaviorSubject, of, Subject } from "rxjs";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { docData$ } from "../../firebase/rx";
 import { FIRESTORE } from "../../firebase/firebase.providers";
@@ -54,6 +54,28 @@ describe("UserService.user$", () => {
   it("does not ask for a name while writes are paused for account deletion", () => {
     service.user$.subscribe();
     FirestoreStorage.pauseWrites();
+    userDoc.next(undefined);
+    expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserService.user$ when a guest registers", () => {
+  it("does not ask for a name: the register popup saves the one the user typed", () => {
+    const userDoc = new Subject<unknown>();
+    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    const create = jest.fn(() => ({ afterClose: new Subject<string>() }));
+    const isAnonymous$ = new BehaviorSubject(true);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of("u1"), isAnonymous$ } },
+        { provide: NzModalService, useValue: { create } }
+      ]
+    });
+    const service = TestBed.inject(UserService);
+    service.user$.subscribe();
+    userDoc.next(undefined);
+    isAnonymous$.next(false);
     userDoc.next(undefined);
     expect(create).not.toHaveBeenCalled();
   });

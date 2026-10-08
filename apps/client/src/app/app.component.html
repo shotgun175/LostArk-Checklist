@@ -103,6 +103,14 @@
     </nz-header>
     <nz-content>
       <div class="inner-content">
+        @if ((anonymous$ | async) && !guestBannerDismissed()) {
+          <nz-alert class="guest-banner" nzType="warning" nzShowIcon nzCloseable
+                    [nzMessage]="guestBannerText" [nzAction]="guestBannerAction"
+                    (nzOnClose)="dismissGuestBanner()"></nz-alert>
+          <ng-template #guestBannerAction>
+            <button nz-button nzSize="small" nzType="primary" (click)="register()">Register</button>
+          </ng-template>
+        }
         <router-outlet></router-outlet>
       </div>
       <footer class="app-footer">
