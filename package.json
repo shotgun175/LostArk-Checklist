@@ -42,7 +42,7 @@
     "@nx/eslint-plugin": "22.7.12",
     "@nx/jest": "22.7.12",
     "@nx/workspace": "22.7.12",
-    "@schematics/angular": "21.2.9",
+    "@schematics/angular": "21.2.26",
     "@types/jest": "30.0.0",
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "7.16.0",
