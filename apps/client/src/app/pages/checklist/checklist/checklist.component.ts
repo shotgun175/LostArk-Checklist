@@ -392,7 +392,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     this.ticketsTrackingOpened = opened;
   }
 
-  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent): void {
+  public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent, shownAmount?: number): void {
     let reset = Infinity;
     switch (task.frequency) {
       case TaskFrequency.DAILY:
@@ -410,6 +410,11 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     }
     if (done) {
       const setAllDone = clickEvent?.ctrlKey;
+      // The counter shows a finished task as done (lazy tracking keeps yesterday's runs on screen),
+      // so a click on it must not reset and count it again
+      if ((shownAmount ?? 0) >= task.amount) {
+        return;
+      }
       const existingEntry = getCompletionEntry(completion.data, character, task);
       if (existingEntry?.updated < reset && reset !== Infinity) {
         existingEntry.amount = 0;

@@ -223,7 +223,7 @@
                                               nzBlock
                                               nzType="primary"
                                               [attr.aria-disabled]="row.completion[0] >= row.task.amount ? true : null"
-                                              (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
+                                              (click)="markAsDone(completion, energy, roster[0], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event, row.completion[0])"
                                               >
                                               {{ row.completion[0] }}/{{ row.task.amount }}
                                             </button>
@@ -274,7 +274,7 @@
                                               nzSize="small"
                                               nzType="primary"
                                               [attr.aria-disabled]="col >= row.task.amount ? true : null"
-                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event)"
+                                              (click)="markAsDone(completion, energy, display.roster[i], row.task, roster, true, display.dailyReset, display.weeklyReset, display.biWeeklyReset, display.biWeeklyOffsetReset, $event, col)"
                                               >
                                               {{ col }} / {{ row.task.amount }}
                                             </button>

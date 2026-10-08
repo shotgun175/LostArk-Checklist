@@ -124,6 +124,22 @@ describe('ChecklistComponent', () => {
       expect(energyService.patchFields).not.toHaveBeenCalled();
     });
 
+    it('does nothing on a counter shown as finished from yesterday (lazy tracking)', () => {
+      const component = createComponent();
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 3, updated: dailyReset - 3600000 } } };
+      const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
+        {} as MouseEvent, 3);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset,
+        { ctrlKey: true } as MouseEvent, 3);
+
+      expect(completion.data['1:una'].amount).toBe(3);
+      expect(energy.data['1:una']).toEqual({ amount: 100 });
+      expect(completionService.patchFields).not.toHaveBeenCalled();
+      expect(energyService.patchFields).not.toHaveBeenCalled();
+    });
+
     it('still resets a finished counter', () => {
       const component = createComponent();
       const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 3, updated: now - 60000 } } };
