@@ -1,8 +1,8 @@
-import { Component, ChangeDetectionStrategy } from "@angular/core";
+import { Component, ChangeDetectionStrategy, signal } from "@angular/core";
 import { AbstractControl, UntypedFormBuilder, ValidationErrors, Validators } from "@angular/forms";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { NzModalRef } from "ng-zorro-antd/modal";
-import { switchMap } from "rxjs";
+import { finalize, switchMap } from "rxjs";
 import { UserService } from "../../../core/database/services/user.service";
 
 @Component({
@@ -13,6 +13,9 @@ import { UserService } from "../../../core/database/services/user.service";
   standalone: false
 })
 export class RegisterPopupComponent {
+  /** True while the account is being created, so a second click cannot send it again. */
+  public busy = signal(false);
+
   public form = this.fb.group({
     username: ["", [Validators.required]],
     email: ["", [Validators.required, Validators.email]],
@@ -37,12 +40,17 @@ export class RegisterPopupComponent {
   }
 
   submit(): void {
+    if (this.busy()) {
+      return;
+    }
+    this.busy.set(true);
     const creds = this.form.getRawValue();
     this.auth.register(creds.email, creds.password)
       .pipe(
         switchMap((res) => {
           return this.userService.setOne(res.user.uid, { name: creds.username });
-        })
+        }),
+        finalize(() => this.busy.set(false))
       )
       .subscribe(() => {
         this.modalRef.close();
