@@ -8,7 +8,7 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 
 - **Checklist**: daily and weekly tasks per character, with rest bonus.
 - **Gold Planner**: weekly gold per character and raid.
-- **Roster** and **Tasks Manager**: your characters and the tasks you track.
+- **Roster** and **Tasks Manager**: your characters and the tasks you track. In Tasks Manager, drag a task by the grip at the left of its row to change the order.
 - **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion.
 - **Privacy** (footer link): what is stored and why.
 

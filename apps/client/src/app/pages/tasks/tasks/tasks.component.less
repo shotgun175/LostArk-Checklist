@@ -34,3 +34,21 @@ nz-card {
 :host ::ng-deep .td-select-box.ant-select-multiple .ant-select-selection-search {
   width: 0 !important;
 }
+
+// Only the grip in the first column starts a row drag, so clicks and text selection in the
+// row's inputs behave normally
+.drag-cell {
+  padding-left: 8px;
+  padding-right: 0;
+}
+
+.drag-handle {
+  cursor: grab;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+:host ::ng-deep tbody.cdk-drop-list-dragging,
+:host ::ng-deep tbody.cdk-drop-list-dragging * {
+  cursor: grabbing;
+}
