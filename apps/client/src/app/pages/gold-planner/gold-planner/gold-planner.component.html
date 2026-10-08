@@ -287,13 +287,13 @@
               }
               <div class="manual-row">
                 <span>Chaos Dungeons</span>
-                <nz-input-number nzChangeOnWheel="false" [nzParser]="manualGoldParser" [nzPrecision]="0" [nzMin]="-10000000" [nzMax]="10000000" (keydown.enter)="$any($event.target).blur()" [ngModel]="display.chaos[character.name]" (ngModelChange)="setManualGold(settings.$key, 'chaos', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
+                <nz-input-number nzChangeOnWheel="false" [nzParser]="manualGoldParser" [nzPrecision]="0" [nzMin]="-10000000" [nzMax]="10000000" (keydown.enter)="$any($event.target).blur()" [ngModel]="display.chaos[character.name]" (ngModelChange)="setManualGold(settings.$key, 'chaos', character, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
                   <img nzInputAddonBefore src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
                 </nz-input-number>
               </div>
               <div class="manual-row">
                 <span>Other sources <span nz-icon nzType="message" nzTheme="outline" nz-tooltip nzTooltipTitle="Enter a negative amount for costs, for example -1300 for a bus" class="info-icon"></span></span>
-                <nz-input-number nzChangeOnWheel="false" [nzParser]="manualGoldParser" [nzPrecision]="0" [nzMin]="-10000000" [nzMax]="10000000" (keydown.enter)="$any($event.target).blur()" [ngModel]="display.other[character.name]" (ngModelChange)="setManualGold(settings.$key, 'other', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
+                <nz-input-number nzChangeOnWheel="false" [nzParser]="manualGoldParser" [nzPrecision]="0" [nzMin]="-10000000" [nzMax]="10000000" (keydown.enter)="$any($event.target).blur()" [ngModel]="display.other[character.name]" (ngModelChange)="setManualGold(settings.$key, 'other', character, $event)" [ngModelOptions]="{ updateOn: 'blur' }">
                   <img nzInputAddonBefore src="./assets/icons/gold.png" class="gold-icon" alt="gold" />
                 </nz-input-number>
               </div>

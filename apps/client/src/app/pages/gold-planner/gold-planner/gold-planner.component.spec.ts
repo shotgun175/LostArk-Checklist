@@ -18,7 +18,7 @@ const character = { id: 1, name: 'Arwen', ilvl: 1800, weeklyGold: true } as Char
 
 // Every gold raid ticked for Taking Gold and switched on in Task tracking, so the character is well over the cap
 const allRaidsTicked: Record<string, boolean> = Object.fromEntries(
-  goldTasks.flatMap(gTask => gTask.gates.map(gate => [`${character.name}:gold:taking:${gate.name}`, true]))
+  goldTasks.flatMap(gTask => gTask.gates.map(gate => [`${character.id}:gold:taking:${gate.name}`, true]))
 );
 const allRaidsTracked: Record<string, boolean> = Object.fromEntries(
   goldTasks.flatMap(gTask => [gTask.taskName, ...gTask.gates.map(gate => gate.taskName)])
@@ -75,7 +75,7 @@ describe('GoldPlannerComponent gold cap', () => {
     // Only unticked Taking Gold flags are written, each as its own field
     const writes: FieldWrite[] = patchFields.mock.calls[0][1];
     expect(writes.length).toBeGreaterThan(0);
-    writes.forEach(write => expect(write).toEqual({ path: ['goldPlannerConfiguration', expect.stringMatching(/^Arwen:gold:taking:/)], value: false }));
+    writes.forEach(write => expect(write).toEqual({ path: ['goldPlannerConfiguration', expect.stringMatching(/^1:gold:taking:/)], value: false }));
     const saved = savedConfiguration();
     // Raids the character cannot enter stay ticked but never count, so check the saved data is within the cap
     expect(capGoldTracking([character], saved, {}, tasks, allRaidsTracked).unticked).toEqual([]);
@@ -91,7 +91,7 @@ describe('GoldPlannerComponent gold cap', () => {
   });
 
   it('writes nothing and shows no message for a character under the cap', () => {
-    const lastTwo = goldTasks.slice(-2).flatMap(gTask => gTask.gates.map(gate => [`${character.name}:gold:taking:${gate.name}`, true]));
+    const lastTwo = goldTasks.slice(-2).flatMap(gTask => gTask.gates.map(gate => [`${character.id}:gold:taking:${gate.name}`, true]));
     emitSettings(Object.fromEntries(lastTwo));
 
     expect(patchFields).not.toHaveBeenCalled();

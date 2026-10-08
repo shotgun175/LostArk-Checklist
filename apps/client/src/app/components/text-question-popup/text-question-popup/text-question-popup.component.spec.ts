@@ -33,6 +33,17 @@ describe("TextQuestionPopupComponent", () => {
     expect(textarea?.placeholder).toBe("");
   });
 
+  it("shows the description line above the field when one is passed", () => {
+    const { fixture } = create({ placeholder: "Paste here", description: "This replaces all characters in your roster." });
+    const description: HTMLElement | null = fixture.nativeElement.querySelector(".popup-description");
+    expect(description?.textContent?.trim()).toBe("This replaces all characters in your roster.");
+  });
+
+  it("shows no description line when none is passed", () => {
+    const { fixture } = create({ placeholder: "Paste here" });
+    expect(fixture.nativeElement.querySelector(".popup-description")).toBeNull();
+  });
+
   it("closes the modal with the entered text on submit", () => {
     const { fixture, modalRef } = create({ placeholder: "Paste here" });
     fixture.componentInstance.control.setValue("hello");

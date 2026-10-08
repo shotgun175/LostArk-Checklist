@@ -20,15 +20,17 @@ function raid(label: string, gold: number, goldILvlLimit = Infinity): GoldTask {
   };
 }
 
+// Stored keys start with the character id (Char1 has id 1)
+const keyOf = (name: string): string => name.replace(/^Char/, '');
 const ticked = (name: string, labels: string[]): Record<string, boolean> => Object.fromEntries(
-  labels.flatMap(label => [1, 2].map(gate => [`${name}:gold:taking:${label} Gate ${gate}`, true]))
+  labels.flatMap(label => [1, 2].map(gate => [`${keyOf(name)}:gold:taking:${label} Gate ${gate}`, true]))
 );
 const modes = (name: string, labels: string[], mode = 'NM'): Record<string, string> => Object.fromEntries(
-  labels.flatMap(label => [1, 2].map(gate => [`${name}:runningMode:${label} Gate ${gate}`, mode]))
+  labels.flatMap(label => [1, 2].map(gate => [`${keyOf(name)}:runningMode:${label} Gate ${gate}`, mode]))
 );
 const takingRaids = (tracking: Record<string, boolean>, name: string): string[] => [...new Set(Object.keys(tracking)
-  .filter(key => key.startsWith(`${name}:gold:taking:`) && tracking[key])
-  .map(key => key.slice(`${name}:gold:taking:`.length).replace(/ Gate \d$/, '')))].sort();
+  .filter(key => key.startsWith(`${keyOf(name)}:gold:taking:`) && tracking[key])
+  .map(key => key.slice(`${keyOf(name)}:gold:taking:`.length).replace(/ Gate \d$/, '')))].sort();
 
 // A 1780 character tracks Horizon Cathedral, Serca and Kazeros by default; Armoche and Mordum need an explicit true
 const allTracked = { '1:Armoche': true, '1:Mordum': true };
@@ -41,9 +43,9 @@ describe('capGoldTracking', () => {
     const tracking = ticked('Char1', five);
     const result = capGoldTracking([character(1780)], tracking, modes('Char1', five), tasks, allTracked, gTasks);
     expect(takingRaids(result.tracking, 'Char1')).toEqual(['Armoche', 'Kazeros', 'Serca']);
-    expect(result.tracking['Char1:gold:taking:Mordum Gate 2']).toBe(false);
+    expect(result.tracking['1:gold:taking:Mordum Gate 2']).toBe(false);
     expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Mordum', 'Horizon Cathedral'], kept: ['Serca', 'Kazeros', 'Armoche'] }]);
-    expect(tracking['Char1:gold:taking:Mordum Gate 1']).toBe(true);
+    expect(tracking['1:gold:taking:Mordum Gate 1']).toBe(true);
   });
 
   it('breaks gold ties in favour of the newer raid', () => {
@@ -84,7 +86,7 @@ describe('capGoldTracking', () => {
     const result = capGoldTracking([character(1712)], ticked('Char1', four), raidModes, tasks, { '1:Armoche': true }, hardRaids);
     expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Armoche'], kept: ['Kazeros', 'Serca', 'Horizon Cathedral'] }]);
     // The saved mode is not rewritten
-    expect(raidModes['Char1:runningMode:Armoche Gate 1']).toBe('HM');
+    expect(raidModes['1:runningMode:Armoche Gate 1']).toBe('HM');
   });
 
   it('Brakka at 1712 with Hard saved on four raids keeps the three paying the most on Normal (real gold data)', () => {
@@ -147,5 +149,20 @@ describe('formatGoldCapMessage', () => {
       .toBe('Brakka can take gold from 3 raids a week. Kept Kazeros, Serca, Horizon Cathedral; unticked Armoche.');
     expect(formatGoldCapMessage([{ characterName: 'A', raids: ['X', 'Y'], kept: ['K'] }, { characterName: 'B', raids: ['Z'], kept: ['L'] }]))
       .toBe('A can take gold from 3 raids a week. Kept K; unticked X, Y. B can take gold from 3 raids a week. Kept L; unticked Z.');
+  });
+});
+
+describe('capGoldTracking with keys saved under the character name', () => {
+  const gTasks = [raid('Horizon Cathedral', 100), raid('Serca', 500), raid('Kazeros', 400), raid('Armoche', 300), raid('Mordum', 200)];
+  const byName = (labels: string[]): Record<string, boolean> => Object.fromEntries(
+    labels.flatMap(label => [1, 2].map(gate => [`Char1:gold:taking:${label} Gate ${gate}`, true]))
+  );
+
+  it('still counts them, and unticks under the id key, which wins over the name key', () => {
+    const modesByName = Object.fromEntries(five.flatMap(label => [1, 2].map(gate => [`Char1:runningMode:${label} Gate ${gate}`, 'NM'])));
+    const result = capGoldTracking([character(1780)], byName(five), modesByName, tasks, allTracked, gTasks);
+    expect(result.unticked).toEqual([{ characterName: 'Char1', raids: ['Mordum', 'Horizon Cathedral'], kept: ['Serca', 'Kazeros', 'Armoche'] }]);
+    expect(result.tracking['1:gold:taking:Mordum Gate 1']).toBe(false);
+    expect(capGoldTracking([character(1780)], result.tracking, modesByName, tasks, allTracked, gTasks).unticked).toEqual([]);
   });
 });

@@ -25,6 +25,7 @@ import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
 import { checklistBodyHeight, checklistTaskColumnWidth, computeChecklistScroll, formatCountdown, formatModeBadge, getGoldBadge, goldBadgeTooltip, isWeeklyFrequency } from './checklist-layout';
 import { capGoldTracking } from "../../gold-planner/gold-cap";
+import { readCharacterFlag } from "../../../core/character-keys";
 
 interface CategoriesDisplay {
   dailyCharacter: boolean,
@@ -178,10 +179,10 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
           const forceDone = (!available && visible); // If task is not available but is visible, we marked it as done
           const completionData = filterVisibleCharacters(roster.characters, showHidden)
             .map(character => {
-              let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character.name, task.label);
+              let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character, task.label);
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
               const modeBadge = formatModeBadge(runningMode);
-              const goldBadge = getGoldBadge(modeBadge, this.getGoldTakingInfoForTask(character.name, task.label, goldTracking), character.weeklyGold);
+              const goldBadge = getGoldBadge(modeBadge, this.getGoldTakingInfoForTask(character, task.label, goldTracking), character.weeklyGold);
               return {
                 runningMode,
                 modeBadge,
@@ -477,7 +478,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     this.rosterService.setOne(roster.$key, roster);
   }
 
-  private getGoldTakingInfoForTask(characterName: string, taskName: string, goldTracking): boolean {
+  private getGoldTakingInfoForTask(character: Character, taskName: string, goldTracking): boolean | undefined {
     let goldTaskName
     let gate
     const goldTask = goldTasks.find(goldTask => goldTask.taskName === taskName)
@@ -494,12 +495,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     } else {
       goldTaskName = goldTask.gates[0].name
     }
-    return goldTaskName === undefined ? false : goldTracking[`${characterName}:gold:taking:${goldTaskName}`]
+    return goldTaskName === undefined ? false : readCharacterFlag(goldTracking, character, `gold:taking:${goldTaskName}`)
   }
 
-  private getRunningModeFlagForTask(raidModesForGoldPlanner: Record<string, string>, characterName: string, taskName: string): string | undefined {
+  private getRunningModeFlagForTask(raidModesForGoldPlanner: Record<string, string>, character: Character, taskName: string): string | undefined {
     const gates = this.getGoldGatesForTask(taskName)
-    return gates.length ? this.settings.getRunningModeFlag(raidModesForGoldPlanner, characterName, gates.map(gate => gate.name)) : undefined
+    return gates.length ? this.settings.getRunningModeFlag(raidModesForGoldPlanner, character, gates.map(gate => gate.name)) : undefined
   }
 
   private getHigherModeInfoForTask(raidModesForGoldPlanner: Record<string, string>, character: Character, taskName: string): string | undefined {
@@ -508,7 +509,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
 
     const higherModes = gates.map(gate => getHigherModeForGate(
       gate,
-      this.settings.getRunningModeFlag(raidModesForGoldPlanner, character.name, [gate.name]),
+      this.settings.getRunningModeFlag(raidModesForGoldPlanner, character, [gate.name]),
       character
     ))
     if (higherModes.some(mode => !mode)) return undefined

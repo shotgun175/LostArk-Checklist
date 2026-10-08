@@ -18,6 +18,7 @@ import { isTaskTracked } from "../../../core/task-tracking";
 import { capGoldTracking, formatGoldCapMessage, GoldCapUntick } from "../gold-cap";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { FieldWrite } from "../../../core/database/write-coalescer";
+import { characterFlagKey, manualGoldKey, readCharacterFlag, readManualGold } from "../../../core/character-keys";
 import { completionLabel, formatCompactGold, getGoldBar, GoldBarSegment, GoldCell, GoldSummary, summarizeCharacterGold, sumGoldSummaries } from "../gold-summary";
 
 interface chestsData {
@@ -123,7 +124,7 @@ export class GoldPlannerComponent {
       const goldCap = capGoldTracking(rawRoster.characters, settings.goldPlannerConfiguration, raidModesForGoldPlanner, tasks, rawRoster.trackedTasks, gTasks);
       const tracking = goldCap.tracking;
       // The mode a gate counts as: a saved Hard or Nightmare the item level cannot run counts as the highest mode it can (never saved back)
-      const savedMode = (gate: Gate, character: Character): string | undefined => raidModesForGoldPlanner?.[this.getRunningModeFlagNameForGate(character.name, gate)];
+      const savedMode = (gate: Gate, character: Character): string | undefined => readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gate.name}`);
       const countedMode = (gate: Gate, character: Character) => getCountedRunningMode(gate, character, savedMode(gate, character));
       const plannerLines: PlannerLine[] = [];
       gTasks.forEach(gTask => {
@@ -217,43 +218,43 @@ export class GoldPlannerComponent {
             let indeterminateTakingChest = false
 
             if (line.gate) {
-              takingGold = tracking[this.getGoldTakingFlagNameForGate(character.name, line.gate)];
+              takingGold = this.goldTakingFlag(tracking, character, line.gate);
               indeterminateTakingGold = false
-              takingChest = tracking[this.getChestTakingFlagNameForGate(character.name, line.gate)];
+              takingChest = this.chestTakingFlag(tracking, character, line.gate);
               indeterminateTakingChest = false
             } else {
               if (tracking['hideAlreadyDoneTasks']) {
                 const firstUndoneGate = line.gTask.gates.find(gate => !this.shouldHideGateBasedOnWeeklyCompletion(gate, character, tasks, tracking, completion, lineReset, task))
 
-                takingGold = firstUndoneGate ? tracking[this.getGoldTakingFlagNameForGate(character.name, firstUndoneGate)] : false
+                takingGold = firstUndoneGate ? this.goldTakingFlag(tracking, character, firstUndoneGate) : false
                 indeterminateTakingGold = firstUndoneGate ? !line.gTask.gates.every(gate => {
                   if (this.shouldHideGateBasedOnWeeklyCompletion(gate, character, tasks, tracking, completion, lineReset, task)) {
                     return true
                   } else {
-                    return tracking[this.getGoldTakingFlagNameForGate(character.name, gate)] === takingGold
+                    return this.goldTakingFlag(tracking, character, gate) === takingGold
                   }
                 }) : false
 
-                takingChest = firstUndoneGate ? tracking[this.getChestTakingFlagNameForGate(character.name, firstUndoneGate)] : false
+                takingChest = firstUndoneGate ? this.chestTakingFlag(tracking, character, firstUndoneGate) : false
                 indeterminateTakingChest = firstUndoneGate ? !line.gTask.gates.every(gate => {
                   if (this.shouldHideGateBasedOnWeeklyCompletion(gate, character, tasks, tracking, completion, lineReset, task)) {
                     return true
                   } else {
-                    return tracking[this.getChestTakingFlagNameForGate(character.name, gate)] === takingChest
+                    return this.chestTakingFlag(tracking, character, gate) === takingChest
                   }
                 }) : false
               } else {
-                takingGold = tracking[this.getGoldTakingFlagNameForGate(character.name, line.gTask.gates[0])]
+                takingGold = this.goldTakingFlag(tracking, character, line.gTask.gates[0])
                 indeterminateTakingGold = !line.gTask.gates.every(gate => {
                   return this.characterHasRequiredILvlForGate(gate, character, tasks, task) ?
-                    tracking[this.getGoldTakingFlagNameForGate(character.name, gate)] === takingGold
+                    this.goldTakingFlag(tracking, character, gate) === takingGold
                     : true
                 })
 
-                takingChest = tracking[this.getChestTakingFlagNameForGate(character.name, line.gTask.gates[0])];
+                takingChest = this.chestTakingFlag(tracking, character, line.gTask.gates[0]);
                 indeterminateTakingChest = !line.gTask.gates.every(gate => {
                   return this.characterHasRequiredILvlForGate(gate, character, tasks, task) ?
-                    tracking[this.getChestTakingFlagNameForGate(character.name, gate)] === takingChest
+                    this.chestTakingFlag(tracking, character, gate) === takingChest
                     : true
                 })
               }
@@ -361,14 +362,14 @@ export class GoldPlannerComponent {
       const chaos = roster.reduce((acc, c) => {
         return {
           ...acc,
-          [c.name]: this.getManualGoldEntry("chaos", c.name, lastWeeklyReset, manualGoldEntries || {})
+          [c.name]: this.getManualGoldEntry("chaos", c, lastWeeklyReset, manualGoldEntries || {})
         };
       }, {});
 
       const other = roster.reduce((acc, c) => {
         return {
           ...acc,
-          [c.name]: this.getManualGoldEntry("other", c.name, lastWeeklyReset, manualGoldEntries || {})
+          [c.name]: this.getManualGoldEntry("other", c, lastWeeklyReset, manualGoldEntries || {})
         };
       }, {});
 
@@ -534,8 +535,12 @@ export class GoldPlannerComponent {
   }
 
   // Taking Gold tick box
-  private getGoldTakingFlagNameForGate(characterName: string, gate: Gate): string {
-    return `${characterName}:gold:taking:${gate.name}`;
+  private getGoldTakingFlagNameForGate(character: Character, gate: Gate): string {
+    return characterFlagKey(character, `gold:taking:${gate.name}`);
+  }
+
+  private goldTakingFlag(tracking: Record<string, boolean>, character: Character, gate: Gate): boolean {
+    return readCharacterFlag(tracking, character, `gold:taking:${gate.name}`) as boolean;
   }
 
   setGoldTakingFlag(settingsKey: string, currentTracking: Record<string, boolean>, currentRaidModes: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
@@ -554,10 +559,10 @@ export class GoldPlannerComponent {
 
   // Ticking gold on a gate with no running mode yet also sets the highest mode the character can run
   setGoldTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
-    const flagName = this.getGoldTakingFlagNameForGate(character.name, gate);
+    const flagName = this.getGoldTakingFlagNameForGate(character, gate);
     tracking[flagName] = flag;
-    const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
-    const pickedMode = shouldAutoPickRunningMode(flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
+    const modeKey = this.getRunningModeFlagNameForGate(character, gate);
+    const pickedMode = shouldAutoPickRunningMode(flag, readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gate.name}`)) ? pickDefaultRunningMode(gate, character) : undefined;
     if (pickedMode) {
       raidModesForGoldPlanner[modeKey] = pickedMode;
     }
@@ -568,8 +573,12 @@ export class GoldPlannerComponent {
   }
 
   //Taking Chest tick box
-  private getChestTakingFlagNameForGate(characterName: string, gate: Gate): string {
-    return `${characterName}:gold:${gate.name}`;
+  private getChestTakingFlagNameForGate(character: Character, gate: Gate): string {
+    return characterFlagKey(character, `gold:${gate.name}`);
+  }
+
+  private chestTakingFlag(tracking: Record<string, boolean>, character: Character, gate: Gate): boolean {
+    return readCharacterFlag(tracking, character, `gold:${gate.name}`) as boolean;
   }
 
   setChestTakingFlag(settingsKey: string, tracking: Record<string, boolean>, currentRaidModes: Record<string, string>, line: PlannerLine, character: Character, flag: boolean): void {
@@ -586,10 +595,10 @@ export class GoldPlannerComponent {
 
   // For a character without Weekly Gold, ticking a chest on a gate with no running mode also sets the highest mode it can run
   setChestTakingFlagForGate(settingsKey: string, tracking: Record<string, boolean>, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: boolean): void {
-    const flagName = this.getChestTakingFlagNameForGate(character.name, gate);
+    const flagName = this.getChestTakingFlagNameForGate(character, gate);
     tracking[flagName] = flag;
-    const modeKey = this.getRunningModeFlagNameForGate(character.name, gate);
-    const pickedMode = shouldAutoPickModeOnChest(character.weeklyGold, flag, raidModesForGoldPlanner[modeKey]) ? pickDefaultRunningMode(gate, character) : undefined;
+    const modeKey = this.getRunningModeFlagNameForGate(character, gate);
+    const pickedMode = shouldAutoPickModeOnChest(character.weeklyGold, flag, readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gate.name}`)) ? pickDefaultRunningMode(gate, character) : undefined;
     if (pickedMode) {
       raidModesForGoldPlanner[modeKey] = pickedMode;
     }
@@ -605,7 +614,7 @@ export class GoldPlannerComponent {
       line.gTask.gates.forEach(gate => {
         this.setRunningModeFlagForGate(settingsKey, raidModesForGoldPlanner, gate, character, flag)
       })
-    } else if (raidModesForGoldPlanner[this.getRunningModeFlagNameForGate(character.name, line.gate)] === 'Solo') {
+    } else if (readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${line.gate.name}`) === 'Solo') {
       line.gTask.gates.forEach(gate => {
         this.setRunningModeFlagForGate(settingsKey, raidModesForGoldPlanner, gate, character, "")
       })
@@ -616,13 +625,13 @@ export class GoldPlannerComponent {
   }
 
   setRunningModeFlagForGate(settingsKey: string, raidModesForGoldPlanner: Record<string, string>, gate: Gate, character: Character, flag: string): void {
-    const flagName = this.getRunningModeFlagNameForGate(character.name, gate);
+    const flagName = this.getRunningModeFlagNameForGate(character, gate);
     raidModesForGoldPlanner[flagName] = flag;
     this.settings.patchFields(settingsKey, [{ path: ["raidModesForGoldPlanner", flagName], value: flag }]);
   }
 
-  private getRunningModeFlagNameForGate(characterName: string, gate: Gate): string {
-    return `${characterName}:runningMode:${gate.name}`;
+  private getRunningModeFlagNameForGate(character: Character, gate: Gate): string {
+    return characterFlagKey(character, `runningMode:${gate.name}`);
   }
 
   // Raid Row Expander utilities
@@ -643,17 +652,17 @@ export class GoldPlannerComponent {
   }
 
   // Manuel gold entries utilities
-  private getManualGoldEntry(type: string, characterName: string, weeklyReset: number, data: Record<string, ManualWeeklyGoldEntry>): number {
-    const entry: ManualWeeklyGoldEntry = data[`${type}:${characterName}`] || { amount: 0, timestamp: Date.now() };
+  private getManualGoldEntry(type: string, character: Character, weeklyReset: number, data: Record<string, ManualWeeklyGoldEntry>): number {
+    const entry: ManualWeeklyGoldEntry = readManualGold(data, type, character) || { amount: 0, timestamp: Date.now() };
     if (entry.timestamp < weeklyReset) {
       return 0;
     }
     return entry.amount || 0;
   }
 
-  public setManualGold(settingsKey: string, type: string, characterName: string, newValue: number): void {
+  public setManualGold(settingsKey: string, type: string, character: Character, newValue: number): void {
     this.settings.patchFields(settingsKey, [{
-      path: ["manualGoldEntries", `${type}:${characterName}`],
+      path: ["manualGoldEntries", manualGoldKey(type, character)],
       value: { amount: this.manualGoldFormatter(newValue) || 0, timestamp: Date.now() }
     }]);
   }

@@ -3,8 +3,11 @@ import { FirestoreStorage } from "../firestore-storage";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { Settings } from "../../../model/settings";
-import { mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
+import { combineLatest, filter, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
+import { RosterService } from "./roster.service";
+import { Character } from "../../../model/character/character";
+import { characterKeyMigrationWrites, readCharacterFlag } from "../../character-keys";
 
 @Injectable({
   providedIn: "root"
@@ -61,12 +64,20 @@ export class SettingsService extends FirestoreStorage<Settings> {
     shareReplay(1)
   );
 
-  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService, rosterService: RosterService) {
     super(firestore);
+    // Per-character settings keys move from the character's name to its id once both documents
+    // have loaded for the same user (see character-keys.ts). The local write makes the next
+    // settings emission clean, so this writes once.
+    combineLatest([this.settings$, rosterService.roster$]).pipe(
+      filter(([settings, roster]) => settings.$key === roster.$key),
+      map(([settings, roster]) => ({ key: settings.$key, writes: characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, roster.characters) })),
+      filter(({ writes }) => writes.length > 0)
+    ).subscribe(({ key, writes }) => this.patchFields(key, writes));
   }
 
-  public getRunningModeFlag(raidModesForGoldPlanner: Record<string, string>, characterName: string, gateNames: string[]): string {
-    const getGateMode = (gateName: string): string => raidModesForGoldPlanner[`${characterName}:runningMode:${gateName}`];
+  public getRunningModeFlag(raidModesForGoldPlanner: Record<string, string>, character: Pick<Character, "id" | "name">, gateNames: string[]): string {
+    const getGateMode = (gateName: string): string => readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gateName}`) as string;
     const firstGateMode = getGateMode(gateNames[0]);
     return gateNames.every(gateName => getGateMode(gateName) === firstGateMode) ? firstGateMode : "Mixed";
   }

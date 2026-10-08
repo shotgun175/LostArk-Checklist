@@ -4,6 +4,7 @@ import { isTaskInIlvlRange, isTaskTracked } from "../../core/task-tracking";
 import { raidReleaseOrder } from "../../core/tasks";
 import { goldTasks } from "./gold-tasks";
 import { getCountedRunningMode, GoldTask, MAX_GOLD_RAIDS } from "./gold-task";
+import { characterFlagKey, readCharacterFlag } from "../../core/character-keys";
 
 /** The raids unticked for one character by capGoldTracking, and the ones it kept. */
 export interface GoldCapUntick {
@@ -56,11 +57,11 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
         gTask.gates.forEach(gate => {
           const task = tasks.find(t => t.label === (gate.taskName || gTask.taskName) && !t.custom);
           const counted = !task || (task.enabled && isTaskInIlvlRange(character, task) && isTaskTracked(trackedTasks, character, task, tasks));
-          if (!counted || tracking[`${character.name}:gold:taking:${gate.name}`] !== true) {
+          if (!counted || readCharacterFlag(tracking, character, `gold:taking:${gate.name}`) !== true) {
             return;
           }
           takingGold = true;
-          const countedMode = getCountedRunningMode(gate, character, raidModes?.[`${character.name}:runningMode:${gate.name}`]).mode;
+          const countedMode = getCountedRunningMode(gate, character, readCharacterFlag(raidModes, character, `runningMode:${gate.name}`)).mode;
           const mode = gate.modes.find(m => m.name === countedMode);
           gold += mode && mode.goldILvlLimit > character.ilvl ? mode.unboundGoldReward + mode.boundGoldReward : 0;
         });
@@ -76,9 +77,8 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
       capped = { ...tracking };
     }
     dropped.forEach(({ gTask }) => gTask.gates.forEach(gate => {
-      const key = `${character.name}:gold:taking:${gate.name}`;
-      if (capped[key]) {
-        capped[key] = false;
+      if (readCharacterFlag(capped, character, `gold:taking:${gate.name}`)) {
+        capped[characterFlagKey(character, `gold:taking:${gate.name}`)] = false;
       }
     }));
     unticked.push({

@@ -8,7 +8,7 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 
 - **Checklist**: daily and weekly tasks per character, with rest bonus.
 - **Gold Planner**: weekly gold per character and raid.
-- **Roster** and **Tasks Manager**: your characters and the tasks you track. In Tasks Manager, drag a task by the grip at the left of its row to change the order.
+- **Roster** and **Tasks Manager**: your characters and the tasks you track. On both pages, drag a row by the grip at the left of it to change the order, or focus the grip (Tab) and press Arrow Up or Arrow Down. The rest of the row works like a normal form, so text in its inputs can be selected.
 - **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion.
 - **Privacy** (footer link): what is stored and why.
 
@@ -46,6 +46,15 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - At most 6 characters can have **Weekly Gold**, as in the game. Once 6 have it, the box is disabled on the others until you untick one.
 - A new character gets Weekly Gold only while fewer than 6 characters have it.
 - A roster that already has more than 6 (for example from an import) shows a warning on the Roster page; nothing is unticked for you.
+- Names are trimmed, invisible characters are removed and they are at most 16 characters long. An empty name or a name another character already has is refused, and the old name shows again. Item levels go from 0 to 2000.
+- Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character, not its name, so renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
+- **Import roster** replaces every character in the roster. It checks each character first (an id, a name, a numeric item level and a known class) and lists what is wrong instead of importing a bad paste.
+
+### Tasks Manager
+
+- **Import custom tasks** checks each task (a name, a known frequency and scope, numeric item levels) and skips tasks you already have with the same name and frequency, so importing your own export again adds nothing. **Export** copies only what another account needs (not the task ids).
+- A new custom task goes to the end of the list, and the list scrolls to it. The form refuses an empty name, fewer than 1 repetition and a minimum item level above the maximum.
+- **Track all tasks** and **Untrack all tasks** ask first.
 
 ### Heads-up for existing users
 
@@ -61,6 +70,9 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - Gold Planner: **Full Planning** can show less tradable and more bound gold than before when chests were bought on raids already done while bound gold is still to come from raids not run yet; the old number counted that later bound gold toward chests already paid. **Remaining for the week** no longer adds your Chaos Dungeons and Other sources entries, since they are already earned. A Hard or Nightmare mode saved above a character's item level now counts as the mode it can run. Nothing saved is changed.
 - **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 - **Weekly Mission** is gone. It no longer exists in the game, so it is removed from the built-in list and from existing accounts the next time the site loads.
+- Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts were saved under the character's name. The first time the site loads they move to the character itself, so a rename keeps them. Nothing else changes.
+- If two characters of an older roster share an internal id (a past bug when adding characters), the second one gets a new id the next time the site loads, so editing one no longer overwrites the other. Its checkmarks, rest bonus and per-character choices were shared with the other character, so they start fresh for it.
+- Classes saved as numbers by a backup restore now show in the Roster class picker.
 
 ## Signing in and syncing
 

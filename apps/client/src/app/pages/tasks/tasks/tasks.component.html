@@ -1,8 +1,14 @@
 @if (tasks$ | async; as tasks) {
   <nz-page-header nzTitle="Task Manager" nzSubtitle="Manage custom tasks, enable/disable existing ones">
     <nz-page-header-extra>
-      <button nz-button nzType="primary" (click)="setTrackAll(tasks, true)">Track all tasks</button>
-      <button nz-button (click)="setTrackAll( tasks,false)">Untrack all tasks</button>
+      <button nz-button nzType="primary" nz-popconfirm
+        nzPopconfirmTitle="Track all {{ tasks.length }} tasks? Your current choices will be lost."
+        nzOkText="Track all"
+        (nzOnConfirm)="setTrackAll(tasks, true)">Track all tasks</button>
+      <button nz-button nz-popconfirm
+        nzPopconfirmTitle="Untrack all {{ tasks.length }} tasks? Your current choices will be lost."
+        nzOkText="Untrack all" [nzOkDanger]="true"
+        (nzOnConfirm)="setTrackAll(tasks, false)">Untrack all tasks</button>
       <button nz-button (click)="exportTasks(tasks)" nz-tooltip nzTooltipTitle="Export custom tasks">
         <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
@@ -36,13 +42,21 @@
         (cdkDropListDropped)="dropTask(tasks, $event)"
         [cdkDropListData]="tasks">
         @for (task of tasksTable.data; track trackByTask($index, task)) {
-          <tr cdkDrag [cdkDragData]="task">
+          <tr cdkDrag [cdkDragData]="task" cdkDragPreviewClass="drag-preview" (cdkDragStarted)="matchPreviewCells()"
+            [attr.data-task-key]="task.$key" [class.new-task]="task.$key === highlightKey">
             <td class="drag-cell">
-              <span class="drag-handle" cdkDragHandle nz-icon nzType="holder" nzTheme="outline"
-                aria-label="Drag to reorder" nz-tooltip nzTooltipTitle="Drag to reorder"></span>
+              <button type="button" class="drag-handle" cdkDragHandle
+                nz-tooltip nzTooltipTitle="Drag to reorder"
+                [attr.aria-label]="'Move ' + task.label"
+                [attr.data-task-key]="task.$key"
+                (keydown.arrowup)="$event.preventDefault(); moveByKeyboard(tasks, $index, -1)"
+                (keydown.arrowdown)="$event.preventDefault(); moveByKeyboard(tasks, $index, 1)">
+                <span nz-icon nzType="holder" nzTheme="outline"></span>
+              </button>
             </td>
             <td>
-              <input type="text" [(ngModel)]="task.label" (ngModelChange)="updateTask(task)" [disabled]="!task.custom"
+              <input type="text" [ngModel]="task.label" #labelModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
+                (ngModelChange)="saveTaskField(task, 'label', $event, labelModel)" [disabled]="!task.custom"
                 nz-input>
               </td>
               <td>
@@ -80,14 +94,17 @@
                 </nz-select>
               </td>
               <td>
-                <nz-input-number nzChangeOnWheel="false" [(ngModel)]="task.amount" (ngModelChange)="updateTask(task)"
+                <nz-input-number nzChangeOnWheel="false" [nzMin]="1" [ngModel]="task.amount" #amountModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
+                  (ngModelChange)="saveTaskField(task, 'amount', $event, amountModel)"
                 [nzDisabled]="!task.custom"></nz-input-number>
               </td>
               <td>
-                <nz-input-number nzChangeOnWheel="false" [(ngModel)]="task.minIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
+                <nz-input-number nzChangeOnWheel="false" [nzMin]="0" [nzMax]="9999" [ngModel]="task.minIlvl" #minIlvlModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
+                  (ngModelChange)="saveTaskField(task, 'minIlvl', $event, minIlvlModel)"></nz-input-number>
               </td>
               <td>
-                <nz-input-number nzChangeOnWheel="false" [(ngModel)]="task.maxIlvl" (ngModelChange)="updateTask(task)"></nz-input-number>
+                <nz-input-number nzChangeOnWheel="false" [nzMin]="0" [nzMax]="9999" [ngModel]="task.maxIlvl" #maxIlvlModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
+                  (ngModelChange)="saveTaskField(task, 'maxIlvl', $event, maxIlvlModel)"></nz-input-number>
               </td>
               <td><label nz-checkbox [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task)"></label></td>
               <td>
@@ -188,14 +205,17 @@
         </nz-form-control>
       </nz-form-item>
       <nz-form-item>
-        <nz-form-control nzErrorTip="Please input a repetition count">
+        <nz-form-control nzErrorTip="Please input at least 1 repetition">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="number"></span>
-            <input type="number" nz-input formControlName="amount" placeholder="Repetitions" />
+            <input type="number" nz-input formControlName="amount" placeholder="Repetitions" min="1" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <button nz-button [nzType]="'primary'" [disabled]="form.invalid">Add</button>
+      <button nz-button [nzType]="'primary'" [disabled]="form.invalid" [nzLoading]="saving">Add</button>
+      @if (form.errors?.['ilvlRange']) {
+        <div class="form-error">Min ilvl cannot be above Max ilvl.</div>
+      }
     </form>
   </nz-card>
 }
