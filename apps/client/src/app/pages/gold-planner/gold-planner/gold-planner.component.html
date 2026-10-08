@@ -69,7 +69,7 @@
           <div class="panel-title">
             <span class="panel-name">
               {{ character.name }} [{{ character.ilvl }}]
-              <i nz-icon nzType="message" nzTheme="outline" *ngIf="character.note" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></i>
+              <span nz-icon nzType="message" nzTheme="outline" *ngIf="character.note" nz-tooltip [nzTooltipTitle]="character.note" class="note-icon"></span>
             </span>
             <span class="panel-raids" *ngIf="character.weeklyGold">{{ display.goldRaidCounts[selection.index] }} of {{ maxGoldRaids }} gold raids</span>
           </div>
@@ -101,7 +101,7 @@
                   </label>
                 </span>
                 <span class="all-bound" *ngIf="flag.unboundGoldReward === 0 && flag.boundGoldReward > 0">all bound</span>
-                <i *ngIf="flag.unboundGoldReward !== 0 && flag.boundGoldReward !== 0" nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipOverlayStyle]="{'max-width': '180px'}" nzTooltipTitle="{{ flag.unboundGoldReward | number }} Unbound Gold {{ flag.boundGoldReward | number }} Bound Gold" class="info-icon"></i>
+                <span *ngIf="flag.unboundGoldReward !== 0 && flag.boundGoldReward !== 0" nz-icon nzType="message" nzTheme="outline" nz-tooltip [nzTooltipOverlayStyle]="{'max-width': '180px'}" nzTooltipTitle="{{ flag.unboundGoldReward | number }} Unbound Gold {{ flag.boundGoldReward | number }} Bound Gold" class="info-icon"></span>
               </div>
               <div class="checkbox-line">
                 <label
@@ -149,7 +149,7 @@
             </nz-input-group>
           </div>
           <div class="manual-row">
-            <span>Other sources <i nz-icon nzType="message" nzTheme="outline" nz-tooltip nzTooltipTitle="For buses costs you can put negative values like (-1300)" class="info-icon"></i></span>
+            <span>Other sources <span nz-icon nzType="message" nzTheme="outline" nz-tooltip nzTooltipTitle="For buses costs you can put negative values like (-1300)" class="info-icon"></span></span>
             <nz-input-group [nzAddOnBefore]="goldIcon">
               <nz-input-number [nzFormatter]="manualGoldFormatter" [ngModel]="display.other[character.name]" (ngModelChange)="setManualGold(settings.$key, 'other', character.name, $event)" [ngModelOptions]="{ updateOn: 'blur' }"></nz-input-number>
             </nz-input-group>

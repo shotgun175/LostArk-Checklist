@@ -9,7 +9,7 @@
   .menu-item {
     padding: 10px;
 
-    > i {
+    > [nz-icon] {
       margin-right: 10px;
     }
   }
@@ -91,7 +91,7 @@ nz-header {
     padding: 0 20px;
     background-color: rgba(0, 45, 82, 0.5);
 
-    > i {
+    > [nz-icon] {
       margin-right: 5px;
     }
 
@@ -134,7 +134,7 @@ nz-content {
         justify-content: center;
         padding: 0;
 
-        > a > span {
+        > a > span:not([nz-icon]) {
           display: inline-block;
           position: absolute;
           opacity: 0;
@@ -146,7 +146,7 @@ nz-content {
         color: white;
         text-decoration: none;
 
-        > span {
+        > span:not([nz-icon]) {
           transition: all .2s;
         }
       }

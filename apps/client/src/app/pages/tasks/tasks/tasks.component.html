@@ -4,11 +4,11 @@
       <button nz-button nzType="primary" (click)="setTrackAll(tasks, true)">Track all tasks</button>
       <button nz-button (click)="setTrackAll( tasks,false)">Untrack all tasks</button>
       <button nz-button (click)="exportTasks(tasks)" nz-tooltip nzTooltipTitle="Export custom tasks">
-        <i nz-icon nzType="upload" nzTheme="outline"></i>
+        <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
       <ng-container *ngIf="uid$ | async as uid">
         <button nz-button (click)="importTasks(uid)" nz-tooltip nzTooltipTitle="Import custom tasks">
-          <i nz-icon nzType="download" nzTheme="outline"></i>
+          <span nz-icon nzType="download" nzTheme="outline"></span>
         </button>
       </ng-container>
     </nz-page-header-extra>
@@ -27,7 +27,7 @@
         <th>Min ilvl</th>
         <th>Max ilvl</th>
         <th>Tracked</th>
-        <th>Days <i nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Select the days for task appear on checklist. Leave blank for all days."></i></th>
+        <th>Days <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Select the days for task appear on checklist. Leave blank for all days."></span></th>
         <th>Manage</th>
       </tr>
       </thead>

@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "files": [],
-  "include": [
-    "./src/types/*.ts"
-  ],
+  "include": ["./src/types/*.ts"],
   "references": [
     {
       "path": "./tsconfig.app.json"
@@ -23,7 +21,8 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "target": "es2020"
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,
