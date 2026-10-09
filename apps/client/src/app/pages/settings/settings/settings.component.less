@@ -1,8 +1,34 @@
-:host ::ng-deep {
-  .ant-table-body {
-    overflow-x: hidden;
-    overflow-y: auto;
+// Title on the left edge of the cards; on a phone the subtitle goes so the title fits
+:host ::ng-deep .settings-header.ant-page-header {
+  padding-left: 0;
+  padding-right: 0;
+
+  .ant-page-header-heading-extra {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
   }
+
+  @media (max-width: 575px) {
+    .ant-page-header-heading-sub-title {
+      display: none;
+    }
+  }
+}
+
+// The User ID wraps on a narrow screen instead of running off it
+.user-id {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.setting-info {
+  margin-left: 4px;
+}
+
+.card-help {
+  margin-bottom: 10px;
+  opacity: .75;
 }
 
 .task-name {
@@ -25,12 +51,55 @@
 
 .import-errors {
   color: #ff4d4f;
-  margin: 0 0 10px;
+  margin: 6px 0 0;
+}
+
+.import-details {
+  margin-bottom: 10px;
+
+  summary {
+    cursor: pointer;
+  }
+}
+
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Lazy tasks and Rest bonus: the Task column is pinned by nz-table (nzLeft) and the rest scrolls sideways
+:host ::ng-deep .pinned-grid table {
+  min-width: 100%;
+}
+
+.grid-cell {
+  text-align: center;
+}
+
+:host ::ng-deep .rest-input {
+  width: 64px;
+}
+
+.rest-show-hidden {
+  margin-right: 8px;
+}
+
+// On narrow screens the Rest bonus controls move under the title instead of squeezing it
+:host ::ng-deep .rest-card {
+  .ant-card-head-wrapper {
+    flex-wrap: wrap;
+  }
+
+  .ant-card-head-title {
+    flex: 1 0 auto;
+  }
 }
 
 // Task tracking grid: scrolls sideways with the Task column pinned on the left (same approach as the checklist)
 :host ::ng-deep .tracking-table {
-  .ant-table-body {
+  .ant-table-body,
+  .ant-table-content {
     overflow-x: auto;
   }
 
@@ -79,9 +148,23 @@
   font-size: 11px;
   line-height: 1.2;
 
+  // Long names end in an ellipsis; the full name is in the title tooltip
   .character-name {
     display: block;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &.hidden-character {
+    .character-name,
+    .character-ilvl {
+      opacity: .55;
+    }
+  }
+
+  .hidden-icon {
+    margin-right: 2px;
   }
 
   .character-ilvl {
@@ -99,10 +182,21 @@
   opacity: 0.45;
 }
 
+// Reset buttons look like small links
 .tracking-reset {
   display: block;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #177ddc;
   font-size: 10px;
   line-height: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: #3c9ae8;
+  }
 }
 
 .ilvl-too-low {

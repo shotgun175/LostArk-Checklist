@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from "@angular/core";
-import { combineLatest, map, Observable, pluck } from "rxjs";
+import { BehaviorSubject, combineLatest, map, Observable, pluck } from "rxjs";
+import { NgModel } from "@angular/forms";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
 import { LostarkTask } from "../../../model/lostark-task";
@@ -28,21 +29,38 @@ import {
   isTaskTracked
 } from "../../../core/task-tracking";
 import { AccountDeletionService } from "../../../core/account/account-deletion.service";
-import { authErrorMessage } from "../../../core/firebase/auth-errors";
-import { characterFlagKey, readCharacterFlag } from "../../../core/character-keys";
+import { authErrorMessage, WRONG_CREDENTIALS } from "../../../core/firebase/auth-errors";
+import { characterFlagKey, characterKey, readCharacterFlag } from "../../../core/character-keys";
+import { normalizeRestBonus, restBonusMax } from "./rest-bonus";
 
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
 const TRACKING_CHARACTER_COLUMN_WIDTH = 64;
 
+/** Lazy tasks and Rest bonus column widths in px: they scroll sideways with the Task column pinned, like the Task tracking grid. */
+const TASK_COLUMN_WIDTH = 160;
+const LAZY_CHARACTER_COLUMN_WIDTH = 110;
+const REST_CHARACTER_COLUMN_WIDTH = 84;
+
 /** localStorage key that remembers whether the Older raids group of the Task tracking grid is expanded. */
 const OLDER_RAIDS_OPEN_KEY = "settings:olderRaidsOpen";
 
-function readOlderRaidsOpen(): boolean {
+/** localStorage key that remembers whether Rest bonus also shows characters marked Hide on the Roster page. */
+const REST_SHOW_HIDDEN_KEY = "settings:restBonusShowHidden";
+
+function readStoredFlag(key: string): boolean {
   try {
-    return localStorage.getItem(OLDER_RAIDS_OPEN_KEY) === "true";
+    return localStorage.getItem(key) === "true";
   } catch {
     return false;
+  }
+}
+
+function storeFlag(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // Storage can be blocked (private mode, site data off); the choice then just lasts for this visit.
   }
 }
 
@@ -68,10 +86,6 @@ export class SettingsComponent {
     map(roster => roster.characters.filter(c => c.lazy))
   );
 
-  public fullRoster$ = this.rosterService.roster$.pipe(
-    pluck("characters")
-  );
-
   public rawRoster$ = this.rosterService.roster$;
 
   public lazyFlags$ = combineLatest([
@@ -81,7 +95,7 @@ export class SettingsComponent {
   ]).pipe(
     map(([tasks, roster, tracking]) => {
       return tasks
-        .filter(task => task.frequency === TaskFrequency.DAILY && task.scope === TaskScope.CHARACTER)
+        .filter(task => task.frequency === TaskFrequency.DAILY && task.scope === TaskScope.CHARACTER && task.enabled !== false)
         .map(task => {
           return {
             task,
@@ -95,23 +109,43 @@ export class SettingsComponent {
     })
   );
 
+  public lazyTable = {
+    taskColumnWidth: `${TASK_COLUMN_WIDTH}px`,
+    characterColumnWidth: `${LAZY_CHARACTER_COLUMN_WIDTH}px`
+  };
+
+  public restShowHidden$ = new BehaviorSubject<boolean>(readStoredFlag(REST_SHOW_HIDDEN_KEY));
+
   public restBonus$ = combineLatest([
     this.tasksService.tasks$,
     this.rosterService.roster$,
-    this.energy$
+    this.energy$,
+    this.restShowHidden$
   ]).pipe(
-    map(([tasks, roster, energy]) => {
-      return tasks
+    map(([tasks, roster, energy, showHidden]) => {
+      // The headers, the cells and the writes all use this one list, so a cell always belongs to its column's character
+      const characters = roster.characters.filter(c => showHidden || !c.isHide);
+      const rows = tasks
         .filter(task => task.frequency === TaskFrequency.DAILY
           && task.scope === TaskScope.CHARACTER
+          && task.enabled !== false
           && !task.custom
           && ["Chaos", "Guardian", "Una"].some(n => task.label?.startsWith(n)))
         .map(task => {
           return {
             task,
-            energy: roster.characters.map(c => getCompletionEntry(energy.data, c, task)?.amount || 0)
+            max: restBonusMax(task.label),
+            energy: characters.map(c => getCompletionEntry(energy.data, c, task)?.amount || 0)
           };
         });
+      return {
+        characters,
+        rows,
+        hiddenCount: roster.characters.filter(c => c.isHide).length,
+        taskColumnWidth: `${TASK_COLUMN_WIDTH}px`,
+        characterColumnWidth: `${REST_CHARACTER_COLUMN_WIDTH}px`,
+        scroll: { x: `${TASK_COLUMN_WIDTH + REST_CHARACTER_COLUMN_WIDTH * characters.length}px` }
+      };
     })
   );
 
@@ -148,8 +182,7 @@ export class SettingsComponent {
         taskColumnWidth: `${TRACKING_TASK_COLUMN_WIDTH}px`,
         characterColumnWidth: `${TRACKING_CHARACTER_COLUMN_WIDTH}px`,
         scroll: {
-          x: `${TRACKING_TASK_COLUMN_WIDTH + TRACKING_CHARACTER_COLUMN_WIDTH * roster.characters.length}px`,
-          y: "300px"
+          x: `${TRACKING_TASK_COLUMN_WIDTH + TRACKING_CHARACTER_COLUMN_WIDTH * roster.characters.length}px`
         }
       };
     })
@@ -172,7 +205,10 @@ export class SettingsComponent {
 
   public readonly deleteBusy = signal(false);
 
-  public olderRaidsOpen = readOlderRaidsOpen();
+  /** The delete confirm opens from the button or from Enter in the password field. */
+  public deleteConfirmVisible = false;
+
+  public olderRaidsOpen = readStoredFlag(OLDER_RAIDS_OPEN_KEY);
 
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
@@ -188,17 +224,44 @@ export class SettingsComponent {
     return row.task.label;
   }
 
+  /** Columns are tracked by character id (name when there is none), so a write does not rebuild every column. */
+  trackCharacter(character: Character): string {
+    return characterKey(character);
+  }
+
+  lazyScrollX(characterCount: number): string {
+    return `${TASK_COLUMN_WIDTH + LAZY_CHARACTER_COLUMN_WIDTH * characterCount}px`;
+  }
+
+  /** "1 character", "2 characters"; the plural is the singular plus "s" unless given. */
+  countLabel(count: number, singular: string, plural = `${singular}s`): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
   setLazyFlag(settingsKey: string, tracking: Record<string, boolean>, task: LostarkTask, character: Character, flag: boolean): void {
     const flagName = characterFlagKey(character, task.$key);
     tracking[flagName] = flag;
     this.settings.patchFields(settingsKey, [{ path: ["lazytracking", flagName], value: flag }]);
   }
 
-  setRestBonus(energy: Energy, task: LostarkTask, character: Character, value: number): void {
+  /**
+   * Saves a rest bonus cell. When the typed value is changed on the way (cleared, a decimal, out of range),
+   * the cell is set to the saved value right away: the table's own value may not change, so it would not redraw.
+   */
+  setRestBonus(energy: Energy, task: LostarkTask, character: Character, value: number | null, cell: NgModel): void {
+    const amount = normalizeRestBonus(value, restBonusMax(task.label));
+    if (amount !== value) {
+      cell.control.setValue(amount, { emitViewToModelChange: false });
+    }
     this.energyService.patchFields(energy.$key, [{
       path: ["data", getCompletionEntryKey(character, task)],
-      value: { amount: Math.max(Math.min(task.label === 'Chaos Dungeon' ? 200 : 100, value), 0) }
+      value: { amount }
     }]);
+  }
+
+  setRestShowHidden(show: boolean): void {
+    storeFlag(REST_SHOW_HIDDEN_KEY, show);
+    this.restShowHidden$.next(show);
   }
 
   setTrackedTask(roster: Roster, task: LostarkTask, character: Character, value: boolean): void {
@@ -243,15 +306,47 @@ export class SettingsComponent {
 
   toggleOlderRaids(): void {
     this.olderRaidsOpen = !this.olderRaidsOpen;
-    try {
-      localStorage.setItem(OLDER_RAIDS_OPEN_KEY, String(this.olderRaidsOpen));
-    } catch {
-      // Storage can be blocked (private mode, site data off); the group then just opens for this visit.
+    storeFlag(OLDER_RAIDS_OPEN_KEY, this.olderRaidsOpen);
+  }
+
+  /** A row menu that opens moves focus to its first item, and focus goes back to its button when it closes. */
+  onTaskMenuVisibleChange(visible: boolean, button: HTMLButtonElement): void {
+    if (visible) {
+      requestAnimationFrame(() => this.focusTaskMenuItem(0));
+    } else if (!document.activeElement || document.activeElement === document.body || document.activeElement.closest(".task-menu")) {
+      button.focus();
     }
+  }
+
+  /** Arrow keys move between the row menu items, Enter or Space picks one. */
+  onTaskMenuKeydown(event: KeyboardEvent): void {
+    const items = this.taskMenuItems();
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      this.focusTaskMenuItem((index + step + items.length) % items.length);
+    } else if ((event.key === "Enter" || event.key === " ") && index >= 0) {
+      event.preventDefault();
+      items[index].click();
+    }
+  }
+
+  private taskMenuItems(): HTMLElement[] {
+    return Array.from(document.querySelectorAll<HTMLElement>(".ant-dropdown .task-menu li[tabindex]"))
+      .filter(item => !item.classList.contains("ant-dropdown-menu-item-disabled") && !item.classList.contains("ant-menu-item-disabled"));
+  }
+
+  private focusTaskMenuItem(index: number): void {
+    this.taskMenuItems()[index]?.focus();
   }
 
   resetBonuses(key: string): void {
     this.energyService.setOne(key, { data: {}, updated: Date.now() });
+  }
+
+  cancelImport(): void {
+    this.pendingImport = null;
   }
 
   async onImportFileSelected(input: HTMLInputElement): Promise<void> {
@@ -290,6 +385,13 @@ export class SettingsComponent {
     });
   }
 
+  /** Enter in the password field opens the same confirm as the button. */
+  requestDelete(): void {
+    if (this.deletePassword() && !this.deleteBusy()) {
+      this.deleteConfirmVisible = true;
+    }
+  }
+
   async deleteAccount(): Promise<void> {
     this.deleteBusy.set(true);
     try {
@@ -301,7 +403,9 @@ export class SettingsComponent {
     } catch (error) {
       this.deleteBusy.set(false);
       console.error(error);
-      this.message.error(authErrorMessage(error));
+      const message = authErrorMessage(error);
+      // Here only the password can be wrong, since the email is the signed-in account's own
+      this.message.error(message === WRONG_CREDENTIALS ? "That password is not right." : message);
     }
   }
 }
