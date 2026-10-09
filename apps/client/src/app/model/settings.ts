@@ -7,6 +7,7 @@ export interface ManualWeeklyGoldEntry {
 
 export interface Settings extends DataModel {
   hiddenOnCompletion: boolean;
+  // No longer used (Affinity is always 5). Kept so old exports and backups import, and new accounts keep their key count.
   crystallineAura: boolean;
   lazytracking: Record<string, boolean>;
   manualGoldEntries: Record<string, ManualWeeklyGoldEntry>;

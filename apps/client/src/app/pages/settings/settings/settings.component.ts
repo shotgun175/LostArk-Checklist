@@ -321,7 +321,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  saveSetting(settings: Settings, field: "crystallineAura" | "hiddenOnCompletion"): void {
+  saveSetting(settings: Settings, field: "hiddenOnCompletion"): void {
     this.settings.patchFields(settings.$key, [{ path: [field], value: settings[field] }]);
   }
 

@@ -13,11 +13,6 @@
   <div>
     <div nz-row [nzGutter]="[10, 10]">
       <div nz-col nzMd="24">
-        <label nz-checkbox [(ngModel)]="settings.crystallineAura"
-          (ngModelChange)="saveSetting(settings, 'crystallineAura')">Crystalline Aura</label>
-        <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Rapport (Affinity) allows 6 actions a day instead of 5" class="setting-info"></span>
-      </div>
-      <div nz-col nzMd="24">
         <label nz-checkbox [(ngModel)]="settings.hiddenOnCompletion" (ngModelChange)="saveSetting(settings, 'hiddenOnCompletion')">Hide on completion</label>
         <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide task when it has been completed, instead of mark it only visually completed" class="setting-info"></span>
       </div>

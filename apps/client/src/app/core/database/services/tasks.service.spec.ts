@@ -1,5 +1,8 @@
 import { from, toArray, firstValueFrom } from "rxjs";
-import { renameUserTask, skipDeletedTaskList, upgradeUserTask } from "./tasks.service";
+import { renameUserTask, skipDeletedTaskList, upgradeUserTask, withDailyAmount } from "./tasks.service";
+import { isTaskDone } from "../../is-task-done";
+import { Character } from "../../../model/character/character";
+import { Completion } from "../../../model/completion";
 import { defaultOffTaskLabels, tasks } from "../../tasks";
 import { isRaidTask } from "../../task-tracking";
 import { TaskScope } from "../../../model/task-scope";
@@ -86,5 +89,36 @@ describe("skipDeletedTaskList", () => {
 
   it("drops an empty list after tasks were seen, so the defaults are not created for a deleted account", async () => {
     expect((await run([list(2), list(1), [], list(3)])).map(l => l.length)).toEqual([2, 1, 3]);
+  });
+});
+
+describe("withDailyAmount", () => {
+  const affinity = (label: string): LostarkTask => ({ ...(tasks.find(t => t.label === label) as LostarkTask), $key: `key-${label}` });
+
+  it("has 5 as the built-in amount of Affinity Song and Affinity Emote", () => {
+    expect(affinity("Affinity Song").amount).toBe(5);
+    expect(affinity("Affinity Emote").amount).toBe(5);
+  });
+
+  it("counts a user's built-in Affinity copy stored with 6 (the old Crystalline Aura amount) to 5", () => {
+    ["Affinity Song", "Affinity Emote"].forEach(label => {
+      expect(withDailyAmount({ ...affinity(label), amount: 6 }, new Date()).amount).toBe(5);
+    });
+  });
+
+  it("leaves the amount of a custom task named Affinity alone", () => {
+    expect(withDailyAmount({ ...affinity("Affinity Song"), amount: 6, custom: true }, new Date()).amount).toBe(6);
+  });
+
+  it("still shows a stored 6 of 6 Affinity completion as done", () => {
+    const task = withDailyAmount({ ...affinity("Affinity Song"), amount: 6 }, new Date());
+    const character = { name: "Synthchar", ilvl: 1700 } as Character;
+    const dailyReset = Date.now() - 60_000;
+    const completion = { data: { [task.$key as string]: { amount: 6, updated: Date.now() } } } as unknown as Completion;
+    const done = isTaskDone(task, character, completion, dailyReset, dailyReset, dailyReset, dailyReset, {});
+    expect(done).toBe(6);
+    // The Checklist shows Math.min(done, amount) and treats done >= amount as finished.
+    expect(Math.min(done, task.amount)).toBe(5);
+    expect(done >= task.amount).toBe(true);
   });
 });
