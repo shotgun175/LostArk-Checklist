@@ -81,6 +81,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - Two characters can now have the same name. Checkmarks or rest bonus still saved under a character's name (very old data) move to the character itself the next time the Checklist loads; if two characters share that name, each gets its own copy. Nothing else changes.
 - If two characters of an older roster share an internal id (a past bug when adding characters), the second one gets a new id the next time the site loads, so editing one no longer overwrites the other. Its checkmarks, rest bonus and per-character choices were shared with the other character, so they start fresh for it.
 - Classes saved as numbers by a backup restore now show in the Roster class picker.
+- Account records from older versions of this site still held unused fields (friends, region, availability). They are removed the next time you sign in or the site loads, so only your display name is stored there. Nothing you see changes.
 - Class names now match the Global client: Arcana shows as **Arcanist** and Scouter as **Machinist**. Saved characters do not change.
 
 ## Signing in and syncing
