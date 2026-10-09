@@ -5,7 +5,6 @@ import { capGoldTracking } from '../gold-cap';
 import { tasks as defaultTasks } from '../../../core/tasks';
 import { LostarkTask } from '../../../model/lostark-task';
 import { Character } from '../../../model/character/character';
-import { SettingsService } from '../../../core/database/services/settings.service';
 import { applyFieldWrites, FieldWrite } from '../../../core/database/write-coalescer';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
@@ -47,7 +46,7 @@ describe('GoldPlannerComponent gold cap', () => {
     const component = new GoldPlannerComponent(
       { roster$ } as never,
       { tasks$: of(tasks) } as never,
-      { settings$, patchFields, getRunningModeFlag: SettingsService.prototype.getRunningModeFlag } as never,
+      { settings$, patchFields } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: {} }) } as never,
       { showHiddenCharacters$: of(false) } as never,
@@ -121,8 +120,7 @@ describe('GoldPlannerComponent gold this week', () => {
           raidModesForGoldPlanner: { 'Arwen:runningMode:Kazeros Gate 1': 'HM', 'Arwen:runningMode:Kazeros Gate 2': 'HM' },
           manualGoldEntries: {}
         }),
-        patchFields: jest.fn(),
-        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+        patchFields: jest.fn()
       } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: { '1:Kazeros': { amount: 1, updated: 10 } } }) } as never,
@@ -194,8 +192,7 @@ describe('GoldPlannerComponent with two characters of the same name', () => {
           raidModesForGoldPlanner: {},
           manualGoldEntries: { 'chaos:1': { amount: 100, timestamp: 10 }, 'chaos:2': { amount: 200, timestamp: 10 }, 'other:2': { amount: 5, timestamp: 10 } }
         }),
-        patchFields: jest.fn(),
-        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+        patchFields: jest.fn()
       } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: {} }) } as never,
@@ -221,8 +218,7 @@ describe('GoldPlannerComponent saving the counted mode', () => {
       { tasks$: of(tasks) } as never,
       {
         settings$: of({ $key: 'settings-key', goldPlannerConfiguration: {}, raidModesForGoldPlanner: raidModes, manualGoldEntries: {} }),
-        patchFields,
-        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+        patchFields
       } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: {} }) } as never,
