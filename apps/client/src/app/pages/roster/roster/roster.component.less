@@ -1,5 +1,7 @@
 .class-selector {
   min-width: 200px;
+  // The list centres its actions; the chosen class reads better left-aligned, like the dropdown
+  text-align: left;
 }
 
 .note-editor {
@@ -7,10 +9,6 @@
 
   textarea {
     line-height: 1.37;
-  }
-
-  @media screen and (max-width: 1150px){
-    display: none;
   }
 }
 
@@ -58,15 +56,148 @@
   }
 }
 
-// While the note is hidden the row can be wider than the card: the actions start 36px closer
-// (the grip's width), so the row is no wider than it was before the grip.
-@media screen and (max-width: 1150px) {
-  :host ::ng-deep .ant-list-item-action {
+// The row layout follows the list's own width (it changes with the sidebar), not the screen's.
+.roster-list {
+  display: block;
+  container-type: inline-size;
+}
+
+// Narrower than a landscape screen (for example 1080 portrait): the note gets its own full-width
+// line under the character, and the actions wrap instead of pushing Delete past the card.
+@container (max-width: 1100px) {
+  :host ::ng-deep .roster-list .ant-list-item {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  // The actions take the space left of the character, not half of it
+  .character-meta {
+    flex: none;
+  }
+
+  // Lined up with the name, past the grip (its 24px width plus 12px margin)
+  .note-editor {
+    order: 10;
+    flex: 1 1 100%;
+    margin-inline-start: 36px;
+  }
+
+  :host ::ng-deep .roster-list .ant-list-item-action {
+    flex: 1 1 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px 16px;
     margin-inline-start: 12px;
+
+    > li {
+      padding: 0;
+    }
+
+    // Separators would dangle at the end of a wrapped line; the gap spaces the actions instead
+    .ant-list-item-action-split {
+      display: none;
+    }
+  }
+}
+
+// Phone width: a stacked card. Name and item level, then the switches, then class and Delete
+// on one full-width line, then the note.
+@container (max-width: 560px) {
+  .character-meta {
+    flex: 1 1 0;
+    min-width: 0;
+
+    .character-name-input {
+      width: 100%;
+    }
+  }
+
+  :host ::ng-deep .roster-list .ant-list-item-action {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    margin-inline-start: 0;
+
+    // The class select takes most of a line, so it always starts a new one, with Delete beside it
+    > li:nth-last-child(2) {
+      flex: 1 0 70%;
+    }
+  }
+
+  .note-editor {
+    margin-inline-start: 0;
+  }
+
+  .class-selector {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+// Add form: a labelled field per value, side by side while they fit
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 16px;
+
+  nz-form-item {
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .name-field {
+    width: 240px;
+  }
+
+  .ilvl-field {
+    width: 180px;
+  }
+
+  .class-field {
+    width: 240px;
+
+    .class-selector {
+      width: 100%;
+    }
+  }
+
+  .check-field {
+    height: 32px;
+    align-items: center;
+  }
+
+  .add-button {
+    margin-bottom: 16px;
   }
 }
 
 :host ::ng-deep .cdk-drop-list-dragging,
 :host ::ng-deep .cdk-drop-list-dragging * {
   cursor: grabbing;
+}
+
+// When the title and the buttons do not fit on one line, the buttons move below the title
+// instead of cutting it off, and the subtitle can go under the title.
+:host ::ng-deep .ant-page-header-heading {
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .ant-page-header-heading-left {
+  flex-wrap: wrap;
+
+  .ant-page-header-heading-sub-title {
+    white-space: normal;
+  }
+}
+
+:host ::ng-deep .ant-page-header-heading-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+
+  > * {
+    margin-inline-start: 0;
+  }
 }
