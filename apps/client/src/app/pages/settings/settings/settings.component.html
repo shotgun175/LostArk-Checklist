@@ -148,8 +148,10 @@
                         (nzOnConfirm)="resetBonuses(energy.$key)">Reset all bonuses
                       </button>
                     </ng-template>
-                    @if (restBonus.characters.length === 0) {
+                    @if (restBonus.characters.length === 0 && restBonus.hiddenCount === 0) {
                       <ng-container *ngTemplateOutlet="noCharacters"></ng-container>
+                    } @else if (restBonus.characters.length === 0) {
+                      <nz-empty nzNotFoundContent="All your characters are hidden. Tick Show hidden characters to edit their rest bonus."></nz-empty>
                     } @else {
                       <div class="pinned-grid">
                         <nz-table #restTable [nzData]="restBonus.rows"
