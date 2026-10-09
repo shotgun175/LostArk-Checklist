@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
 import { LAHUser } from "../../../model/lah-user";
-import { Firestore } from "firebase/firestore";
+import { deleteField, FieldValue, Firestore, UpdateData } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { AuthService } from "./auth.service";
 import { combineLatest, EMPTY, filter, map, Observable, of, scan, shareReplay, switchMap, take } from "rxjs";
@@ -17,6 +17,9 @@ export class UserService extends FirestoreStorage<LAHUser> {
   /** True while the display name popup is open, so a second one does not open on top of it. */
   updatingUserName = false;
 
+  /** Users documents already cleaned on this page, so a replayed copy is not cleaned twice. */
+  private readonly cleanedUsers = new Set<string>();
+
   public user$ = combineLatest([
     this.auth.uid$,
     this.auth.isAnonymous$
@@ -30,6 +33,7 @@ export class UserService extends FirestoreStorage<LAHUser> {
     switchMap(({ uid, anonymous, registeredInPlace }) => {
       return this.getOne(uid).pipe(
         switchMap(user => {
+          this.removeLeftoverFields(user);
           // While an account is deleted its users document disappears before the auth account
           // does; asking for a display name then would open a popup that cannot be closed.
           if (!anonymous && !user.name && !registeredInPlace && !FirestoreStorage.writesArePaused()) {
@@ -85,6 +89,27 @@ export class UserService extends FirestoreStorage<LAHUser> {
       filter(name => name.length > 0),
       switchMap(name => this.setOne(user.$key, { name }).pipe(map(() => name)))
     );
+  }
+
+  /**
+   * Removes fields this app no longer uses (friends, region, availability and the like, left by
+   * Lostark-helper) from an existing users document, in one write. A clean or missing document is
+   * not written, and nothing is written while writes are paused (account deletion, import).
+   */
+  private removeLeftoverFields(user: LAHUser): void {
+    if (user.notFound || this.cleanedUsers.has(user.$key) || FirestoreStorage.writesArePaused()) {
+      return;
+    }
+    const leftovers = Object.keys(user).filter(key => !["$key", "name"].includes(key));
+    if (leftovers.length === 0) {
+      return;
+    }
+    this.cleanedUsers.add(user.$key);
+    const deletes: Record<string, FieldValue> = {};
+    leftovers.forEach(key => deletes[key] = deleteField());
+    this.updateOne(user.$key, deletes as UpdateData<LAHUser>).subscribe({
+      error: (error: unknown) => console.error("Could not remove old fields from the users document:", error)
+    });
   }
 
   constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService,

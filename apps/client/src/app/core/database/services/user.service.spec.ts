@@ -1,6 +1,7 @@
 import { TestBed } from "@angular/core/testing";
 import { BehaviorSubject, of, Subject } from "rxjs";
 import { NzModalService } from "ng-zorro-antd/modal";
+import { updateDoc } from "firebase/firestore";
 import { docData$ } from "../../firebase/rx";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { FirestoreStorage } from "../firestore-storage";
@@ -14,7 +15,9 @@ jest.mock("firebase/firestore", () => {
   const ref = (path: string) => ({ path, withConverter() { return this; } });
   return {
     collection: jest.fn((_firestore: unknown, name: string) => ref(name)),
-    doc: jest.fn((_firestore: unknown, name: string, key: string) => ref(`${name}/${key}`))
+    doc: jest.fn((_firestore: unknown, name: string, key: string) => ref(`${name}/${key}`)),
+    updateDoc: jest.fn(() => Promise.resolve()),
+    deleteField: jest.fn(() => "<deleteField>")
   };
 });
 jest.mock("../../firebase/rx", () => ({ docData$: jest.fn(), collectionData$: jest.fn(), authState$: jest.fn() }));
@@ -56,6 +59,71 @@ describe("UserService.user$", () => {
     FirestoreStorage.pauseWrites();
     userDoc.next(undefined);
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("UserService.user$ cleaning leftover fields", () => {
+  let userDoc: Subject<unknown>;
+  let isAnonymous$: BehaviorSubject<boolean>;
+  let service: UserService;
+
+  beforeEach(() => {
+    jest.mocked(updateDoc).mockClear();
+    userDoc = new Subject<unknown>();
+    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    isAnonymous$ = new BehaviorSubject(true);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of("u1"), isAnonymous$ } },
+        { provide: NzModalService, useValue: { create: jest.fn(() => ({ afterClose: new Subject<string>() })) } }
+      ]
+    });
+    service = TestBed.inject(UserService);
+  });
+
+  afterEach(() => {
+    FirestoreStorage.resumeWrites();
+  });
+
+  // The live listener adds $key to every document it reads.
+  const dirty = { $key: "u1", name: "Synthetic Sorc", friends: ["x"], region: "EUC", availability: {} };
+
+  it("removes every field but name with one write, once", () => {
+    service.user$.subscribe();
+    userDoc.next(dirty);
+    // A guest who registers in place replays the same document before the write lands.
+    isAnonymous$.next(false);
+    userDoc.next({ ...dirty, version: 2 });
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+    expect(jest.mocked(updateDoc).mock.calls[0][0]).toEqual(expect.objectContaining({ path: "users/u1" }));
+    expect(jest.mocked(updateDoc).mock.calls[0][1]).toEqual({
+      friends: "<deleteField>",
+      region: "<deleteField>",
+      availability: "<deleteField>"
+    });
+  });
+
+  it("writes nothing for a document that has only a name", () => {
+    service.user$.subscribe();
+    userDoc.next({ $key: "u1", name: "Synthetic Sorc" });
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing for a missing document", () => {
+    service.user$.subscribe();
+    userDoc.next(undefined);
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing while writes are paused, and cleans on the next load after they resume", () => {
+    service.user$.subscribe();
+    FirestoreStorage.pauseWrites();
+    userDoc.next(dirty);
+    expect(updateDoc).not.toHaveBeenCalled();
+    FirestoreStorage.resumeWrites();
+    userDoc.next({ ...dirty, region: "NAE" });
+    expect(updateDoc).toHaveBeenCalledTimes(1);
   });
 });
 
