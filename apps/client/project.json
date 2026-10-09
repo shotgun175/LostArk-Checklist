@@ -20,6 +20,7 @@
         "inlineStyleLanguage": "less",
         "assets": [
           "apps/client/src/favicon.ico",
+          "apps/client/src/manifest.webmanifest",
           "apps/client/src/assets",
           {
             "glob": "export-from-lostark-helper.js",
