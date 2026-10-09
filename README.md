@@ -47,8 +47,8 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - At most 6 characters can have **Weekly Gold**, as in the game. Once 6 have it, the box is disabled on the others until you untick one.
 - A new character gets Weekly Gold only while fewer than 6 characters have it.
 - A roster that already has more than 6 (for example from an import) shows a warning on the Roster page; nothing is unticked for you.
-- Names are trimmed, invisible characters are removed and they are at most 16 characters long. An empty name or a name another character already has is refused, and the old name shows again. Item levels go from 0 to 2000.
-- Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character, not its name, so renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
+- Names are trimmed, invisible characters are removed and they are at most 16 characters long. An empty name is refused, and the old name shows again. Two characters can have the same name, since names are unique only per region (one on NA and one on EU, for example). Item levels go from 0 to 2000.
+- Checkmarks, rest bonus, task tracking, lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character (its internal id), not its name, so two characters with the same name keep their own, and renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
 - **Import roster** replaces every character in the roster. It checks each character first (an id, a name, a numeric item level and a known class) and lists what is wrong instead of importing a bad paste.
 - Class names are the ones the Global client uses (for example Arcanist, Machinist, Guardian Knight), in alphabetical order. Base classes (Warrior, Mage, Gunner, Assassin) are not offered, but a character saved with one still shows it.
 - On a narrower screen (for example a 1080 monitor in portrait) each character's note moves to its own line under the character. At phone width each character is a stacked card.
@@ -77,6 +77,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - **Howl's Hourglass** is now spelled **Haal's Hourglass**. Your existing task is renamed in place, so its checkmarks and tracking choices carry over and no duplicate appears.
 - **Weekly Mission** is gone. It no longer exists in the game, so it is removed from the built-in list and from existing accounts the next time the site loads.
 - Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts were saved under the character's name. The first time the site loads they move to the character itself, so a rename keeps them. Nothing else changes.
+- Two characters can now have the same name. Checkmarks or rest bonus still saved under a character's name (very old data) move to the character itself the next time the Checklist loads; if two characters share that name, each gets its own copy. Nothing else changes.
 - If two characters of an older roster share an internal id (a past bug when adding characters), the second one gets a new id the next time the site loads, so editing one no longer overwrites the other. Its checkmarks, rest bonus and per-character choices were shared with the other character, so they start fresh for it.
 - Classes saved as numbers by a backup restore now show in the Roster class picker.
 - Class names now match the Global client: Arcana shows as **Arcanist** and Scouter as **Machinist**. Saved characters do not change.
