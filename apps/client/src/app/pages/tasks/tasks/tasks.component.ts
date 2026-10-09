@@ -131,12 +131,17 @@ export class TasksComponent {
     this.setPinColumns();
   }
 
+  /** One handler: Angular binds only the last of several listeners for the same event. */
   @HostListener("window:resize")
+  onResize(): void {
+    this.setTableHeight();
+    this.setPinColumns();
+  }
+
   setPinColumns(): void {
     this.pinColumns = window.innerWidth >= 900;
   }
 
-  @HostListener("window:resize")
   setTableHeight(): void {
     const computed = window.innerHeight
       - 64 - 48 - 64 - 56 // Page Layout
