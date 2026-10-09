@@ -61,50 +61,65 @@ export class TasksComponent {
 
   public uid$ = this.authService.uid$;
 
-  public icons = [
-    "abyssal-dungeon.webp",
-    "abyssal-raid.webp",
-    "legion_raid.png",
-    "chaos-dungeon.webp",
-    "chaos_gate.png",
-    "daily.webp",
-    "ghostship.png",
-    "guardian.png",
-    "island.webp",
-    "pirate_coin.png",
-    "rapport.webp",
-    "sylmael.png",
-    "gold.png",
-    "weekly.webp",
-    "anguished.png",
-    "rift_piece.png",
-    "t1_cube.png",
-    "t2_bossrush.png",
-    "t2_cube.png",
-    "t3_bossrush.png",
-    "t3_cube.png",
-    "adventure_quest.webp",
-    "amethyst_shard.webp",
-    "chain_quest.webp",
-    "co-op_quest.webp",
-    "crystal.webp",
-    "dungeon.webp",
-    "dungeon_quest.webp",
-    "event_quest.webp",
-    "main_quest.webp",
-    "normal_quest.webp",
-    "normal_quest_end.webp",
-    "normal_quest_start.webp",
-    "stronghold_quest.webp",
-    "sudden_quest.webp",
-    "trade_skill_tool.webp",
-    "world_quest.webp",
-    "world_tree_leaves.webp",
-    "guild.webp",
-    "cardpack.png"
+  /** Task icons with a name, so the picker can show and search them. */
+  public icons: { path: string; label: string }[] = [
+    { path: "abyssal-dungeon.webp", label: "Abyssal dungeon" },
+    { path: "abyssal-raid.webp", label: "Abyssal raid" },
+    { path: "legion_raid.png", label: "Legion raid" },
+    { path: "chaos-dungeon.webp", label: "Chaos dungeon" },
+    { path: "chaos_gate.png", label: "Chaos gate" },
+    { path: "daily.webp", label: "Daily" },
+    { path: "ghostship.png", label: "Ghost ship" },
+    { path: "guardian.png", label: "Guardian raid" },
+    { path: "island.webp", label: "Island" },
+    { path: "pirate_coin.png", label: "Pirate coin" },
+    { path: "rapport.webp", label: "Rapport" },
+    { path: "sylmael.png", label: "Sylmael bloodstone" },
+    { path: "gold.png", label: "Gold" },
+    { path: "weekly.webp", label: "Weekly" },
+    { path: "anguished.png", label: "Anguished Isle" },
+    { path: "rift_piece.png", label: "Rift piece" },
+    { path: "t1_cube.png", label: "T1 cube" },
+    { path: "t2_bossrush.png", label: "T2 boss rush" },
+    { path: "t2_cube.png", label: "T2 cube" },
+    { path: "t3_bossrush.png", label: "T3 boss rush" },
+    { path: "t3_cube.png", label: "T3 cube" },
+    { path: "adventure_quest.webp", label: "Adventure quest" },
+    { path: "amethyst_shard.webp", label: "Amethyst shard" },
+    { path: "chain_quest.webp", label: "Chain quest" },
+    { path: "co-op_quest.webp", label: "Co-op quest" },
+    { path: "crystal.webp", label: "Crystal" },
+    { path: "dungeon.webp", label: "Dungeon" },
+    { path: "dungeon_quest.webp", label: "Dungeon quest" },
+    { path: "event_quest.webp", label: "Event quest" },
+    { path: "main_quest.webp", label: "Main quest" },
+    { path: "normal_quest.webp", label: "Quest" },
+    { path: "normal_quest_end.webp", label: "Quest end" },
+    { path: "normal_quest_start.webp", label: "Quest start" },
+    { path: "stronghold_quest.webp", label: "Stronghold quest" },
+    { path: "sudden_quest.webp", label: "Sudden quest" },
+    { path: "trade_skill_tool.webp", label: "Trade skill tool" },
+    { path: "world_quest.webp", label: "World quest" },
+    { path: "world_tree_leaves.webp", label: "World Tree leaves" },
+    { path: "guild.webp", label: "Guild" },
+    { path: "cardpack.png", label: "Card pack" }
+  ];
+
+  /** Day options for the Days column, Sunday first as in the saved values (0 is Sunday). */
+  public days = [
+    { value: 0, label: "Sunday", short: "Sun" },
+    { value: 1, label: "Monday", short: "Mon" },
+    { value: 2, label: "Tuesday", short: "Tue" },
+    { value: 3, label: "Wednesday", short: "Wed" },
+    { value: 4, label: "Thursday", short: "Thu" },
+    { value: 5, label: "Friday", short: "Fri" },
+    { value: 6, label: "Saturday", short: "Sat" }
   ];
 
   public tableHeight!: number;
+
+  /** Pin the grip and Name columns while the table scrolls sideways; on a narrow screen they would fill it. */
+  public pinColumns = true;
 
   constructor(private tasksService: TasksService,
               private fb: UntypedFormBuilder,
@@ -113,6 +128,12 @@ export class TasksComponent {
               private modal: NzModalService,
               private authService: AuthService) {
     this.setTableHeight();
+    this.setPinColumns();
+  }
+
+  @HostListener("window:resize")
+  setPinColumns(): void {
+    this.pinColumns = window.innerWidth >= 900;
   }
 
   @HostListener("window:resize")

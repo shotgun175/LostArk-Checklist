@@ -1,5 +1,5 @@
 @if (tasks$ | async; as tasks) {
-  <nz-page-header nzTitle="Task Manager" nzSubtitle="Manage custom tasks, enable/disable existing ones">
+  <nz-page-header nzTitle="Tasks Manager" nzSubtitle="Manage custom tasks, enable/disable existing ones">
     <nz-page-header-extra>
       <button nz-button nzType="primary" nz-popconfirm
         nzPopconfirmTitle="Track all {{ tasks.length }} tasks? Your current choices will be lost."
@@ -9,11 +9,11 @@
         nzPopconfirmTitle="Untrack all {{ tasks.length }} tasks? Your current choices will be lost."
         nzOkText="Untrack all" [nzOkDanger]="true"
         (nzOnConfirm)="setTrackAll(tasks, false)">Untrack all tasks</button>
-      <button nz-button (click)="exportTasks(tasks)" nz-tooltip nzTooltipTitle="Export custom tasks">
+      <button nz-button (click)="exportTasks(tasks)" nz-tooltip nzTooltipTitle="Export: copy your custom tasks to the clipboard" aria-label="Export custom tasks">
         <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
       @if (uid$ | async; as uid) {
-        <button nz-button (click)="importTasks(uid)" nz-tooltip nzTooltipTitle="Import custom tasks">
+        <button nz-button (click)="importTasks(uid)" nz-tooltip nzTooltipTitle="Import: paste custom tasks copied with Export" aria-label="Import custom tasks">
           <span nz-icon nzType="download" nzTheme="outline"></span>
         </button>
       }
@@ -21,21 +21,22 @@
   </nz-page-header>
   <nz-card nzTitle="Tasks">
     <nz-table #tasksTable [nzData]="tasks"
-      [nzScroll]="{y:tableHeight + 'px'}" [nzPageSize]="999" nzHideOnSinglePage
+      [nzScroll]="{x: '1530px', y: tableHeight + 'px'}" [nzPageSize]="999" nzHideOnSinglePage
       nzSize="middle">
       <thead>
         <tr>
-          <th nzWidth="36px"></th>
-          <th>Name</th>
-          <th>Icon</th>
-          <th>Frequency</th>
-          <th>Scope</th>
-          <th>Repetitions</th>
-          <th>Min ilvl</th>
-          <th>Max ilvl</th>
-          <th>Tracked</th>
-          <th>Days <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Select the days for task appear on checklist. Leave blank for all days."></span></th>
-          <th>Manage</th>
+          <!-- Fixed widths, wider than a 1080 screen: the table scrolls sideways with the grip and Name pinned -->
+          <th nzWidth="40px" [nzLeft]="pinColumns"></th>
+          <th nzWidth="250px" [nzLeft]="pinColumns">Name</th>
+          <th nzWidth="200px">Icon</th>
+          <th nzWidth="150px">Frequency</th>
+          <th nzWidth="130px">Scope</th>
+          <th nzWidth="120px">Repetitions</th>
+          <th nzWidth="120px">Min ilvl</th>
+          <th nzWidth="120px">Max ilvl</th>
+          <th nzWidth="80px">Tracked</th>
+          <th nzWidth="220px">Days <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Days this task shows on the Checklist. Leave blank for every day."></span></th>
+          <th nzWidth="100px">Manage</th>
         </tr>
       </thead>
       <tbody cdkDropList
@@ -44,7 +45,7 @@
         @for (task of tasksTable.data; track trackByTask($index, task)) {
           <tr cdkDrag [cdkDragData]="task" cdkDragPreviewClass="drag-preview" (cdkDragStarted)="matchPreviewCells()"
             [attr.data-task-key]="task.$key" [class.new-task]="task.$key === highlightKey">
-            <td class="drag-cell">
+            <td class="drag-cell" [nzLeft]="pinColumns">
               <button type="button" class="drag-handle" cdkDragHandle
                 nz-tooltip nzTooltipTitle="Drag to reorder"
                 [attr.aria-label]="'Move ' + task.label"
@@ -54,27 +55,29 @@
                 <span nz-icon nzType="holder" nzTheme="outline"></span>
               </button>
             </td>
-            <td>
+            <td [nzLeft]="pinColumns">
               <input type="text" [ngModel]="task.label" #labelModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
                 (ngModelChange)="saveTaskField(task, 'label', $event, labelModel)" [disabled]="!task.custom"
                 nz-input>
               </td>
               <td>
                 <div class="task-icon-wrapper">
-                  @if (task.iconPath) {
-                    <img src="./assets/icons/{{task.iconPath}}" alt="" class="task-icon">
-                  }
                   @if (task.custom) {
                     <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task)"
-                      nzAllowClear
-                      class="icon-select"
-                      >
-                      @for (icon of icons; track icon) {
-                        <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
-                          <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
+                      nzAllowClear nzShowSearch nzPlaceHolder="No icon"
+                      [nzCustomTemplate]="chosenIcon"
+                      class="icon-select">
+                      @for (icon of icons; track icon.path) {
+                        <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
+                          <span class="icon-option">
+                            <img src="./assets/icons/{{icon.path}}" alt="" class="task-icon">
+                            {{ icon.label }}
+                          </span>
                         </nz-option>
                       }
                     </nz-select>
+                  } @else if (task.iconPath) {
+                    <img src="./assets/icons/{{task.iconPath}}" alt="" class="task-icon">
                   }
                 </div>
               </td>
@@ -108,24 +111,23 @@
               </td>
               <td><label nz-checkbox [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task)"></label></td>
               <td>
+                <!-- All 7 days is the same as every day -->
                 <nz-select [nzDisabled]="task.canEditDaysFilter === false"
                   [nzMode]="'multiple'"
-                  [nzMaxMultipleCount]="6"
+                  [nzMaxTagCount]="2"
+                  nzPlaceHolder="Every day"
                   nzAllowClear
                   class="td-select-box"
                   [(ngModel)]="task.daysFilter"
                   (ngModelChange)="updateTask(task)">
-                  <nz-option [nzValue]="0" nzLabel="Sunday"></nz-option>
-                  <nz-option [nzValue]="1" nzLabel="Monday"></nz-option>
-                  <nz-option [nzValue]="2" nzLabel="Tuesday"></nz-option>
-                  <nz-option [nzValue]="3" nzLabel="Wednesday"></nz-option>
-                  <nz-option [nzValue]="4" nzLabel="Thursday"></nz-option>
-                  <nz-option [nzValue]="5" nzLabel="Friday"></nz-option>
-                  <nz-option [nzValue]="6" nzLabel="Saturday"></nz-option>
+                  @for (day of days; track day.value) {
+                    <nz-option [nzValue]="day.value" [nzLabel]="day.short" nzCustomContent>{{ day.label }}</nz-option>
+                  }
                 </nz-select>
               </td>
               <td>
-                <button nz-button nzDanger [disabled]="!task.custom" nz-popconfirm nzPopconfirmTitle="Are you sure?"
+                <button nz-button nzDanger [disabled]="!task.custom" nz-popconfirm nzPopconfirmTitle="Delete {{ task.label }}?"
+                  nzOkText="Delete" [nzOkDanger]="true"
                   (nzOnConfirm)="removeTask(task)">
                   Delete
                 </button>
@@ -139,83 +141,94 @@
 
 @if (uid$ | async; as uid) {
   <nz-card nzTitle="Add a custom task">
-    <form nz-form [formGroup]="form" (ngSubmit)="addTask(uid)" nzLayout="inline">
-      <nz-form-item>
+    <form nz-form nzLayout="vertical" class="add-form" [formGroup]="form" (ngSubmit)="addTask(uid)">
+      <nz-form-item class="name-field">
+        <nz-form-label nzFor="add-task-label">Name</nz-form-label>
         <nz-form-control nzErrorTip="Please input a task name">
           <nz-input-wrapper>
-            <span nz-icon nzInputPrefix nzType="user"></span>
-            <input type="text" nz-input formControlName="label" placeholder="Name" />
+            <span nz-icon nzInputPrefix nzType="edit"></span>
+            <input type="text" nz-input id="add-task-label" formControlName="label" placeholder="Task name" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
-        <nz-form-control nzErrorTip="Please input a task frequency">
-          <ng-template #imagePreview>
-            @if (form.value.iconPath) {
-              <img src="./assets/icons/{{form.value.iconPath}}" alt=""
-                class="task-icon preview">
-            }
-            @if (!form.value.iconPath) {
-              <span>Icon</span>
-            }
-          </ng-template>
-          <nz-select [nzPrefix]="imagePreview" formControlName="iconPath"
-            nzAllowClear
+      <nz-form-item class="icon-field">
+        <nz-form-label nzFor="add-task-icon">Icon</nz-form-label>
+        <nz-form-control>
+          <nz-select nzId="add-task-icon" formControlName="iconPath"
+            nzAllowClear nzShowSearch nzPlaceHolder="No icon"
+            [nzCustomTemplate]="chosenIcon"
             class="icon-select">
-            @for (icon of icons; track icon) {
-              <nz-option [nzValue]="icon" [nzLabel]="icon" nzCustomContent>
-                <img src="./assets/icons/{{icon}}" alt="" class="task-icon">
+            @for (icon of icons; track icon.path) {
+              <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
+                <span class="icon-option">
+                  <img src="./assets/icons/{{icon.path}}" alt="" class="task-icon">
+                  {{ icon.label }}
+                </span>
               </nz-option>
             }
           </nz-select>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
-        <nz-form-control nzErrorTip="Please input a task frequency">
-          <nz-select nzPrefix="Frequency" formControlName="frequency">
+      <nz-form-item class="select-field">
+        <nz-form-label nzFor="add-task-frequency">Frequency</nz-form-label>
+        <nz-form-control nzErrorTip="Please choose a task frequency">
+          <nz-select nzId="add-task-frequency" formControlName="frequency">
             <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
             <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
             <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
+            <nz-option [nzValue]="TaskFrequency.BIWEEKLY_OFFSET" nzLabel="Biweekly offset"></nz-option>
             <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
-        <nz-form-control nzErrorTip="Please input a task scope">
-          <nz-select nzPrefix="Scope" formControlName="scope">
+      <nz-form-item class="select-field">
+        <nz-form-label nzFor="add-task-scope">Scope</nz-form-label>
+        <nz-form-control nzErrorTip="Please choose a task scope">
+          <nz-select nzId="add-task-scope" formControlName="scope">
             <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
             <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item class="number-field">
+        <nz-form-label nzFor="add-task-min-ilvl">Min ilvl</nz-form-label>
         <nz-form-control nzErrorTip="Please input a minimum ilvl">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="info"></span>
-            <input type="number" nz-input formControlName="minIlvl" placeholder="Min ilvl" />
+            <input type="number" nz-input id="add-task-min-ilvl" formControlName="minIlvl" placeholder="For example 0" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item class="number-field">
+        <nz-form-label nzFor="add-task-max-ilvl">Max ilvl</nz-form-label>
         <nz-form-control nzErrorTip="Please input a maximum ilvl">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="info"></span>
-            <input type="number" nz-input formControlName="maxIlvl" placeholder="Max ilvl" />
+            <input type="number" nz-input id="add-task-max-ilvl" formControlName="maxIlvl" placeholder="For example 9999" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item class="number-field">
+        <nz-form-label nzFor="add-task-amount">Repetitions</nz-form-label>
         <nz-form-control nzErrorTip="Please input at least 1 repetition">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="number"></span>
-            <input type="number" nz-input formControlName="amount" placeholder="Repetitions" min="1" />
+            <input type="number" nz-input id="add-task-amount" formControlName="amount" placeholder="For example 1" min="1" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <button nz-button [nzType]="'primary'" [disabled]="form.invalid" [nzLoading]="saving">Add</button>
+      <button nz-button class="add-button" [nzType]="'primary'" [disabled]="form.invalid" [nzLoading]="saving">Add</button>
       @if (form.errors?.['ilvlRange']) {
         <div class="form-error">Min ilvl cannot be above Max ilvl.</div>
       }
     </form>
   </nz-card>
 }
+
+<!-- The chosen icon in a closed icon select: the picture and its name -->
+<ng-template #chosenIcon let-selected>
+  <span class="icon-option">
+    <img src="./assets/icons/{{selected.nzValue}}" alt="" class="task-icon preview">
+    {{ selected.nzLabel }}
+  </span>
+</ng-template>

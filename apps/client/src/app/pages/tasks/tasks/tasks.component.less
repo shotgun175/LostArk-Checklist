@@ -20,13 +20,28 @@ nz-card {
 }
 
 .icon-select {
-  min-width: 100px;
+  width: 180px;
 }
 
-// ng-zorro 17 shows a "picked / max" count in multiple selects that set nzMaxMultipleCount,
-// with no option to turn it off; it overlapped the Delete button, so the Days select hides it
-:host ::ng-deep .td-select-box.ant-select-multiple nz-select-arrow {
-  display: none;
+// An icon option, and the chosen icon in a closed select: the picture, then its name
+.icon-option {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: top;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.td-select-box {
+  width: 100%;
+}
+
+// The table is 1530px wide, or the card's width when that is wider
+:host ::ng-deep .ant-table-body > table {
+  min-width: 100%;
 }
 
 // ng-zorro 18 gives the empty search box a 4px width, which pushed it onto its own line
@@ -59,19 +74,84 @@ nz-card {
   }
 }
 
-// A task just added, so it can be found in a long list
+// A task just added, so it can be found in a long list. A tint over the cell's own background,
+// so the pinned cells stay solid while the rest of the row scrolls under them.
 :host ::ng-deep tr.new-task > td {
-  background: rgba(23, 125, 220, 0.25);
-  transition: background 0.3s;
+  background-image: linear-gradient(rgba(23, 125, 220, 0.25), rgba(23, 125, 220, 0.25));
+}
+
+// Add form: a labelled field per value, side by side while they fit
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 16px;
+
+  nz-form-item {
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .name-field {
+    width: 240px;
+  }
+
+  .icon-field {
+    width: 200px;
+
+    .icon-select {
+      width: 100%;
+    }
+  }
+
+  .select-field {
+    width: 160px;
+
+    nz-select {
+      width: 100%;
+    }
+  }
+
+  .number-field {
+    width: 170px;
+  }
+
+  .add-button {
+    margin-bottom: 16px;
+  }
 }
 
 .form-error {
   align-self: center;
-  margin-left: 12px;
+  margin-bottom: 16px;
   color: #a61d24;
 }
 
 :host ::ng-deep tbody.cdk-drop-list-dragging,
 :host ::ng-deep tbody.cdk-drop-list-dragging * {
   cursor: grabbing;
+}
+
+// When the title and the buttons do not fit on one line, the buttons move below the title
+// instead of cutting it off, and the subtitle can go under the title.
+:host ::ng-deep .ant-page-header-heading {
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .ant-page-header-heading-left {
+  flex-wrap: wrap;
+
+  .ant-page-header-heading-sub-title {
+    white-space: normal;
+  }
+}
+
+:host ::ng-deep .ant-page-header-heading-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+
+  > * {
+    margin-inline-start: 0;
+  }
 }
