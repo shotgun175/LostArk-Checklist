@@ -1,7 +1,7 @@
 import { TestBed } from "@angular/core/testing";
 import { BehaviorSubject, of, Subject } from "rxjs";
 import { NzModalService } from "ng-zorro-antd/modal";
-import { updateDoc } from "firebase/firestore";
+import { FieldPath, updateDoc } from "firebase/firestore";
 import { docData$ } from "../../firebase/rx";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { FirestoreStorage } from "../firestore-storage";
@@ -17,7 +17,13 @@ jest.mock("firebase/firestore", () => {
     collection: jest.fn((_firestore: unknown, name: string) => ref(name)),
     doc: jest.fn((_firestore: unknown, name: string, key: string) => ref(`${name}/${key}`)),
     updateDoc: jest.fn(() => Promise.resolve()),
-    deleteField: jest.fn(() => "<deleteField>")
+    deleteField: jest.fn(() => "<deleteField>"),
+    FieldPath: class {
+      readonly segments: string[];
+      constructor(...segments: string[]) {
+        this.segments = segments;
+      }
+    }
   };
 });
 jest.mock("../../firebase/rx", () => ({ docData$: jest.fn(), collectionData$: jest.fn(), authState$: jest.fn() }));
@@ -97,11 +103,33 @@ describe("UserService.user$ cleaning leftover fields", () => {
     userDoc.next({ ...dirty, version: 2 });
     expect(updateDoc).toHaveBeenCalledTimes(1);
     expect(jest.mocked(updateDoc).mock.calls[0][0]).toEqual(expect.objectContaining({ path: "users/u1" }));
-    expect(jest.mocked(updateDoc).mock.calls[0][1]).toEqual({
-      friends: "<deleteField>",
-      region: "<deleteField>",
-      availability: "<deleteField>"
+    expect(jest.mocked(updateDoc).mock.calls[0].slice(1)).toEqual([
+      new FieldPath("friends"), "<deleteField>",
+      new FieldPath("region"), "<deleteField>",
+      new FieldPath("availability"), "<deleteField>"
+    ]);
+  });
+
+  it("removes a field whose name has a dot as that field, not a nested one", () => {
+    service.user$.subscribe();
+    userDoc.next({ $key: "u1", name: "Synthetic Sorc", "a.b": 1 });
+    expect(jest.mocked(updateDoc).mock.calls[0].slice(1)).toEqual([new FieldPath("a.b"), "<deleteField>"]);
+  });
+
+  it("keeps the users stream working when the write throws at once", () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    jest.mocked(updateDoc).mockImplementationOnce(() => {
+      throw new Error("Document fields cannot begin and end with __");
     });
+    const seen: unknown[] = [];
+    const errors: unknown[] = [];
+    service.user$.subscribe({ next: user => seen.push(user), error: error => errors.push(error) });
+    userDoc.next({ $key: "u1", name: "Synthetic Sorc", __x__: 1 });
+    userDoc.next({ $key: "u1", name: "Synthetic Sorc 2", __x__: 1 });
+    expect(errors).toEqual([]);
+    expect(seen).toHaveLength(2);
+    expect(consoleError).toHaveBeenCalledWith("Could not remove old fields from the users document:", expect.any(Error));
+    consoleError.mockRestore();
   });
 
   it("writes nothing for a document that has only a name", () => {

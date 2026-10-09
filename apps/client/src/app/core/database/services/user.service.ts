@@ -1,10 +1,10 @@
 import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
 import { LAHUser } from "../../../model/lah-user";
-import { deleteField, FieldValue, Firestore, UpdateData } from "firebase/firestore";
+import { deleteField, FieldPath, Firestore, updateDoc } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { AuthService } from "./auth.service";
-import { combineLatest, EMPTY, filter, map, Observable, of, scan, shareReplay, switchMap, take } from "rxjs";
+import { combineLatest, defer, EMPTY, filter, map, Observable, of, scan, shareReplay, switchMap, take } from "rxjs";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { cleanDisplayName, DISPLAY_NAME_MAX_LENGTH, displayNameValidator } from "../../display-name";
@@ -94,7 +94,9 @@ export class UserService extends FirestoreStorage<LAHUser> {
   /**
    * Removes fields this app no longer uses (friends, region, availability and the like, left by
    * Lostark-helper) from an existing users document, in one write. A clean or missing document is
-   * not written, and nothing is written while writes are paused (account deletion, import).
+   * not written, and nothing is written while writes are paused (account deletion, import). Each key
+   * is a FieldPath, so a name with a dot is removed as itself, and a name Firestore rejects is only
+   * logged: it must not end the users stream.
    */
   private removeLeftoverFields(user: LAHUser): void {
     if (user.notFound || this.cleanedUsers.has(user.$key) || FirestoreStorage.writesArePaused()) {
@@ -105,9 +107,11 @@ export class UserService extends FirestoreStorage<LAHUser> {
       return;
     }
     this.cleanedUsers.add(user.$key);
-    const deletes: Record<string, FieldValue> = {};
-    leftovers.forEach(key => deletes[key] = deleteField());
-    this.updateOne(user.$key, deletes as UpdateData<LAHUser>).subscribe({
+    this.recordOperation("write", user.$key);
+    defer(() => {
+      const [field, value, ...more] = leftovers.flatMap(key => [new FieldPath(key), deleteField()]);
+      return updateDoc(this.docRef(user.$key), field as FieldPath, value, ...more);
+    }).subscribe({
       error: (error: unknown) => console.error("Could not remove old fields from the users document:", error)
     });
   }
