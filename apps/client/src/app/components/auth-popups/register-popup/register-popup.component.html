@@ -1,32 +1,34 @@
 <nz-alert nzType="info" nzMessage="Creating an account will migrate everything for you, you won't lose any of your progress or settings"></nz-alert>
 <form (ngSubmit)="submit()" [formGroup]="form" nz-form>
   <nz-form-item>
-    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="username" nzRequired>Username</nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="username" id="username" nz-input type="username">
+    <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="displayName">Display name</nz-form-label>
+    <nz-form-control [nzSm]="14" [nzXs]="24"
+                     nzExtra="Optional. Shown in the header. Leave it blank to use the part of your email before the @.">
+      <input formControlName="displayName" id="displayName" nz-input type="text" autocomplete="nickname"
+             [attr.maxlength]="displayNameMaxLength">
     </nz-form-control>
   </nz-form-item>
   <nz-form-item>
     <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="email" nzRequired>Email</nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="email" id="email" nz-input type="email">
+    <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Enter a valid email address">
+      <input formControlName="email" id="email" nz-input type="email" autocomplete="email">
     </nz-form-control>
   </nz-form-item>
   <nz-form-item>
     <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="password" nzRequired>Password</nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="password" id="password" nz-input type="password">
+    <nz-form-control [nzSm]="14" [nzXs]="24" nzExtra="At least 6 characters" nzErrorTip="At least 6 characters">
+      <input formControlName="password" id="password" nz-input type="password" autocomplete="new-password">
     </nz-form-control>
   </nz-form-item>
   <nz-form-item>
     <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="confirmPassword" nzRequired>Confirmation
     </nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="confirmPassword" id="confirmPassword" nz-input type="password">
+    <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Type the password again">
+      <input formControlName="confirmPassword" id="confirmPassword" nz-input type="password" autocomplete="new-password">
     </nz-form-control>
   </nz-form-item>
-  @if (form.errors && form.errors['matchPassword']) {
-    <nz-alert nzType="error" nzShowIcon nzMessage="Passwords do not match"></nz-alert>
+  @if (showPasswordMismatch) {
+    <nz-alert class="password-mismatch" nzType="error" nzShowIcon nzMessage="Passwords do not match"></nz-alert>
   }
   <nz-form-item nz-row>
     <nz-form-control [nzOffset]="6" [nzSpan]="14">
@@ -34,3 +36,4 @@
     </nz-form-control>
   </nz-form-item>
 </form>
+<p class="switch-popup">Already have an account? <button nz-button nzType="link" type="button" (click)="switchToSignIn()">Sign in</button></p>

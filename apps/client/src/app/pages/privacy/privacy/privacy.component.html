@@ -8,7 +8,7 @@
     <h2>What is stored and why</h2>
     <ul>
       <li><strong>Account email</strong>, only if you register, so you can sign in on other devices. Your password is handled by Firebase Authentication, which keeps only a secure hash of it.</li>
-      <li><strong>Username</strong> you choose when you register.</li>
+      <li><strong>Display name</strong> shown in the header. You can type one when you register; if you leave it blank, it is the part of your email before the @.</li>
       <li><strong>Characters</strong>: names, classes, item levels and the options you set on the Roster page.</li>
       <li><strong>Checklist state</strong>: your tasks, ticks and rest bonus.</li>
       <li><strong>Settings</strong>: your choices on the Settings and Gold Planner pages.</li>
@@ -31,7 +31,7 @@
   <section>
     <h2>Your choices</h2>
     <ul>
-      <li><strong>Get a copy:</strong> on <a routerLink="/settings">Settings</a>, Bring data over, <strong>Download backup</strong> saves your characters, checklist state and settings as a file. It does not include your username or account email, which you entered yourself.</li>
+      <li><strong>Get a copy:</strong> on <a routerLink="/settings">Settings</a>, Bring data over, <strong>Download backup</strong> saves your characters, checklist state, settings and display name as a file. It does not include your account email, which you entered yourself.</li>
       <li><strong>Correct it:</strong> change anything on the Roster, Tasks Manager and Settings pages.</li>
       <li><strong>Erase it:</strong> on <a routerLink="/settings">Settings</a>, <strong>Delete my account and data</strong> removes everything stored for your account, then the account itself. For a guest, the data is removed and the browser starts a new, empty guest account.</li>
     </ul>

@@ -8,25 +8,67 @@ import { FirestoreStorage } from "../database/firestore-storage";
 import { EXPORT_FORMAT, LostarkExport } from "./lostark-export";
 import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
 
+/** BroadcastChannel that tells the other open tabs of this browser that an account's data was replaced. */
+export const DATA_REPLACED_CHANNEL = "loa-checklist:data-replaced";
+
 @Injectable({
   providedIn: "root"
 })
 export class DataTransferService {
+
+  /** Tells this tab's own messages apart: a BroadcastChannel also reaches other listeners in the same tab. */
+  private readonly tabId = `${Date.now()}-${Math.random()}`;
 
   constructor(@Inject(FIRESTORE) private firestore: Firestore, private auth: AuthService,
               private completionService: CompletionService) {
   }
 
   /**
+   * Reloads this tab when another tab of the same account finishes an import or restore. Until the
+   * reload it writes nothing, so its old data (first snapshots, the old task list) cannot be written
+   * over the imported data. Field changes still waiting here are dropped: the import replaced them.
+   */
+  public reloadWhenReplacedInAnotherTab(): void {
+    if (typeof BroadcastChannel === "undefined") {
+      return;
+    }
+    let currentUid: string | null = null;
+    this.auth.uid$.subscribe(uid => currentUid = uid);
+    const channel = new BroadcastChannel(DATA_REPLACED_CHANNEL);
+    channel.onmessage = (event: MessageEvent<{ uid?: string, tabId?: string }>) => {
+      if (currentUid !== null && event.data?.uid === currentUid && event.data.tabId !== this.tabId) {
+        FirestoreStorage.pauseWrites();
+        this.reloadPage();
+      }
+    };
+  }
+
+  /** A method of its own so tests can replace it (jsdom cannot reload). */
+  public reloadPage(): void {
+    window.location.reload();
+  }
+
+  private announceDataReplaced(uid: string): void {
+    if (typeof BroadcastChannel === "undefined") {
+      return;
+    }
+    const channel = new BroadcastChannel(DATA_REPLACED_CHANNEL);
+    channel.postMessage({ uid, tabId: this.tabId });
+    channel.close();
+  }
+
+  /**
    * Replaces the current user's roster, settings, completion, energy and tasks with an
    * export, in one atomic batch. The page must be reloaded afterwards because roster and
    * completion streams keep their first snapshot in memory, and service writes stay paused. A Lostark-helper file
-   * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic.
+   * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic, and never
+   * changes the display name. Other open tabs of the same account reload once the batch is written.
    */
   public async importExport(data: LostarkExport, fromLostarkHelper = false): Promise<void> {
     const uid = await firstValueFrom(this.auth.uid$);
     const existingTasks = await getDocs(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
-    const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), data,
+    const file: LostarkExport = fromLostarkHelper ? { ...data, user: null } : data;
+    const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), file,
       () => doc(collection(this.firestore, "tasks")).id, fromLostarkHelper);
     if (writes.length > FIRESTORE_BATCH_LIMIT) {
       throw new Error(`This import needs ${writes.length} writes, more than the ${FIRESTORE_BATCH_LIMIT} Firestore allows in one batch. Nothing was changed.`);
@@ -58,13 +100,15 @@ export class DataTransferService {
       this.completionService.setLocal(uid, previous);
       throw error;
     }
+    this.announceDataReplaced(uid);
   }
 
   public async buildBackup(): Promise<LostarkExport> {
     const uid = await firstValueFrom(this.auth.uid$);
-    const [roster, settings, completion, energy] = await Promise.all(
-      ["roster", "settings", "completion", "energy"].map(name => getDoc(doc(this.firestore, name, uid)))
+    const [roster, settings, completion, energy, user] = await Promise.all(
+      ["roster", "settings", "completion", "energy", "users"].map(name => getDoc(doc(this.firestore, name, uid)))
     );
+    const name = user.data()?.["name"];
     const tasks = await getDocs(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
     return {
       format: EXPORT_FORMAT,
@@ -76,7 +120,8 @@ export class DataTransferService {
       settings: (settings.data() ?? {}) as LostarkExport["settings"],
       completion: (completion.data() ?? null) as LostarkExport["completion"],
       energy: (energy.data() ?? null) as LostarkExport["energy"],
-      tasks: tasks.docs.map(task => ({ ...task.data(), $key: task.id }) as LostarkExport["tasks"][number])
+      tasks: tasks.docs.map(task => ({ ...task.data(), $key: task.id }) as LostarkExport["tasks"][number]),
+      user: typeof name === "string" && name ? { name } : null
     };
   }
 

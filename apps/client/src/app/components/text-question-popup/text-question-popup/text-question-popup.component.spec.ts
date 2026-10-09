@@ -1,8 +1,9 @@
-import { TestBed } from "@angular/core/testing";
+import { fakeAsync, TestBed, tick } from "@angular/core/testing";
 import { NoopAnimationsModule } from "@angular/platform-browser/animations";
 import { NZ_MODAL_DATA, NzModalRef } from "ng-zorro-antd/modal";
 import { TextQuestionPopupModule } from "../text-question-popup.module";
 import { TextQuestionPopupComponent } from "./text-question-popup.component";
+import { displayNameValidator } from "../../../core/display-name";
 
 describe("TextQuestionPopupComponent", () => {
   function create(data: unknown) {
@@ -49,5 +50,38 @@ describe("TextQuestionPopupComponent", () => {
     fixture.componentInstance.control.setValue("hello");
     fixture.componentInstance.submit();
     expect(modalRef.close).toHaveBeenCalledWith("hello");
+  });
+
+  it("has no Cancel button unless asked", () => {
+    const { fixture } = create({ type: "input" });
+    expect(fixture.nativeElement.querySelectorAll("button").length).toBe(1);
+  });
+
+  it("closes without an answer from Cancel", () => {
+    const { fixture, modalRef } = create({ type: "input", baseText: "Arwen", cancellable: true });
+    const cancel: HTMLButtonElement = [...fixture.nativeElement.querySelectorAll("button")].find((b: HTMLButtonElement) => b.textContent?.trim() === "Cancel");
+    cancel.click();
+    expect(modalRef.close).toHaveBeenCalledWith();
+  });
+
+  it("starts with the current text, selected, and applies maxlength and autocomplete", fakeAsync(() => {
+    const { fixture } = create({ type: "input", baseText: "Arwen", selectOnOpen: true, maxLength: 32, autocomplete: "nickname" });
+    const input: HTMLInputElement = fixture.nativeElement.querySelector("input");
+    document.body.appendChild(fixture.nativeElement);
+    tick(100);
+    expect(input.value).toBe("Arwen");
+    expect(input.getAttribute("maxlength")).toBe("32");
+    expect(input.getAttribute("autocomplete")).toBe("nickname");
+    expect(document.activeElement).toBe(input);
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 5]);
+    fixture.nativeElement.remove();
+  }));
+
+  it("applies an extra validator to the answer", () => {
+    const { fixture } = create({ type: "input", validator: displayNameValidator });
+    fixture.componentInstance.control.setValue("   ");
+    expect(fixture.componentInstance.control.valid).toBe(false);
+    fixture.componentInstance.control.setValue("Arwen");
+    expect(fixture.componentInstance.control.valid).toBe(true);
   });
 });

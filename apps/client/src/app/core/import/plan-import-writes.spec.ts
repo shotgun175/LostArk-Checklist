@@ -33,6 +33,16 @@ function dataOf(writes: ImportWrite[], collection: ImportWrite["collection"]): R
 }
 
 describe("planImportWrites", () => {
+  it("sets the display name when the file has one", () => {
+    expect(dataOf(plan([], { ...sampleExport(), user: { name: "Synthetic Sorc" } }), "users")).toEqual({ name: "Synthetic Sorc" });
+    expect(plan([], { ...sampleExport(), user: { name: "Synthetic Sorc" } }).find(w => w.op === "set" && w.collection === "users")?.id).toBe("me");
+  });
+
+  it("does not touch the display name when the file has none", () => {
+    expect(dataOf(plan([]), "users")).toBeUndefined();
+    expect(dataOf(plan([], { ...sampleExport(), user: null }), "users")).toBeUndefined();
+  });
+
   it("deletes every task the current user has", () => {
     expect(plan(["fresh1", "t1"]).filter(w => w.op === "delete")).toEqual([
       { op: "delete", collection: "tasks", id: "fresh1" },

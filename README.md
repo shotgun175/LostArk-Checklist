@@ -10,6 +10,7 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 - **Gold Planner**: weekly gold per character and raid.
 - **Roster** and **Tasks Manager**: your characters and the tasks you track. On both pages, drag a row by the grip at the left of it to change the order, or focus the grip (Tab) and press Arrow Up or Arrow Down. The rest of the row works like a normal form, so text in its inputs can be selected.
 - **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
+- On a phone (under 768 px wide) the sidebar is hidden; the menu button at the top left opens it over the page, and a tap on a page or outside it closes it. From 768 px up, the sidebar's collapse button (also reachable with Tab) remembers your choice.
 - **Privacy** (footer link): what is stored and why. To report a problem or ask about your data, open an issue on the [GitHub issues page](https://github.com/shotgun175/LostArk-Checklist/issues).
 
 ## Checklist
@@ -86,7 +87,9 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - To use the same data on your phone (or on a second PC):
   1. On the PC that already has your data, open the user menu and choose **Register**. Create an account with email and password. Registering upgrades the anonymous account in place: same account, same data.
   2. On the phone, open the user menu, choose **Sign in** and use the same email and password.
-- **Trap: Sign in is not Register.** On a browser that already has anonymous data, **Sign in** switches to the other account and leaves the anonymous data behind, so it no longer shows. Use **Register** the first time on the browser that holds your data. This behavior comes from the original app and is kept as is. The original code also tries to delete the previous anonymous account's tasks during that switch. On this site the database rules block that, so nothing is deleted and the app ignores the refusal.
+- **Sign in is not Register.** On a browser that already has anonymous data, **Sign in** switches to the other account and leaves the anonymous data behind, so it no longer shows (it is not merged). The Sign in popup warns a guest who has characters before this happens, with a **Download backup** button and a **Register instead** link. Use **Register** the first time on the browser that holds your data. The original code also tries to delete the previous anonymous account's tasks during that switch. On this site the database rules block that, so nothing is deleted and the app ignores the refusal.
+- **Display name:** shown in the header (a guest shows **Guest**). It is optional when you register; left blank, it is the part of your email before the @. Change it from the user menu, **Change display name**. Names are trimmed, invisible characters are removed, and the limit is 32 characters. You still sign in with your email, not the display name.
+- The Sign in and Create an account popups link to each other, and Register, Sign in and Log out each confirm with a short message.
 - **Log out** starts a fresh, empty anonymous account in that browser. Your registered account's data is untouched. Sign in again to get it back.
 - **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
 
@@ -102,6 +105,8 @@ The import replaces this account's roster, tasks, ticks, rest bonus and settings
 
 - **Download backup** (Settings, Bring data over) saves this account's data as a JSON file.
 - **Restore backup** imports such a file. It uses the same format as the lostark-helper.com export and replaces the same data. Unlike **Import from Lostark-helper**, it keeps your raid tracking choices.
+- Backups also hold your display name, and **Restore backup** brings it back. A backup made before this change has none, and then your current name is kept. **Import from Lostark-helper** never changes the display name.
+- After an import or a restore, other open tabs of the same account in this browser reload by themselves, so they cannot write their old data over the new one.
 
 ## Development
 

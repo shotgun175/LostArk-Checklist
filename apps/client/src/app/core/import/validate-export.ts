@@ -1,4 +1,5 @@
 import { EXPORT_FORMAT, LostarkExport, SETTINGS_KEYS } from "./lostark-export";
+import { cleanDisplayName } from "../display-name";
 
 export interface ExportCounts {
   characters: number;
@@ -36,7 +37,8 @@ function pickSettings(settings: JsonObject): LostarkExport["settings"] {
  *
  * Rejects a wrong format, missing collections, characters without a truthy id (the roster
  * loader would replace a falsy id with a random one and orphan that character's keys) and
- * tasks without $key. Settings keys this fork does not use are dropped from `data`.
+ * tasks without $key. Settings keys this fork does not use are dropped from `data`, and the optional
+ * display name (`user.name`) is cleaned like a typed one, or left out when nothing usable is left.
  */
 export function validateExport(input: unknown): ExportValidation {
   const errors: string[] = [];
@@ -104,6 +106,9 @@ export function validateExport(input: unknown): ExportValidation {
   if (errors.length > 0) {
     return { ok: false, errors, counts, data: null };
   }
+  // The display name is optional and never blocks an import: a missing or unusable one is left out.
+  const user = input["user"];
+  const name = isObject(user) ? cleanDisplayName(user["name"]) : "";
   return {
     ok: true,
     errors,
@@ -116,7 +121,8 @@ export function validateExport(input: unknown): ExportValidation {
       settings: pickSettings(settings as JsonObject),
       completion: completion as LostarkExport["completion"],
       energy: energy as LostarkExport["energy"],
-      tasks: tasks as LostarkExport["tasks"]
+      tasks: tasks as LostarkExport["tasks"],
+      ...(name ? { user: { name } } : {})
     }
   };
 }

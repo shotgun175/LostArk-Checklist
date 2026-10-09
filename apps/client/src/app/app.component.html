@@ -109,7 +109,7 @@
             @if (user$ | async; as user) {
               <li nz-menu-item class="menu-item" tabindex="-1" (click)="updateUserName(user)" (keydown)="onUserMenuKeydown($event)">
                 <span nz-icon nzType="user-switch" nzTheme="outline"></span>
-                Change user name
+                Change display name
               </li>
             }
             <li nz-menu-item nzDanger class="menu-item" tabindex="-1" (click)="disconnect()" (keydown)="onUserMenuKeydown($event)">

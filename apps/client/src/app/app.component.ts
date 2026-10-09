@@ -6,9 +6,8 @@ import { NzContentComponent } from "ng-zorro-antd/layout";
 import { AuthService } from "./core/database/services/auth.service";
 import { UserService } from "./core/database/services/user.service";
 import { LayoutStateService } from "./core/services/layout-state.service";
-import { NzModalService } from "ng-zorro-antd/modal";
-import { RegisterPopupComponent } from "./components/auth-popups/register-popup/register-popup.component";
-import { LoginPopupComponent } from "./components/auth-popups/login-popup/login-popup.component";
+import { AuthPopupsService } from "./components/auth-popups/auth-popups.service";
+import { DataTransferService } from "./core/import/data-transfer.service";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { LAHUser } from "./model/lah-user";
 
@@ -49,10 +48,13 @@ export class AppComponent {
   constructor(private layoutState: LayoutStateService,
               private userService: UserService,
               private auth: AuthService,
-              private modalService: NzModalService,
+              private authPopups: AuthPopupsService,
               private message: NzMessageService,
-              router: Router
+              router: Router,
+              dataTransfer: DataTransferService
   ) {
+    // An import or restore in another tab of this account replaces the data this tab shows.
+    dataTransfer.reloadWhenReplacedInAnotherTab();
     this.layoutState.isPhone$.pipe(takeUntilDestroyed()).subscribe(phone => {
       this.isPhone.set(phone);
       this.isCollapsed = this.layoutState.sidebarCollapsedForScreen();
@@ -123,19 +125,11 @@ export class AppComponent {
   }
 
   signIn(): void {
-    this.modalService.create({
-      nzContent: LoginPopupComponent,
-      nzMaskClosable: false,
-      nzFooter: null
-    });
+    this.authPopups.openSignIn();
   }
 
   register(): void {
-    this.modalService.create({
-      nzContent: RegisterPopupComponent,
-      nzMaskClosable: false,
-      nzFooter: null
-    });
+    this.authPopups.openRegister();
   }
 
   dismissGuestBanner(): void {
@@ -149,11 +143,16 @@ export class AppComponent {
 
   disconnect(): void {
     this.auth.disconnect();
+    this.message.success("Logged out. This browser now starts a new, empty guest checklist; sign in to see your account's checklist again.", { nzDuration: 6000 });
   }
 
   updateUserName(user: LAHUser): void {
-    this.userService.updateUserName(user).subscribe(() => {
-      this.message.success("Username updated");
+    this.userService.updateUserName(user).subscribe({
+      next: () => this.message.success("Display name updated"),
+      error: (error: unknown) => {
+        console.error(error);
+        this.message.error("Could not save the display name. Please try again.");
+      }
     });
   }
 }
