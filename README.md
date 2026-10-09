@@ -9,8 +9,8 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 - **Checklist**: daily and weekly tasks per character, with rest bonus.
 - **Gold Planner**: weekly gold per character and raid.
 - **Roster** and **Tasks Manager**: your characters and the tasks you track. On both pages, drag a row by the grip at the left of it to change the order, or focus the grip (Tab) and press Arrow Up or Arrow Down. The rest of the row works like a normal form, so text in its inputs can be selected.
-- **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion.
-- **Privacy** (footer link): what is stored and why.
+- **Settings**: display options, lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
+- **Privacy** (footer link): what is stored and why. To report a problem or ask about your data, open an issue on the [GitHub issues page](https://github.com/shotgun175/LostArk-Checklist/issues).
 
 ## Checklist
 

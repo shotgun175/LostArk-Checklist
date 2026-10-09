@@ -26,6 +26,16 @@ describe("PrivacyComponent", () => {
     expect(text).toContain("not affiliated with or endorsed by Smilegate or Amazon Games");
   });
 
+  it("points to the GitHub issues page as the contact, also for people who cannot sign in", () => {
+    const text = renderText();
+    expect(text).toContain("open an issue on the project's GitHub issues page");
+    expect(text).toContain("If you cannot sign in");
+    const fixture = TestBed.createComponent(PrivacyComponent);
+    fixture.detectChanges();
+    const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll("a")).map(a => a.getAttribute("href"));
+    expect(hrefs).toContain("https://github.com/shotgun175/LostArk-Checklist/issues");
+  });
+
   it("lists no contact email and no long dashes", () => {
     const text = renderText();
     expect(text).not.toMatch(/[\w.+-]+@[\w-]+\.\w+/);
