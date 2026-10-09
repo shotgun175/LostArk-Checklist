@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { BehaviorSubject, combineLatest, map, Observable, of, pluck, tap } from "rxjs";
 import { goldTasks } from "../gold-tasks";
-import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS, getCountedRunningMode, getCountedModeNote, getModeLabel } from "../gold-task";
+import { GoldTask, Gate, resetType, canRunHardModeForGateAndCharacter, canRunNightmareModeForGateAndCharacter, pickDefaultRunningMode, shouldAutoPickRunningMode, getGoldRaids, isGateCountedForGoldCap, earnsGold, getGoldTakingDisabledReason, shouldAutoPickModeOnChest, groupPlannerCharacters, getRosterSummary, GoldTotal, MAX_GOLD_RAIDS, getCountedRunningMode, getCountedLineMode, getCountedModeNotes, getModeLabel } from "../gold-task";
 import { LostarkTask } from "../../../model/lostark-task";
 import { RosterService } from "../../../core/database/services/roster.service";
 import { SettingsService } from "../../../core/database/services/settings.service";
@@ -44,6 +44,8 @@ interface chestsData {
     runningMode: string,
     // Saved modes the character's item level cannot run, with the mode they count as instead
     modeNotes: string[],
+    // The counted mode to save when a note shows it (not Mixed); its button is already selected
+    savableMode?: string,
     // Gate line: the gate is done this week on the Checklist
     done: boolean,
     // Checklist completion shown next to the raid or gate: done, to do, or how many gates are done
@@ -292,17 +294,16 @@ export class GoldPlannerComponent {
             }
 
             // The line's mode as the buttons show it: the counted mode of its gates, or Mixed when they differ
-            const countedModes = gatesInReach.map(gate => countedMode(gate, character).mode)
-            const modeNotes = [...new Set(reachableGates
-              .map(gate => getCountedModeNote(savedMode(gate, character), countedMode(gate, character)))
-              .filter((note): note is string => !!note))]
+            const lineMode = getCountedLineMode(gatesInReach, character, gate => savedMode(gate, character))
+            const modeNotes = getCountedModeNotes(reachableGates, character, gate => savedMode(gate, character))
 
             const hiddenByTracking = cantDoTask || (task ? !isTaskTracked(rawRoster.trackedTasks, character, task, tasks) : false)
 
             const goldDetail = {
               hide: false || hiddenByTracking || hideAlreadyDoneRaidOrGate,
-              runningMode: countedModes.every(mode => mode === countedModes[0]) ? countedModes[0] as string : "Mixed",
+              runningMode: lineMode as string,
               modeNotes,
+              savableMode: modeNotes.length && lineMode && lineMode !== "Mixed" ? lineMode : undefined,
               takingChest,
               indeterminateTakingChest,
               takingGold,
@@ -624,6 +625,27 @@ export class GoldPlannerComponent {
       this.setRunningModeFlagForGate(settingsKey, raidModesForGoldPlanner, line.gate, character, flag)
     } else {
       this.setRunningModeFlagForGate(settingsKey, raidModesForGoldPlanner, line.gate, character, flag)
+    }
+  }
+
+  /**
+   * Saves the mode a line counts as, on each of its gates, in one write: used when a note says a saved
+   * mode counts as another one. That mode's button is already selected, so the radio group alone
+   * would never save it.
+   */
+  saveCountedMode(settingsKey: string, raidModesForGoldPlanner: Record<string, string>, line: PlannerLine, character: Character, mode: string): void {
+    const writes: FieldWrite[] = (line.gate ? [line.gate] : line.gTask.gates).map(gate => {
+      const flagName = this.getRunningModeFlagNameForGate(character, gate);
+      raidModesForGoldPlanner[flagName] = mode;
+      return { path: ["raidModesForGoldPlanner", flagName], value: mode };
+    });
+    this.settings.patchFields(settingsKey, writes);
+  }
+
+  /** A click on a mode button: the already selected counted mode is saved here; any other mode is saved by the radio group's change. */
+  onModeButtonClick(settingsKey: string, raidModesForGoldPlanner: Record<string, string>, line: PlannerLine, character: Character, flag: { savableMode?: string }, mode: string): void {
+    if (flag.savableMode === mode) {
+      this.saveCountedMode(settingsKey, raidModesForGoldPlanner, line, character, mode);
     }
   }
 

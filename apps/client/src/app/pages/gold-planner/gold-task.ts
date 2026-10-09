@@ -98,6 +98,27 @@ export function getCountedModeNote(savedMode: string | undefined, counted: Count
   return `${getModeLabel(savedMode)} ${needs}, counted as ${counted.mode ? getModeLabel(counted.mode) : 'no mode'}`;
 }
 
+/**
+ * The mode a raid or gate shows, in the Gold Planner and on the Checklist badge: the mode its gates
+ * count as (getCountedRunningMode), "Mixed" when they differ, undefined when no mode is saved.
+ *
+ * Args:
+ *   gates: the gates of the raid, or the one gate.
+ *   character: the character, whose item level decides what a saved Hard or Nightmare counts as.
+ *   savedModeOf: the saved mode of a gate for this character.
+ */
+export function getCountedLineMode(gates: Gate[], character: Character, savedModeOf: (gate: Gate) => string | undefined): string | undefined {
+  const modes = gates.map(gate => getCountedRunningMode(gate, character, savedModeOf(gate)).mode);
+  return modes.every(mode => mode === modes[0]) ? modes[0] : "Mixed";
+}
+
+/** The counted-mode notes of these gates (see getCountedModeNote), each once. */
+export function getCountedModeNotes(gates: Gate[], character: Character, savedModeOf: (gate: Gate) => string | undefined): string[] {
+  return [...new Set(gates
+    .map(gate => getCountedModeNote(savedModeOf(gate), getCountedRunningMode(gate, character, savedModeOf(gate))))
+    .filter((note): note is string => !!note))];
+}
+
 /** Auto-pick only when gold is being ticked and the gate has no running mode yet (any set mode, Solo included, is kept). */
 export function shouldAutoPickRunningMode(takingGold: boolean, currentMode: string | undefined): boolean {
   return takingGold && !currentMode

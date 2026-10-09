@@ -119,13 +119,17 @@ const MODE_NAMES: Record<string, string> = {
   Mix: 'Mixed modes'
 };
 
-/** Tooltip of the checklist gold badge, for example "Normal Mode, earns gold". */
-export function goldBadgeTooltip(modeBadge: string, coin: boolean): string {
+/**
+ * Tooltip of the checklist gold badge, for example "Normal Mode, earns gold", followed by why a saved
+ * mode counts as another one: "Normal Mode, earns gold (Hard needs 1730, counted as Normal)".
+ */
+export function goldBadgeTooltip(modeBadge: string, coin: boolean, modeNotes: string[] = []): string {
   const mode = modeBadge ? MODE_NAMES[modeBadge] || modeBadge : '';
   if (!mode) {
     return coin ? 'Earns gold' : '';
   }
-  return coin ? `${mode}, earns gold` : `${mode}, no gold`;
+  const text = coin ? `${mode}, earns gold` : `${mode}, no gold`;
+  return modeNotes.length ? `${text} (${modeNotes.join('; ')})` : text;
 }
 
 /** Short mode label for the checklist gold badge; empty when no mode is set. */

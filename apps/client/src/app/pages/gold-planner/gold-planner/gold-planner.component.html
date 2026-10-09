@@ -183,28 +183,39 @@
                       nzSize="small"
                       (ngModelChange)="setRunningModeFlag(settings.$key, display.raidModesForGoldPlanner, row.line, character, $event)"
                       >
+                      <!-- A click (or Space) on the already selected counted mode changes nothing in the group, so onModeButtonClick saves it.
+                           Each label wraps ng-zorro's native radio input, which takes the focus and turns Space into a click
+                           that reaches the label, so the label itself needs no focus or key handler. -->
+                      <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
                       @if (flag.soloModeExists) {
-                        <label nz-radio-button nzValue="Solo">Solo</label>
+                        <label nz-radio-button nzValue="Solo" (click)="onModeButtonClick(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag, 'Solo')">Solo</label>
                       }
                       @if (flag.normalModeExists) {
-                        <label nz-radio-button nzValue="NM">Normal</label>
+                        <label nz-radio-button nzValue="NM" (click)="onModeButtonClick(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag, 'NM')">Normal</label>
                       }
                       @if (flag.hardModeExists) {
-                        <label nz-radio-button nzValue="HM" [nzDisabled]="!flag.canRunHM">Hard</label>
+                        <label nz-radio-button nzValue="HM" [nzDisabled]="!flag.canRunHM" (click)="onModeButtonClick(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag, 'HM')">Hard</label>
                       }
                       @if (flag.nightmareModeExists) {
-                        <label nz-radio-button nzValue="Nightmare" [nzDisabled]="!flag.canRunNightmare">Nightmare</label>
+                        <label nz-radio-button nzValue="Nightmare" [nzDisabled]="!flag.canRunNightmare" (click)="onModeButtonClick(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag, 'Nightmare')">Nightmare</label>
                       }
+                      <!-- eslint-enable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
                     </nz-radio-group>
                     @if (flag.runningMode === 'Mixed') {
                       <span class="mixed-tag">Mixed</span>
                     }
-                    @for (note of flag.modeNotes; track note) {
-                      <span class="mode-tag">{{ note }}</span>
-                    }
-                    <!-- The counted mode's button is already selected, so a click on it saves nothing; this saves it -->
-                    @if (flag.modeNotes.length && flag.runningMode && flag.runningMode !== 'Mixed') {
-                      <button nz-button nzType="link" nzSize="small" class="save-mode" (click)="setRunningModeFlag(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag.runningMode)">Save as {{ modeLabel(flag.runningMode) }}</button>
+                    @if (flag.savableMode) {
+                      <!-- The note itself saves the counted mode -->
+                      <button type="button" class="mode-note-save" (click)="saveCountedMode(settings.$key, display.raidModesForGoldPlanner, row.line, character, flag.savableMode)">
+                        @for (note of flag.modeNotes; track note) {
+                          <span class="mode-tag">{{ note }}</span>
+                        }
+                        <span class="save-mode">Save as {{ modeLabel(flag.savableMode) }}</span>
+                      </button>
+                    } @else {
+                      @for (note of flag.modeNotes; track note) {
+                        <span class="mode-tag">{{ note }}</span>
+                      }
                     }
                   </div>
                   <div class="checkbox-line">

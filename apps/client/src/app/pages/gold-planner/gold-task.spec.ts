@@ -1,5 +1,5 @@
 import { goldTasks } from './gold-tasks';
-import { earnsGold, Gate, getCountedModeNote, getCountedRunningMode, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
+import { earnsGold, Gate, getCountedLineMode, getCountedModeNote, getCountedModeNotes, getCountedRunningMode, getGoldTakingDisabledReason, getRosterSummary, shouldAutoPickModeOnChest, groupPlannerCharacters, getGoldRaids, GoldGateState, isGateCountedForGoldCap, isGoldTakingDisabled, MAX_GOLD_RAIDS, pickDefaultRunningMode, shouldAutoPickRunningMode } from './gold-task';
 import { Character } from '../../model/character/character';
 
 const gate = (name: string): Gate => goldTasks.flatMap(t => t.gates).find(g => g.name === name) as Gate;
@@ -46,6 +46,25 @@ describe('getCountedRunningMode', () => {
     expect(getCountedRunningMode(gate('Kazeros Gate 1'), character(1700), undefined)).toEqual({ mode: undefined });
     expect(getCountedModeNote('HM', { mode: 'HM' })).toBeUndefined();
     expect(getCountedModeNote(undefined, { mode: undefined })).toBeUndefined();
+  });
+});
+
+describe('getCountedLineMode and getCountedModeNotes', () => {
+  const kazeros = [gate('Kazeros Gate 1'), gate('Kazeros Gate 2')];
+  const saved = (modes: Record<string, string>) => (g: Gate) => modes[g.name];
+
+  it('shows the mode every gate counts as, so a saved Hard below 1730 shows Normal, with its note once', () => {
+    const hard = saved({ 'Kazeros Gate 1': 'HM', 'Kazeros Gate 2': 'HM' });
+    expect(getCountedLineMode(kazeros, character(1712), hard)).toBe('NM');
+    expect(getCountedModeNotes(kazeros, character(1712), hard)).toEqual(['Hard needs 1730, counted as Normal']);
+    expect(getCountedLineMode(kazeros, character(1730), hard)).toBe('HM');
+    expect(getCountedModeNotes(kazeros, character(1730), hard)).toEqual([]);
+  });
+
+  it('shows Mixed when the gates count as different modes, and no mode when none is saved', () => {
+    expect(getCountedLineMode(kazeros, character(1730), saved({ 'Kazeros Gate 1': 'HM', 'Kazeros Gate 2': 'NM' }))).toBe('Mixed');
+    expect(getCountedLineMode(kazeros, character(1712), saved({ 'Kazeros Gate 1': 'HM', 'Kazeros Gate 2': 'NM' }))).toBe('NM');
+    expect(getCountedLineMode(kazeros, character(1712), saved({}))).toBeUndefined();
   });
 });
 
