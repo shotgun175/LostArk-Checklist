@@ -24,6 +24,12 @@ import { moveNameKeysToIds } from "../../../core/get-completion-entry-key";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
+// Nothing else limits a note; this keeps the popup and the hover text a sensible size
+const MAX_NOTE_LENGTH = 500;
+
+// The hover text shows at most this many characters of a long note
+const NOTE_TOOLTIP_LENGTH = 300;
+
 @Component({
   selector: "lostark-helper-roster",
   templateUrl: "./roster.component.html",
@@ -44,6 +50,13 @@ export class RosterComponent {
   public readonly maxNameLength = MAX_CHARACTER_NAME_LENGTH;
 
   public readonly maxIlvl = MAX_CHARACTER_ILVL;
+
+  public readonly maxNoteLength = MAX_NOTE_LENGTH;
+
+  // The character whose note popup is open, and the unsaved text in it
+  public openNoteId: number | null = null;
+
+  public noteDraft = "";
 
   public form = this.fb.group({
     name: ["", [Validators.required, Validators.pattern(/\S/), Validators.maxLength(MAX_CHARACTER_NAME_LENGTH)]],
@@ -169,6 +182,57 @@ export class RosterComponent {
     this.rosterService.updateOne(roster.$key, {
       characters: roster.characters.map(char => char.id === character.id ? character : char)
     });
+  }
+
+  hasNote(character: Character): boolean {
+    return !!character.note?.trim();
+  }
+
+  /** The note as the button's hover text, shortened when very long. Line breaks are kept by the tooltip style. */
+  noteTooltip(character: Character): string {
+    const note = character.note?.trim() ?? "";
+    return note.length > NOTE_TOOLTIP_LENGTH ? `${note.slice(0, NOTE_TOOLTIP_LENGTH).trimEnd()}...` : note;
+  }
+
+  /** Opening the note popup starts from the saved note; closing it without Save drops the edits. */
+  onNoteVisible(character: Character, visible: boolean): void {
+    if (!visible) {
+      this.closeNote(character);
+      return;
+    }
+    this.openNoteId = character.id ?? null;
+    this.noteDraft = character.note ?? "";
+    // A popup that is still fading out is also in the page, so look for this character's own text box
+    setTimeout(() => document.querySelector<HTMLTextAreaElement>(`.note-editor[data-note-id="${character.id}"] textarea`)?.focus());
+  }
+
+  /** Closes the popup. Keyboard focus that was in it, or was lost with it, goes back to the character's note button. */
+  private closeNote(character: Character): void {
+    if (this.openNoteId === character.id) {
+      this.openNoteId = null;
+    }
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body || active.closest(`.note-editor[data-note-id="${character.id}"]`)) {
+        document.querySelector<HTMLElement>(`.note-button[data-note-id="${character.id}"]`)?.focus();
+      }
+    });
+  }
+
+  /** Saves the trimmed note (a blank one is stored as an empty note, as before) and closes the popup. */
+  saveNote(character: Character, roster: Roster): void {
+    const note = this.noteDraft.trim();
+    this.closeNote(character);
+    if (note === (character.note ?? "")) {
+      return;
+    }
+    character.note = note;
+    this.saveCharacter(character, roster);
+  }
+
+  clearNote(character: Character, roster: Roster): void {
+    this.noteDraft = "";
+    this.saveNote(character, roster);
   }
 
   exportRoster(roster: Roster): void {

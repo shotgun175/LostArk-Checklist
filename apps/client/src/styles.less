@@ -161,3 +161,13 @@ tr.drag-preview {
 .user-menu-overlay .menu-item:focus-visible {
   outline: 2px solid @primary-color !important;
 }
+
+// Roster note: the hover text keeps the note's line breaks, and the popup fits a phone screen
+.note-tooltip .ant-tooltip-inner {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.note-popover {
+  max-width: calc(100vw - 32px);
+}
