@@ -171,3 +171,37 @@ tr.drag-preview {
 .note-popover {
   max-width: calc(100vw - 32px);
 }
+
+// Checklist and Tasks Manager tables (class page-scroll) on phones and tablets: the page scrolls instead
+// of a box inside it, so a swipe never gets stuck in the table. The table keeps its separate header (it
+// follows sideways scrolling), but the body is not height-limited. A PC, narrow window included, keeps
+// the scroll box. !important beats the inline max-height and overflow ng-zorro sets from nzScroll.
+@media (pointer: coarse) {
+  nz-table.page-scroll {
+    .ant-table-header {
+      overflow-y: hidden !important;
+    }
+
+    .ant-table-body {
+      max-height: none !important;
+      overflow-y: hidden !important;
+    }
+  }
+}
+
+// The header row stays at the top of the screen while the rows scroll under it, except on a short
+// screen (a phone on its side), where it would cover too many rows.
+@media (pointer: coarse) and (min-height: 501px) {
+  nz-table.page-scroll .ant-table-header {
+    position: sticky;
+    top: 0;
+    // Above the checklist's pinned task column (12) and rest bonus bars (10, 11)
+    z-index: 13;
+  }
+
+  // A row or field scrolled into view (a task just added, the keyboard's previous and next field)
+  // stops below the stuck header row (about 47px on Tasks Manager, 103px on the Checklist)
+  nz-content:has(nz-table.page-scroll) {
+    scroll-padding-top: 112px;
+  }
+}

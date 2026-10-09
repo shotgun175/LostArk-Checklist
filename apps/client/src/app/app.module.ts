@@ -20,6 +20,7 @@ import { NzAlertModule } from "ng-zorro-antd/alert";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { provideNzDateFnsAdapter } from 'ng-zorro-antd/core/time';
+import { CdkScrollableModule } from "@angular/cdk/scrolling";
 
 
 registerLocaleData(en);
@@ -38,7 +39,8 @@ registerLocaleData(en);
     NzModalModule,
     NzAlertModule,
     NzButtonModule,
-    NzTooltipModule
+    NzTooltipModule,
+    CdkScrollableModule
   ],
   providers: [
     { provide: NZ_I18N, useValue: en_US },
