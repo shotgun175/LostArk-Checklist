@@ -25,8 +25,7 @@
     <nz-list class="roster-list" nzNoResult="No characters yet. Add one below." [nzDataSource]="roster.characters" cdkDropList [cdkDropListData]="roster.characters" (cdkDropListDropped)="drop(roster, $event)">
       @for (character of roster.characters; track trackByCharacter($index, character)) {
         <nz-list-item
-          [nzContent]="noteEditor"
-          [nzActions]="[setLazyAction, setHideAction,setWeeklyGoldAction, setClassAction, deleteAction]"
+          [nzActions]="[setLazyAction, setHideAction,setWeeklyGoldAction, setClassAction, noteAction, deleteAction]"
           cdkDrag [cdkDragData]="character" cdkDragPreviewClass="drag-preview">
           <!-- Only the grip starts a drag, so the row's inputs can be clicked and their text selected -->
           <button type="button" class="drag-handle" cdkDragHandle
@@ -37,17 +36,6 @@
             (keydown.arrowdown)="$event.preventDefault(); moveByKeyboard(roster, $index, 1)">
             <span nz-icon nzType="holder" nzTheme="outline"></span>
           </button>
-          <ng-template #noteEditor>
-            <div class="note-editor">
-              <textarea nz-input
-                placeholder="Notes (for example Bifrost spots or Song of Return location)"
-                cols="50"
-                rows="3"
-                [(ngModel)]="character.note"
-                [ngModelOptions]="{updateOn: 'blur'}"
-              (ngModelChange)="saveCharacter(character, roster)"></textarea>
-            </div>
-          </ng-template>
           <nz-list-item-meta [nzTitle]="title" [nzDescription]="description" class="character-meta"
           nzAvatar="./assets/icons/classes/class_{{character.class?.toString()?.padStart(2,'0')}}.png"></nz-list-item-meta>
           <ng-template #title>
@@ -91,6 +79,41 @@
                 </nz-option>
               }
             </nz-select>
+          </ng-template>
+          <ng-template #noteAction>
+            <!-- The note opens in a popup; on phones this button moves up to the name line (see the less) -->
+            <button type="button" nz-button class="note-button" [class.has-note]="hasNote(character)"
+              nz-popover nzPopoverTrigger="click" nzPopoverPlacement="bottomRight" nzPopoverOverlayClassName="note-popover"
+              [nzPopoverTitle]="'Note for ' + character.name" [nzPopoverContent]="noteEditor"
+              [nzPopoverVisible]="openNoteId === character.id" (nzPopoverVisibleChange)="onNoteVisible(character, $event)"
+              nz-tooltip nzTooltipOverlayClassName="note-tooltip"
+              [nzTooltipTitle]="openNoteId === character.id ? '' : noteTooltip(character)"
+              [attr.aria-label]="(hasNote(character) ? 'Edit note for ' : 'Add note for ') + character.name">
+              @if (hasNote(character)) {
+                <svg class="note-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3.5h12v7H7l-3 3v-3H2z" stroke-linejoin="round"/><path d="M4.5 6h7M4.5 8.2h5" stroke-linecap="round"/></svg>
+                Note
+              } @else {
+                <svg class="note-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 3.5h12v7H7l-3 3v-3H2z" stroke-linejoin="round"/><path d="M8 5v4M6 7h4" stroke-linecap="round"/></svg>
+                Add note
+              }
+            </button>
+            <ng-template #noteEditor>
+              <div class="note-editor">
+                <textarea nz-input
+                  placeholder="Notes (for example Bifrost spots or Song of Return location)"
+                  rows="3"
+                  [maxlength]="maxNoteLength"
+                  [attr.aria-label]="'Note for ' + character.name"
+                  [(ngModel)]="noteDraft"></textarea>
+                <div class="note-editor-footer">
+                  <span class="note-hint">Shown as a hover icon on Checklist and Gold Planner</span>
+                  <span class="note-editor-buttons">
+                    <button type="button" nz-button nzSize="small" (click)="clearNote(character, roster)">Clear</button>
+                    <button type="button" nz-button nzSize="small" nzType="primary" (click)="saveNote(character, roster)">Save</button>
+                  </span>
+                </div>
+              </div>
+            </ng-template>
           </ng-template>
           <ng-template #deleteAction>
             <button nz-button nzDanger nz-popconfirm

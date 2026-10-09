@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import { of, Subject } from 'rxjs';
 import { UntypedFormBuilder } from '@angular/forms';
 import { RosterComponent } from './roster.component';
@@ -206,6 +208,75 @@ describe('RosterComponent', () => {
       expect(after['lazytracking']).toEqual({ '1:task1': false });
       expect(after['goldPlannerConfiguration']).toEqual({ '1:gold:taking:Gate 1': true });
       expect(after['manualGoldEntries']).toEqual({ 'chaos:1': { amount: 3 } });
+    });
+  });
+
+  describe('character note', () => {
+    it('saves the trimmed note through saveCharacter and closes the popup', () => {
+      const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
+      component.onNoteVisible(r.characters[1], true);
+      expect(component.openNoteId).toBe(2);
+      component.noteDraft = '  Bus alt\nfor Serca  ';
+      component.saveNote(r.characters[1], r);
+      const written: Character[] = rosterService.updateOne.mock.calls[0][1].characters;
+      expect(written.map(c => c.note)).toEqual([undefined, 'Bus alt\nfor Serca']);
+      expect(component.openNoteId).toBeNull();
+    });
+
+    it('stores a blank note as an empty note, as the old text box did', () => {
+      const r = roster([character(1, 'Arwen', { note: 'Old' })]);
+      component.onNoteVisible(r.characters[0], true);
+      component.noteDraft = '   ';
+      component.saveNote(r.characters[0], r);
+      expect(rosterService.updateOne.mock.calls[0][1].characters[0].note).toBe('');
+      expect(component.hasNote(r.characters[0])).toBe(false);
+    });
+
+    it('Clear empties the note and saves it', () => {
+      const r = roster([character(1, 'Arwen', { note: 'Old' })]);
+      component.onNoteVisible(r.characters[0], true);
+      component.clearNote(r.characters[0], r);
+      expect(component.noteDraft).toBe('');
+      expect(rosterService.updateOne.mock.calls[0][1].characters[0].note).toBe('');
+      expect(component.openNoteId).toBeNull();
+    });
+
+    it('does not write when the note did not change', () => {
+      const r = roster([character(1, 'Arwen', { note: 'Same' }), character(2, 'Brakka')]);
+      component.onNoteVisible(r.characters[0], true);
+      component.saveNote(r.characters[0], r);
+      component.onNoteVisible(r.characters[1], true);
+      component.clearNote(r.characters[1], r);
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('closing the popup without Save drops the edits, and reopening starts from the saved note', () => {
+      const r = roster([character(1, 'Arwen', { note: 'Saved' })]);
+      component.onNoteVisible(r.characters[0], true);
+      component.noteDraft = 'Unsaved';
+      component.onNoteVisible(r.characters[0], false);
+      expect(component.openNoteId).toBeNull();
+      component.onNoteVisible(r.characters[0], true);
+      expect(component.noteDraft).toBe('Saved');
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
+    });
+
+    it('shows a blue Note button only for a non-blank note, with a capped hover text', () => {
+      expect(component.hasNote(character(1, 'Arwen'))).toBe(false);
+      expect(component.hasNote(character(1, 'Arwen', { note: ' \n ' }))).toBe(false);
+      expect(component.hasNote(character(1, 'Arwen', { note: 'x' }))).toBe(true);
+      expect(component.noteTooltip(character(1, 'Arwen', { note: ' Line 1\nLine 2 ' }))).toBe('Line 1\nLine 2');
+      const long = component.noteTooltip(character(1, 'Arwen', { note: 'a'.repeat(400) }));
+      expect(long).toBe(`${'a'.repeat(300)}...`);
+    });
+
+    it('wires the note button into the row actions just before Delete, with no note text box on the row', () => {
+      const html = fs.readFileSync(path.resolve(__dirname, 'roster.component.html'), 'utf8');
+      expect(html).toMatch(/\[nzActions\]="\[[^\]]*setClassAction, noteAction, deleteAction\]"/);
+      expect(html).not.toContain('[nzContent]');
+      expect(html).toContain('(click)="saveNote(character, roster)"');
+      expect(html).toContain('(click)="clearNote(character, roster)"');
+      expect(html).toContain('(nzPopoverVisibleChange)="onNoteVisible(character, $event)"');
     });
   });
 
