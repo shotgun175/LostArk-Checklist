@@ -296,11 +296,11 @@
                         [attr.aria-label]="'Set ' + row.task.label + ' for all characters'">&#8942;</button>
                       </div>
                       <nz-dropdown-menu #taskMenu="nzDropdownMenu">
-                        <ul nz-menu class="task-menu" (keydown)="onTaskMenuKeydown($event)">
+                        <ul nz-menu class="task-menu">
                           <li nz-menu-item nzDisabled class="task-menu-title">{{row.task.label}}: all characters whose item level fits ({{row.eligibleCount}})</li>
-                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)">Track for all</li>
-                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)">Ignore for all</li>
-                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)">Back to auto for all</li>
+                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, true)" (keydown)="onTaskMenuKeydown($event)">Track for all</li>
+                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, false)" (keydown)="onTaskMenuKeydown($event)">Ignore for all</li>
+                          <li nz-menu-item tabindex="-1" [nzDisabled]="row.eligibleCount === 0" (click)="setTaskForAll(rawRoster, row.task, null)" (keydown)="onTaskMenuKeydown($event)">Back to auto for all</li>
                         </ul>
                       </nz-dropdown-menu>
                     </td>

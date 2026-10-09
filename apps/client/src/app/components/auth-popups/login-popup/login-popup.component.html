@@ -1,14 +1,32 @@
+@if (guestCharacterCount$ | async; as count) {
+  <nz-alert class="guest-data-warning" nzType="warning" nzShowIcon nzMessage="Your guest data on this browser will be replaced"
+            [nzDescription]="guestDataText"></nz-alert>
+  <ng-template #guestDataText>
+    <p>
+      You have {{ count === 1 ? '1 character' : count + ' characters' }} as a guest. After you sign in, this browser shows
+      that account's checklist instead; the guest data is not merged into it. Download a backup first if you want to keep it,
+      or register instead to keep it in a new account.
+    </p>
+    <div class="guest-data-actions">
+      <button nz-button nzSize="small" type="button" [nzLoading]="backupBusy()" (click)="downloadBackup()">
+        <span nz-icon nzType="download"></span>
+        Download backup
+      </button>
+      <button nz-button nzSize="small" nzType="link" type="button" (click)="switchToRegister()">Register instead</button>
+    </div>
+  </ng-template>
+}
 <form (ngSubmit)="login()" [formGroup]="form" nz-form>
   <nz-form-item>
     <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="email" nzRequired>Email</nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="email" id="email" nz-input type="email">
+    <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="Enter a valid email address">
+      <input formControlName="email" id="email" nz-input type="email" autocomplete="email">
     </nz-form-control>
   </nz-form-item>
   <nz-form-item>
     <nz-form-label [nzSm]="6" [nzXs]="24" nzFor="password" nzRequired>Password</nz-form-label>
-    <nz-form-control [nzSm]="14" [nzXs]="24">
-      <input formControlName="password" id="password" nz-input type="password">
+    <nz-form-control [nzSm]="14" [nzXs]="24" nzErrorTip="At least 6 characters">
+      <input formControlName="password" id="password" nz-input type="password" autocomplete="current-password">
     </nz-form-control>
   </nz-form-item>
   <nz-form-item nz-row>
@@ -18,7 +36,7 @@
   </nz-form-item>
   <nz-form-item nz-row>
     <nz-form-control [nzOffset]="6" [nzSpan]="14">
-      <button (click)="sendResetPassword()" [disabled]="form.pristine ||(form.errors && form.errors['email'])"
+      <button (click)="sendResetPassword()" [disabled]="form.controls['email'].invalid"
               nz-button
               type="button">
         Forgot your password?
@@ -26,3 +44,4 @@
     </nz-form-control>
   </nz-form-item>
 </form>
+<p class="switch-popup">No account yet? <button nz-button nzType="link" type="button" (click)="switchToRegister()">Create an account</button></p>

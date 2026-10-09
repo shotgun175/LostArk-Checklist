@@ -7,7 +7,7 @@
     @if (roster$ | async; as roster) {
       @if (roster.length > 0) {
         <div class="hidden-characters">
-          <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
+          <label nz-checkbox aria-label="Show your hidden characters" [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
           Show your hidden characters
           <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Also show characters marked Hide on the Roster page"></span>
         </div>

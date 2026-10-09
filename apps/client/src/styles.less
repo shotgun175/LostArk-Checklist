@@ -132,3 +132,31 @@ tr.drag-preview {
     background: fade(@primary-color, 12%);
   }
 }
+
+// Keyboard focus rings: a clear outline when an element is reached with Tab (not on a mouse click).
+.ant-btn,
+.ant-alert-close-icon,
+.app-footer a,
+.github-menu-entry a,
+.user-menu,
+.header-menu-button,
+.sider-trigger-button,
+.user-menu-overlay .menu-item {
+  &:focus-visible {
+    outline: 2px solid @primary-color;
+    outline-offset: 2px;
+  }
+}
+
+// The sider trigger, the user menu button (at the window's top right edge) and the menu items would
+// have their ring cut off, so it sits inside them.
+.sider-trigger-button:focus-visible,
+.user-menu:focus-visible,
+.user-menu-overlay .menu-item:focus-visible {
+  outline-offset: -2px;
+}
+
+// The menu items have tabindex="-1", which the ng-zorro base styles strip of any outline with !important.
+.user-menu-overlay .menu-item:focus-visible {
+  outline: 2px solid @primary-color !important;
+}

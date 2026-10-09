@@ -5,7 +5,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-::ng-deep .user-menu {
+::ng-deep .user-menu-overlay {
+  min-width: 180px;
+  // The overlay pane is as wide as the menu button; this keeps the menu at its right edge (bottomRight).
+  margin-left: auto;
+
   .menu-item {
     padding: 10px;
 
@@ -24,6 +28,39 @@
   z-index: 10;
   min-height: 100vh;
   box-shadow: 2px 0 6px rgba(0, 21, 41, .35);
+
+  // Phone: the sidebar opens over the page instead of taking width from it.
+  &.phone {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1001;
+  }
+
+  &.ant-layout-sider-zero-width {
+    box-shadow: none;
+  }
+}
+
+.sider-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, .45);
+  cursor: pointer;
+}
+
+.sider-trigger-button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
 .header-trigger {
@@ -83,32 +120,83 @@ nz-header {
   width: 100%;
   z-index: 2;
 
+  .header-menu-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 20px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+
   .user-menu {
     margin-left: auto;
     display: flex;
     flex-direction: row;
     align-items: center;
+    gap: 6px;
+    height: 100%;
+    min-width: 0;
     padding: 0 20px;
+    border: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font: inherit;
     background-color: rgba(0, 45, 82, 0.5);
+    cursor: pointer;
+    transition: background-color .2s;
 
-    > [nz-icon] {
-      margin-right: 5px;
+    &:hover {
+      background-color: rgba(0, 45, 82, 0.85);
     }
 
-    &.anonymous {
-      background-color: rgba(231, 99, 99, 0.5);
+    // A guest is not an error: amber, not red.
+    &.guest {
+      background-color: rgba(212, 136, 6, 0.35);
+
+      &:hover {
+        background-color: rgba(212, 136, 6, 0.55);
+      }
+    }
+
+    .user-name {
+      max-width: 240px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+
+      @media (max-width: 575px) {
+        max-width: 120px;
+      }
+    }
+
+    .caret {
+      font-size: 10px;
+      opacity: .75;
     }
   }
 }
 
+// A column, so a short page still puts the footer at the bottom of the window.
 nz-content {
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
 .inner-content {
+  flex: 1 0 auto;
   padding: 24px;
   background: #333;
-  min-height: 100%;
 }
 
 .sidebar-container {
@@ -178,6 +266,17 @@ nz-content {
   a {
     color: inherit;
     text-decoration: underline;
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  // Privacy is this site's own page: set apart from the reCAPTCHA notice by a divider and brighter text.
+  .privacy-link {
+    padding-left: 16px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.65);
   }
 }
 

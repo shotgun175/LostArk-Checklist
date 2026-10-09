@@ -23,6 +23,11 @@ export interface LostarkExport {
   completion: StoredDoc<Completion> | null;
   energy: StoredDoc<Energy> | null;
   tasks: LostarkTask[];
+  /**
+   * The account's display name (users/{uid}). Only this app's backups have it; files from older
+   * backups and the lostark-helper.com snippet do not, and then the current name is kept.
+   */
+  user?: { name: string } | null;
 }
 
 // One entry per Settings field. The Record type makes the compiler flag this list

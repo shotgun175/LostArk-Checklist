@@ -8,7 +8,7 @@ export const FIRESTORE_BATCH_LIMIT = 500;
 
 export type ImportWrite =
   | { op: "delete"; collection: "tasks"; id: string }
-  | { op: "set"; collection: "tasks" | "roster" | "settings" | "completion" | "energy"; id: string; data: Record<string, unknown> };
+  | { op: "set"; collection: "tasks" | "roster" | "settings" | "completion" | "energy" | "users"; id: string; data: Record<string, unknown> };
 
 export interface ImportPlan {
   writes: ImportWrite[];
@@ -62,7 +62,7 @@ export function cleanImportedTracking(trackedTasks: Record<string, boolean | und
  * fail whenever the same file was already imported into another account. Completion, rest
  * bonus, tracking and lazy-flag keys are rewritten to the fresh ids. Tracking choices are
  * cleaned first (see cleanImportedTracking); dropRaidTracking is set for Lostark-helper files,
- * not for this app's own backups.
+ * not for this app's own backups. A file with a display name (`user.name`) also sets users/{uid}.
  */
 export function planImportWrites(uid: string, existingTaskIds: string[], data: LostarkExport, newTaskId: () => string, dropRaidTracking = false): ImportPlan {
   const newIds = new Map(data.tasks.map(task => [task.$key, newTaskId()]));
@@ -86,5 +86,9 @@ export function planImportWrites(uid: string, existingTaskIds: string[], data: L
     { op: "set", collection: "completion", id: uid, data: { ...completion } },
     { op: "set", collection: "energy", id: uid, data: { ...sourceEnergy, data: remapKeys(sourceEnergy.data, newIds) ?? {} } }
   ];
+  // A backup's display name; a file without one keeps the current name.
+  if (data.user?.name) {
+    docSets.push({ op: "set", collection: "users", id: uid, data: { name: data.user.name } });
+  }
   return { writes: [...deletes, ...taskSets, ...docSets], completion };
 }

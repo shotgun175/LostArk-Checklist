@@ -54,6 +54,14 @@ describe('computeChecklistScroll', () => {
     expect(computeChecklistScroll(at(1080, 1920, 6, false))).toEqual({ y: '1520px' });
   });
 
+  it('counts no sidebar width on a phone, where the sidebar opens over the page', () => {
+    // 700 wide: 130 task + 3 x 76 = 358; 700 - 200 - 55 = 445 fits either way, 700 - 0 - 55 = 645 leaves room to grow
+    expect(checklistTaskColumnWidth({ ...at(700, 900, 3, false), sidebarWidth: 0 })).toBe(240);
+    expect(checklistTaskColumnWidth(at(700, 900, 3, false))).toBe(217);
+    // 8 characters: 130 + 8 x 76 = 738 > 645, so it scrolls sideways
+    expect(computeChecklistScroll({ ...at(700, 900, 8, false), sidebarWidth: 0 })).toEqual({ y: '500px', x: '738px' });
+  });
+
   it('does not scroll sideways for 7 characters at 2560x1440 in either sidebar state', () => {
     expect(computeChecklistScroll(at(2560, 1440, 7, true))).toEqual({ y: '1040px' });
     expect(computeChecklistScroll(at(2560, 1440, 7, false))).toEqual({ y: '1040px' });

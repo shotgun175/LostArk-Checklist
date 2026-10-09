@@ -80,3 +80,72 @@ describe("UserService.user$ when a guest registers", () => {
     expect(create).not.toHaveBeenCalled();
   });
 });
+
+describe("UserService.updateUserName", () => {
+  let afterClose: Subject<string | undefined>;
+  let create: jest.Mock;
+  let service: UserService;
+  let setOne: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.mocked(docData$).mockReturnValue(new Subject() as never);
+    afterClose = new Subject<string | undefined>();
+    create = jest.fn(() => ({ afterClose }));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of("u1"), isAnonymous$: of(false) } },
+        { provide: NzModalService, useValue: { create } }
+      ]
+    });
+    service = TestBed.inject(UserService);
+    setOne = jest.spyOn(service, "setOne").mockReturnValue(of(void 0));
+  });
+
+  it("opens with the current name, selected, and a Cancel button", () => {
+    service.updateUserName({ $key: "u1", name: "Arwen" }).subscribe();
+    const options = create.mock.calls[0][0];
+    expect(options.nzData).toEqual(expect.objectContaining({ baseText: "Arwen", cancellable: true, selectOnOpen: true, maxLength: 32 }));
+  });
+
+  it("saves the cleaned name and emits it", () => {
+    const saved: string[] = [];
+    service.updateUserName({ $key: "u1", name: "Arwen" }).subscribe(name => saved.push(name));
+    afterClose.next("  Synthetic\u200B Sorc  ");
+    expect(setOne).toHaveBeenCalledWith("u1", { name: "Synthetic Sorc" });
+    expect(saved).toEqual(["Synthetic Sorc"]);
+  });
+
+  it("saves nothing when closed with Escape or Cancel", () => {
+    const saved: string[] = [];
+    service.updateUserName({ $key: "u1", name: "Arwen" }).subscribe(name => saved.push(name));
+    afterClose.next(undefined);
+    expect(setOne).not.toHaveBeenCalled();
+    expect(saved).toEqual([]);
+  });
+
+  it("saves nothing for a blank or invisible-only name", () => {
+    service.updateUserName({ $key: "u1", name: "Arwen" }).subscribe();
+    afterClose.next(" \u200B ");
+    expect(setOne).not.toHaveBeenCalled();
+  });
+
+  it("does not open a second popup while one is open", () => {
+    service.updateUserName({ $key: "u1", name: "" }).subscribe();
+    service.updateUserName({ $key: "u1", name: "" }).subscribe();
+    expect(create).toHaveBeenCalledTimes(1);
+    afterClose.next(undefined);
+    service.updateUserName({ $key: "u1", name: "" }).subscribe();
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves what is typed in the automatic prompt, which has no Cancel button", () => {
+    const userDoc = new Subject<unknown>();
+    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    service.user$.subscribe();
+    userDoc.next(undefined);
+    expect(create.mock.calls[0][0].nzData.cancellable).toBe(false);
+    afterClose.next("Synthetic Sorc");
+    expect(setOne).toHaveBeenCalledWith("u1", { name: "Synthetic Sorc" });
+  });
+});

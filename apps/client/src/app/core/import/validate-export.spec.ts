@@ -30,6 +30,18 @@ function sampleExport(): Record<string, unknown> {
 }
 
 describe("validateExport", () => {
+  it("keeps a backup's display name, cleaned", () => {
+    expect(validateExport({ ...sampleExport(), user: { name: "  Synthetic\u200B Sorc " } }).data?.user).toEqual({ name: "Synthetic Sorc" });
+  });
+
+  it("leaves out a missing, blank or malformed display name without blocking the import", () => {
+    for (const user of [undefined, null, { name: "   " }, { name: 42 }, "Synthetic Sorc"]) {
+      const result = validateExport({ ...sampleExport(), user });
+      expect(result.ok).toBe(true);
+      expect(result.data && "user" in result.data).toBe(false);
+    }
+  });
+
   it("accepts a valid export and counts its content", () => {
     const result = validateExport(sampleExport());
     expect(result.errors).toEqual([]);

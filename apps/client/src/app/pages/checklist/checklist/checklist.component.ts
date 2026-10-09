@@ -291,21 +291,23 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     map(([display, showHidden]) => filterVisibleCharacters(display.roster, showHidden))
   );
 
-  public taskColumnWidth$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$]).pipe(
-    map(([characters, sidebarCollapsed]) => checklistTaskColumnWidth({
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-      visibleCharacterCount: characters.length,
-      sidebarCollapsed
-    }))
-  );
-
-  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.windowResize$, this.tableBox$]).pipe(
-    map(([characters, sidebarCollapsed, , tableBox]) => computeChecklistScroll({
+  public taskColumnWidth$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.layoutState.sidebarWidth$, this.windowResize$]).pipe(
+    map(([characters, sidebarCollapsed, sidebarWidth]) => checklistTaskColumnWidth({
       innerWidth: window.innerWidth,
       innerHeight: window.innerHeight,
       visibleCharacterCount: characters.length,
       sidebarCollapsed,
+      sidebarWidth
+    }))
+  );
+
+  public scrolling$ = combineLatest([this.characters$, this.layoutState.sidebarCollapsed$, this.layoutState.sidebarWidth$, this.windowResize$, this.tableBox$]).pipe(
+    map(([characters, sidebarCollapsed, sidebarWidth, , tableBox]) => computeChecklistScroll({
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+      visibleCharacterCount: characters.length,
+      sidebarCollapsed,
+      sidebarWidth,
       bodyHeight: tableBox.height
     })),
     startWith({ x: null, y: null })

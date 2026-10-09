@@ -36,10 +36,16 @@ export default [
   {
     files: ['**/*.html'],
     rules: {
-      // Newly enabled accessibility checks in the angular-eslint 22 template preset; not enforced before the upgrade.
-      '@angular-eslint/template/label-has-associated-control': 'off',
-      '@angular-eslint/template/click-events-have-key-events': 'off',
-      '@angular-eslint/template/interactive-supports-focus': 'off',
+      // ng-zorro's checkbox and radio are attributes on the label itself (<label nz-checkbox>), and the
+      // component renders its input inside that label, so such a label counts as associated.
+      '@angular-eslint/template/label-has-associated-control': [
+        'error',
+        {
+          labelComponents: [
+            { selector: 'label', inputs: ['for', 'htmlFor', 'nz-checkbox', 'nz-radio', 'nz-radio-button'] },
+          ],
+        },
+      ],
     },
   },
 ];
