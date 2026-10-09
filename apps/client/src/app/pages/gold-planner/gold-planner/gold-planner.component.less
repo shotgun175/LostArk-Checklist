@@ -361,8 +361,9 @@
   padding: 9px 14px;
   border-bottom: 1px solid @row-border;
 
-  // Raid name above its controls on narrow screens
-  @media screen and (max-width: 767px) {
+  // Raid name above its controls on narrow screens, and on tablets, where the character list beside
+  // the panel leaves the controls too little room
+  @media screen and (max-width: 991px) {
     grid-template-columns: 24px minmax(0, 1fr);
 
     .raid-controls {
