@@ -45,20 +45,14 @@ describe('cleanCharacterName', () => {
 });
 
 describe('characterNameError', () => {
-  const roster = [char(1, 'Arwen'), char(2, 'Brakka')];
-
   it('rejects an empty name', () => {
-    expect(characterNameError('', roster)).toMatch(/empty/i);
+    expect(characterNameError('')).toMatch(/empty/i);
   });
 
-  it('rejects a name another character already has, ignoring case', () => {
-    expect(characterNameError('brakka', roster, 1)).toMatch(/already/i);
-    expect(characterNameError('Brakka', roster)).toMatch(/already/i);
-  });
-
-  it('accepts a new name, and the character keeping its own name', () => {
-    expect(characterNameError('Celyne', roster, 1)).toBeNull();
-    expect(characterNameError('Arwen', roster, 1)).toBeNull();
+  // Names are unique only per region (NA and EU), so one roster may hold the same name twice
+  it('accepts any name that is not empty, including one another character already has', () => {
+    expect(characterNameError('Celyne')).toBeNull();
+    expect(characterNameError('Arwen')).toBeNull();
   });
 });
 

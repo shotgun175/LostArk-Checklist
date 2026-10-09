@@ -177,3 +177,34 @@ describe('GoldPlannerComponent gold this week', () => {
     expect(labels).toEqual({ 'Kazeros': '1 of 2 done', 'Kazeros Gate 1': 'done', 'Kazeros Gate 2': 'to do' });
   });
 });
+
+describe('GoldPlannerComponent with two characters of the same name', () => {
+  // One player can have the same name on NA and on EU; everything is keyed by id
+  it('keeps each one\'s Chaos Dungeons and Other gold apart', () => {
+    const na = { id: 1, name: 'Arwen', ilvl: 1700, weeklyGold: true } as Character;
+    const eu = { id: 2, name: 'Arwen', ilvl: 1700, weeklyGold: true } as Character;
+    let display: { chaos: Record<string, number>, other: Record<string, number> } | undefined;
+    const component = new GoldPlannerComponent(
+      { roster$: of({ $key: 'roster-key', characters: [na, eu], trackedTasks: {} }) } as never,
+      { tasks$: of(tasks) } as never,
+      {
+        settings$: of({
+          $key: 'settings-key',
+          goldPlannerConfiguration: {},
+          raidModesForGoldPlanner: {},
+          manualGoldEntries: { 'chaos:1': { amount: 100, timestamp: 10 }, 'chaos:2': { amount: 200, timestamp: 10 }, 'other:2': { amount: 5, timestamp: 10 } }
+        }),
+        patchFields: jest.fn(),
+        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+      } as never,
+      { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
+      { completion$: of({ $key: 'completion-key', data: {} }) } as never,
+      { showHiddenCharacters$: of(false) } as never,
+      { info: jest.fn() } as never
+    );
+    component.display$.subscribe(value => display = value as never).unsubscribe();
+    expect([component.characterKey(na), component.characterKey(eu)]).toEqual(['1', '2']);
+    expect(display?.chaos).toEqual({ '1': 100, '2': 200 });
+    expect(display?.other).toEqual({ '1': 0, '2': 5 });
+  });
+});

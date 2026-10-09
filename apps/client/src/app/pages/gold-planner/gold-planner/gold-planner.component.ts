@@ -18,7 +18,7 @@ import { isTaskTracked } from "../../../core/task-tracking";
 import { capGoldTracking, formatGoldCapMessage, GoldCapUntick } from "../gold-cap";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { FieldWrite } from "../../../core/database/write-coalescer";
-import { characterFlagKey, manualGoldKey, readCharacterFlag, readManualGold } from "../../../core/character-keys";
+import { characterFlagKey, characterKey, manualGoldKey, readCharacterFlag, readManualGold } from "../../../core/character-keys";
 import { completionLabel, formatCompactGold, getGoldBar, GoldBarSegment, GoldCell, GoldSummary, summarizeCharacterGold, sumGoldSummaries } from "../gold-summary";
 
 interface chestsData {
@@ -362,14 +362,14 @@ export class GoldPlannerComponent {
       const chaos = roster.reduce((acc, c) => {
         return {
           ...acc,
-          [c.name]: this.getManualGoldEntry("chaos", c, lastWeeklyReset, manualGoldEntries || {})
+          [characterKey(c)]: this.getManualGoldEntry("chaos", c, lastWeeklyReset, manualGoldEntries || {})
         };
       }, {});
 
       const other = roster.reduce((acc, c) => {
         return {
           ...acc,
-          [c.name]: this.getManualGoldEntry("other", c, lastWeeklyReset, manualGoldEntries || {})
+          [characterKey(c)]: this.getManualGoldEntry("other", c, lastWeeklyReset, manualGoldEntries || {})
         };
       }, {});
 
@@ -385,7 +385,7 @@ export class GoldPlannerComponent {
           done: flag.done
         };
       };
-      const manualGold = (character: Character) => [chaos[character.name], other[character.name]];
+      const manualGold = (character: Character) => [chaos[characterKey(character)], other[characterKey(character)]];
 
       // The summary cards ignore the switch: every planned gate (as counted for the gold cap), done or not
       const characterSummaries = roster.map((character, i) => summarizeCharacterGold(
@@ -451,6 +451,9 @@ export class GoldPlannerComponent {
 
   // Mode names as the buttons show them, for the "Save as" action next to a counted-mode note
   public readonly modeLabel = getModeLabel;
+
+  // Manual gold amounts are listed by character id, so two characters with the same name keep their own
+  public readonly characterKey = characterKey;
 
   // Short gold amounts in the character list
   public readonly compactGold = formatCompactGold;

@@ -5,7 +5,7 @@ import { FIRESTORE } from "../../firebase/firebase.providers";
 import { combineLatest, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 import { Energy } from "../../../model/energy";
-import { getCompletionEntry, setCompletionEntry } from "../../get-completion-entry-key";
+import { getCompletionEntry, moveNameKeysToIds, setCompletionEntry } from "../../get-completion-entry-key";
 import { RosterService } from "./roster.service";
 import { TimeService } from "../../time.service";
 import { CompletionService } from "./completion.service";
@@ -44,6 +44,10 @@ export class EnergyService extends FirestoreStorage<Energy> {
         this.completionService.completion$
       ]).pipe(
         switchMap(([reset, roster, tasks, completion]) => {
+          // Entries saved under a character's name (older data) move to its id first, so two characters
+          // with the same name (one on NA, one on EU) never share ticks or rest bonus through that name
+          const energyMoved = moveNameKeysToIds(energy.data, roster.characters);
+          const completionMoved = moveNameKeysToIds(completion.data, roster.characters);
           const newEnergy = Object.keys(energy.data).length === 0;
           if (energy.updated < reset) {
             roster.characters.forEach(character => {
@@ -74,6 +78,14 @@ export class EnergyService extends FirestoreStorage<Energy> {
             return combineLatest([
               this.setOne(energy.$key, energy),
               this.completionService.setOne(completion.$key, completion)
+            ]).pipe(
+              mapTo(energy)
+            );
+          }
+          if (energyMoved || completionMoved) {
+            return combineLatest([
+              energyMoved ? this.setOne(energy.$key, energy) : of(void 0),
+              completionMoved ? this.completionService.setOne(completion.$key, completion) : of(void 0)
             ]).pipe(
               mapTo(energy)
             );

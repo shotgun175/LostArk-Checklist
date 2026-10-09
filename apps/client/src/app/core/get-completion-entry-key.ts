@@ -46,3 +46,42 @@ export function completionEntryFieldWrites<T>(field: string, data: Record<string
   }
   return writes;
 }
+
+/**
+ * Moves completion or rest bonus entries saved under a character's name (older data) to its id key,
+ * in place. A name shared by several characters (the same name on NA and EU) is copied to each of
+ * them, an id key that already exists is kept, and the name key is removed. Keys of characters
+ * without an id, and of names that are also a character's id, are left as they are.
+ *
+ * Args:
+ *   data: the completion or energy `data` map, changed in place.
+ *   characters: the characters whose name keys to move.
+ *
+ * Returns:
+ *   Whether anything changed.
+ */
+export function moveNameKeysToIds(data: Record<string, unknown>, characters: { id?: number, name: string }[]): boolean {
+  const ids = new Set(characters.filter(c => c.id).map(c => String(c.id)));
+  const idsByName = new Map<string, string[]>();
+  characters
+    .filter(c => c.id && typeof c.name === "string" && c.name !== "" && !ids.has(c.name))
+    .forEach(c => idsByName.set(c.name, [...(idsByName.get(c.name) ?? []), String(c.id)]));
+  // Longest name first, so "A:B:task" belongs to a character named "A:B" rather than "A"
+  const names = [...idsByName.keys()].sort((a, b) => b.length - a.length);
+  let changed = false;
+  Object.keys(data).forEach(key => {
+    const name = names.find(n => key.startsWith(`${n}:`));
+    if (name === undefined) {
+      return;
+    }
+    const suffix = key.slice(name.length + 1);
+    idsByName.get(name)?.forEach(id => {
+      if (data[`${id}:${suffix}`] === undefined) {
+        data[`${id}:${suffix}`] = data[key];
+      }
+    });
+    delete data[key];
+    changed = true;
+  });
+  return changed;
+}

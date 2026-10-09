@@ -20,6 +20,7 @@ import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickD
 import { characterNameError, cleanCharacterName, MAX_CHARACTER_ILVL, MAX_CHARACTER_NAME_LENGTH, nextCharacterId, parseRosterImport } from "../../../core/roster-input";
 import { SettingsService } from "../../../core/database/services/settings.service";
 import { characterKeyMigrationWrites, removedCharacterWrites } from "../../../core/character-keys";
+import { moveNameKeysToIds } from "../../../core/get-completion-entry-key";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 
@@ -67,7 +68,7 @@ export class RosterComponent {
   public addCharacter(roster: Roster): void {
     const form = this.form.getRawValue();
     const name = cleanCharacterName(form.name);
-    const nameError = characterNameError(name, roster.characters);
+    const nameError = characterNameError(name);
     if (nameError) {
       this.message.error(nameError);
       return;
@@ -116,14 +117,15 @@ export class RosterComponent {
       showSavedValue(nameModel, character.name);
       return;
     }
-    const nameError = characterNameError(name, roster.characters, character.id);
+    const nameError = characterNameError(name);
     if (nameError) {
       showSavedValue(nameModel, character.name);
       this.message.error(nameError);
       return;
     }
-    // Keys saved under the old name (from older data) move to the character id before the name changes
-    const isOldNameKey = (key: string) => key.split(":")[0] === character.name;
+    // Keys saved under the old name (from older data) move to the character id before the name changes.
+    // Every character with that name gets its copy, so renaming one does not take them from the other.
+    const sameName = roster.characters.filter(c => c.name === character.name);
     combineLatest([
       this.completionService.completion$,
       this.energyService.energy$,
@@ -131,22 +133,13 @@ export class RosterComponent {
     ]).pipe(
       first(),
       switchMap(([completion, energy, settings]) => {
-        const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, [character]);
+        const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, sameName);
         if (settingsWrites.length > 0) {
           this.settings.patchFields(settings.$key, settingsWrites);
         }
-        let updated = false;
-        Object.keys(completion.data).filter(isOldNameKey).forEach(key => {
-          updated = true;
-          completion.data[`${character.id}:${key.split(":")[1]}`] = completion.data[key];
-          delete completion.data[key];
-        });
-        Object.keys(energy.data).filter(isOldNameKey).forEach(key => {
-          updated = true;
-          energy.data[`${character.id}:${key.split(":")[1]}`] = energy.data[key];
-          delete energy.data[key];
-        });
-        if (updated) {
+        const completionMoved = moveNameKeysToIds(completion.data, sameName);
+        const energyMoved = moveNameKeysToIds(energy.data, sameName);
+        if (completionMoved || energyMoved) {
           return combineLatest([
             this.completionService.setOne(completion.$key, completion),
             this.energyService.setOne(energy.$key, energy)
