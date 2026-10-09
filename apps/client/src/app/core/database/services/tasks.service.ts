@@ -7,7 +7,6 @@ import { AuthService } from "./auth.service";
 import { combineLatest, debounceTime, from, map, mapTo, MonoTypeOperatorFunction, Observable, of, pairwise, pluck, shareReplay, switchMap, tap } from "rxjs";
 import { tasks, oldTaskNames, renamedTaskLabels } from "../../tasks";
 import { catchError, filter } from "rxjs/operators";
-import { SettingsService } from "./settings.service";
 import { subHours } from "date-fns";
 
 /**
@@ -45,6 +44,26 @@ export function upgradeUserTask(t: LostarkTask, defaultTasks: LostarkTask[], uid
     index: t.index,
     version: TASKS_VERSION
   };
+}
+
+/**
+ * Sets the amount of built-in tasks whose count does not come from the stored task: Affinity Song and
+ * Affinity Emote are always 5 (copies saved before Crystalline Aura was removed still say 6), and
+ * Adventure Island is 2 on weekends and 1 on other days. Custom tasks are left alone. Changes the task in place.
+ */
+export function withDailyAmount(task: LostarkTask, now: Date): LostarkTask {
+  if (task.label?.startsWith("Affinity") && !task.custom) {
+    task.amount = 5;
+  }
+  if (task.label?.startsWith("Adventure Island") && !task.custom) {
+    const currentLADay = subHours(now, 10);
+    if ([0, 6].includes(currentLADay.getUTCDay())) {
+      task.amount = 2;
+    } else {
+      task.amount = 1;
+    }
+  }
+  return task;
 }
 
 /** A user's copy of a built-in task with its new label when that label changed (see renamedTaskLabels), otherwise the same object. */
@@ -126,36 +145,16 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     shareReplay(1)
   );
 
-  public tasks$ = combineLatest([
-    this.baseData$.pipe(
-      pluck("result")
-    ),
-    this.settings.settings$
-  ]).pipe(
-    map(([tasks, settings]) => {
-      const currentLADay = subHours(new Date(), 10);
-      return tasks.map(task => {
-        if (task.label?.startsWith("Affinity") && !task.custom) {
-          if (settings.crystallineAura) {
-            task.amount = 6;
-          } else {
-            task.amount = 5;
-          }
-        }
-        if (task.label?.startsWith("Adventure Island") && !task.custom) {
-          if ([0, 6].includes(currentLADay.getUTCDay())) {
-            task.amount = 2;
-          } else {
-            task.amount = 1;
-          }
-        }
-        return task;
-      });
+  public tasks$ = this.baseData$.pipe(
+    pluck("result"),
+    map(tasks => {
+      const now = new Date();
+      return tasks.map(task => withDailyAmount(task, now));
     }),
     shareReplay(1)
   );
 
-  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService, private settings: SettingsService) {
+  constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
     super(firestore);
     this.baseData$.pipe(
       pluck("toCreate"),

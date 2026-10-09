@@ -27,8 +27,8 @@ export const tasks = [
     daysFilter: [2, 5, 0],
     canEditDaysFilter: false,
   }),
-  createTask("Affinity Song", 302, TaskFrequency.DAILY, TaskScope.ROSTER, 6, 9999, "rapport.webp"),
-  createTask("Affinity Emote", 302, TaskFrequency.DAILY, TaskScope.ROSTER, 6, 9999, "rapport.webp"),
+  createTask("Affinity Song", 302, TaskFrequency.DAILY, TaskScope.ROSTER, 5, 9999, "rapport.webp"),
+  createTask("Affinity Emote", 302, TaskFrequency.DAILY, TaskScope.ROSTER, 5, 9999, "rapport.webp"),
 
   // Weekly Character
   createTask(`Paradise`, 1580, TaskFrequency.WEEKLY, TaskScope.CHARACTER, 5, 9999, "weekly.webp"),

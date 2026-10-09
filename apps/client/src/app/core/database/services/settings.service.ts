@@ -20,7 +20,7 @@ export class SettingsService extends FirestoreStorage<Settings> {
             const result = {
               ...settings,
               hiddenOnCompletion: false,
-              crystallineAura: true,
+              crystallineAura: true, // unused; keeps the key count the check above expects
               lazytracking: {},
               chestConfiguration: {},
               goldPlannerConfiguration: {},

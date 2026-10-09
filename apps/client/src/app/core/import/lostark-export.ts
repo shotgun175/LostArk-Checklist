@@ -34,7 +34,7 @@ export interface LostarkExport {
 // whenever the Settings model gains or loses a field.
 const SETTINGS_FIELDS: Record<keyof StoredDoc<Settings>, true> = {
   hiddenOnCompletion: true,
-  crystallineAura: true,
+  crystallineAura: true, // ignored; still accepted so old exports and backups import
   lazytracking: true,
   manualGoldEntries: true,
   chestConfiguration: true,
