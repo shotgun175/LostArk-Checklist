@@ -1,6 +1,6 @@
 {
   "name": "lostark-helper",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "license": "MIT",
   "scripts": {
     "ng": "nx",
