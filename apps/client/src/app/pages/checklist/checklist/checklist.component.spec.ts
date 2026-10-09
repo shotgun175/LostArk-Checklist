@@ -214,4 +214,52 @@ describe('ChecklistComponent', () => {
       expect(component.categoriesDisplay$.value.oneTimeRoster).toBe(true);
     });
   });
+  describe('gold badge', () => {
+    const kazerosTask: LostarkTask = { ...tasks.find(task => task.label === 'Kazeros'), $key: 'kazeros' };
+
+    // The Kazeros badge of one character with Hard saved on both gates and gold ticked on both
+    async function kazerosBadge(ilvl: number) {
+      const character = { ...arwen, ilvl, weeklyGold: true } as Character;
+      const component = new ChecklistComponent(
+        { roster$: of({ $key: 'uid', characters: [character], trackedTasks: { '1:kazeros': true }, showAllTasks: false }) } as unknown as RosterService,
+        { tasks$: of([kazerosTask]) } as unknown as TasksService,
+        {
+          settings$: of({
+            lazytracking: {},
+            hiddenOnCompletion: false,
+            goldPlannerConfiguration: { '1:gold:taking:Kazeros Gate 1': true, '1:gold:taking:Kazeros Gate 2': true },
+            raidModesForGoldPlanner: { '1:runningMode:Kazeros Gate 1': 'HM', '1:runningMode:Kazeros Gate 2': 'HM' }
+          })
+        } as unknown as SettingsService,
+        { energy$: of({ data: {} }) } as unknown as EnergyService,
+        {
+          lastDailyReset$: of(dailyReset),
+          lastWeeklyReset$: of(weeklyReset),
+          lastBiWeeklyReset$: of(biWeeklyReset),
+          lastBiWeeklyOffsetReset$: of(biWeeklyOffsetReset)
+        } as unknown as TimeService,
+        { completion$: of({ data: {} }) } as unknown as CompletionService,
+        { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
+        new ElementRef(document.createElement('div')),
+        { run: (fn: () => void) => fn() } as unknown as NgZone
+      );
+      const display = await firstValueFrom(component.tableDisplay$);
+      const row = display.data.weeklyCharacter.data.find(r => r.task.$key === 'kazeros');
+      return row.completionData[0];
+    }
+
+    it('shows the mode the Gold Planner counts: a saved Hard below 1730 shows NM, with the reason in the tooltip', async () => {
+      const cell = await kazerosBadge(1712);
+      expect(cell.modeBadge).toBe('NM');
+      expect(cell.goldBadgeTooltip).toBe('Normal Mode, earns gold (Hard needs 1730, counted as Normal)');
+      // Hard is out of reach, so no "can run a higher mode" arrow either
+      expect(cell.higherModeInfo).toBeUndefined();
+    });
+
+    it('shows the saved Hard once the item level allows it', async () => {
+      const cell = await kazerosBadge(1730);
+      expect(cell.modeBadge).toBe('HM');
+      expect(cell.goldBadgeTooltip).toBe('Hard Mode, earns gold');
+    });
+  });
 });

@@ -5,7 +5,6 @@ import { capGoldTracking } from '../gold-cap';
 import { tasks as defaultTasks } from '../../../core/tasks';
 import { LostarkTask } from '../../../model/lostark-task';
 import { Character } from '../../../model/character/character';
-import { SettingsService } from '../../../core/database/services/settings.service';
 import { applyFieldWrites, FieldWrite } from '../../../core/database/write-coalescer';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
@@ -47,7 +46,7 @@ describe('GoldPlannerComponent gold cap', () => {
     const component = new GoldPlannerComponent(
       { roster$ } as never,
       { tasks$: of(tasks) } as never,
-      { settings$, patchFields, getRunningModeFlag: SettingsService.prototype.getRunningModeFlag } as never,
+      { settings$, patchFields } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: {} }) } as never,
       { showHiddenCharacters$: of(false) } as never,
@@ -121,8 +120,7 @@ describe('GoldPlannerComponent gold this week', () => {
           raidModesForGoldPlanner: { 'Arwen:runningMode:Kazeros Gate 1': 'HM', 'Arwen:runningMode:Kazeros Gate 2': 'HM' },
           manualGoldEntries: {}
         }),
-        patchFields: jest.fn(),
-        getRunningModeFlag: SettingsService.prototype.getRunningModeFlag
+        patchFields: jest.fn()
       } as never,
       { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
       { completion$: of({ $key: 'completion-key', data: { '1:Kazeros': { amount: 1, updated: 10 } } }) } as never,
@@ -175,5 +173,91 @@ describe('GoldPlannerComponent gold this week', () => {
       .filter(row => row.line.name.startsWith('Kazeros'))
       .map(row => [row.line.name, row.goldDetails[0].completion]));
     expect(labels).toEqual({ 'Kazeros': '1 of 2 done', 'Kazeros Gate 1': 'done', 'Kazeros Gate 2': 'to do' });
+  });
+});
+
+describe('GoldPlannerComponent with two characters of the same name', () => {
+  // One player can have the same name on NA and on EU; everything is keyed by id
+  it('keeps each one\'s Chaos Dungeons and Other gold apart', () => {
+    const na = { id: 1, name: 'Arwen', ilvl: 1700, weeklyGold: true } as Character;
+    const eu = { id: 2, name: 'Arwen', ilvl: 1700, weeklyGold: true } as Character;
+    let display: { chaos: Record<string, number>, other: Record<string, number> } | undefined;
+    const component = new GoldPlannerComponent(
+      { roster$: of({ $key: 'roster-key', characters: [na, eu], trackedTasks: {} }) } as never,
+      { tasks$: of(tasks) } as never,
+      {
+        settings$: of({
+          $key: 'settings-key',
+          goldPlannerConfiguration: {},
+          raidModesForGoldPlanner: {},
+          manualGoldEntries: { 'chaos:1': { amount: 100, timestamp: 10 }, 'chaos:2': { amount: 200, timestamp: 10 }, 'other:2': { amount: 5, timestamp: 10 } }
+        }),
+        patchFields: jest.fn()
+      } as never,
+      { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
+      { completion$: of({ $key: 'completion-key', data: {} }) } as never,
+      { showHiddenCharacters$: of(false) } as never,
+      { info: jest.fn() } as never
+    );
+    component.display$.subscribe(value => display = value as never).unsubscribe();
+    expect([component.characterKey(na), component.characterKey(eu)]).toEqual(['1', '2']);
+    expect(display?.chaos).toEqual({ '1': 100, '2': 200 });
+    expect(display?.other).toEqual({ '1': 0, '2': 5 });
+  });
+});
+
+describe('GoldPlannerComponent saving the counted mode', () => {
+  // Kazeros Hard saved on both gates of a character; at 1712 it counts as Normal, at 1730 it stays Hard
+  const setup = (ilvl: number) => {
+    const planned = { ...character, ilvl } as Character;
+    const raidModes: Record<string, string> = { '1:runningMode:Kazeros Gate 1': 'HM', '1:runningMode:Kazeros Gate 2': 'HM' };
+    const patchFields = jest.fn();
+    let display: unknown;
+    const component = new GoldPlannerComponent(
+      { roster$: of({ $key: 'roster-key', characters: [planned], trackedTasks: allRaidsTracked }) } as never,
+      { tasks$: of(tasks) } as never,
+      {
+        settings$: of({ $key: 'settings-key', goldPlannerConfiguration: {}, raidModesForGoldPlanner: raidModes, manualGoldEntries: {} }),
+        patchFields
+      } as never,
+      { lastWeeklyReset$: of(0), lastBiWeeklyReset$: of(0), lastBiWeeklyOffsetReset$: of(0) } as never,
+      { completion$: of({ $key: 'completion-key', data: {} }) } as never,
+      { showHiddenCharacters$: of(false) } as never,
+      { info: jest.fn() } as never
+    );
+    component.display$.subscribe(value => display = value).unsubscribe();
+    const rows = (display as { chestsData: { line: { name: string }, goldDetails: { savableMode?: string }[] }[] }).chestsData;
+    const raid = rows.find(row => row.line.name === 'Kazeros');
+    const gate = rows.find(row => row.line.name === 'Kazeros Gate 2');
+    return { component, planned, raidModes, patchFields, raid, gate };
+  };
+
+  it('saves the counted Normal on every gate in one write when its already selected button is clicked', () => {
+    const { component, planned, raidModes, patchFields, raid } = setup(1712);
+    expect(raid?.goldDetails[0].savableMode).toBe('NM');
+    component.onModeButtonClick('settings-key', raidModes, raid?.line as never, planned, raid?.goldDetails[0] as never, 'NM');
+    expect(patchFields).toHaveBeenCalledTimes(1);
+    expect(patchFields).toHaveBeenCalledWith('settings-key', [
+      { path: ['raidModesForGoldPlanner', '1:runningMode:Kazeros Gate 1'], value: 'NM' },
+      { path: ['raidModesForGoldPlanner', '1:runningMode:Kazeros Gate 2'], value: 'NM' }
+    ]);
+  });
+
+  it('saves only that gate from a gate line, and the note button saves the same way', () => {
+    const { component, planned, raidModes, patchFields, gate } = setup(1712);
+    component.saveCountedMode('settings-key', raidModes, gate?.line as never, planned, 'NM');
+    expect(patchFields).toHaveBeenCalledTimes(1);
+    expect(patchFields).toHaveBeenCalledWith('settings-key', [{ path: ['raidModesForGoldPlanner', '1:runningMode:Kazeros Gate 2'], value: 'NM' }]);
+  });
+
+  it('leaves a click on another mode to the radio group, and does nothing when the saved mode counts', () => {
+    const low = setup(1712);
+    // Another button changes the selection, so the radio group's change saves it (once)
+    low.component.onModeButtonClick('settings-key', low.raidModes, low.raid?.line as never, low.planned, low.raid?.goldDetails[0] as never, 'Solo');
+    expect(low.patchFields).not.toHaveBeenCalled();
+    const high = setup(1730);
+    expect(high.raid?.goldDetails[0].savableMode).toBeUndefined();
+    high.component.onModeButtonClick('settings-key', high.raidModes, high.raid?.line as never, high.planned, high.raid?.goldDetails[0] as never, 'HM');
+    expect(high.patchFields).not.toHaveBeenCalled();
   });
 });

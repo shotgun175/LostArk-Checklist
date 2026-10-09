@@ -20,7 +20,7 @@ import { Character } from '../../../model/character/character';
 import { tickets } from '../../../data/tickets';
 import { addWeeks, getWeek } from 'date-fns';
 import { goldTasks } from "../../gold-planner/gold-tasks";
-import { Gate, getHigherModeForGate } from "../../gold-planner/gold-task";
+import { Gate, getCountedLineMode, getCountedModeNotes, getCountedRunningMode, getHigherModeForGate } from "../../gold-planner/gold-task";
 import { filterVisibleCharacters } from '../../../core/visible-characters';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
 import { checklistBodyHeight, checklistTaskColumnWidth, computeChecklistScroll, formatCountdown, formatModeBadge, getGoldBadge, goldBadgeTooltip, isWeeklyFrequency } from './checklist-layout';
@@ -179,14 +179,17 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
           const forceDone = (!available && visible); // If task is not available but is visible, we marked it as done
           const completionData = filterVisibleCharacters(roster.characters, showHidden)
             .map(character => {
-              let runningMode = this.getRunningModeFlagForTask(raidModesForGoldPlanner, character, task.label);
+              // The mode the Gold Planner counts (a saved Hard or Nightmare the item level cannot run counts lower)
+              const gates = this.getGoldGatesForTask(task.label);
+              const savedModeOf = (gate: Gate): string | undefined => readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gate.name}`);
+              let runningMode = gates.length ? getCountedLineMode(gates, character, savedModeOf) : undefined;
               runningMode = runningMode === 'Nightmare' ? 'NiM' : runningMode;
               const modeBadge = formatModeBadge(runningMode);
               const goldBadge = getGoldBadge(modeBadge, this.getGoldTakingInfoForTask(character, task.label, goldTracking), character.weeklyGold);
               return {
                 runningMode,
                 modeBadge,
-                higherModeInfo: this.getHigherModeInfoForTask(raidModesForGoldPlanner, character, task.label),
+                higherModeInfo: this.getHigherModeInfo(gates, character, savedModeOf),
                 done: Math.min(isTaskDone(
                   task,
                   character,
@@ -201,7 +204,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
                 doable: character.ilvl >= (task.minIlvl || 0) && character.ilvl < (task.maxIlvl || Infinity),
                 energy: getCompletionEntry(energy.data, character, task) || 0,
                 goldBadge,
-                goldBadgeTooltip: goldBadgeTooltip(modeBadge, goldBadge.coin)
+                goldBadgeTooltip: goldBadgeTooltip(modeBadge, goldBadge.coin, getCountedModeNotes(gates, character, savedModeOf))
               };
             });
 
@@ -500,18 +503,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     return goldTaskName === undefined ? false : readCharacterFlag(goldTracking, character, `gold:taking:${goldTaskName}`)
   }
 
-  private getRunningModeFlagForTask(raidModesForGoldPlanner: Record<string, string>, character: Character, taskName: string): string | undefined {
-    const gates = this.getGoldGatesForTask(taskName)
-    return gates.length ? this.settings.getRunningModeFlag(raidModesForGoldPlanner, character, gates.map(gate => gate.name)) : undefined
-  }
-
-  private getHigherModeInfoForTask(raidModesForGoldPlanner: Record<string, string>, character: Character, taskName: string): string | undefined {
-    const gates = this.getGoldGatesForTask(taskName)
+  private getHigherModeInfo(gates: Gate[], character: Character, savedModeOf: (gate: Gate) => string | undefined): string | undefined {
     if (!gates.length) return undefined
 
     const higherModes = gates.map(gate => getHigherModeForGate(
       gate,
-      this.settings.getRunningModeFlag(raidModesForGoldPlanner, character, [gate.name]),
+      getCountedRunningMode(gate, character, savedModeOf(gate)).mode ?? '',
       character
     ))
     if (higherModes.some(mode => !mode)) return undefined

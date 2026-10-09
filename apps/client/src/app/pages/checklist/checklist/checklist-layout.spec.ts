@@ -129,6 +129,12 @@ describe('goldBadgeTooltip', () => {
     expect(goldBadgeTooltip('Mix', false)).toBe('Mixed modes, no gold');
   });
 
+  it('adds why a saved mode counts as another one', () => {
+    expect(goldBadgeTooltip('NM', true, ['Hard needs 1730, counted as Normal'])).toBe('Normal Mode, earns gold (Hard needs 1730, counted as Normal)');
+    expect(goldBadgeTooltip('Mix', false, ['Hard needs 1730, counted as Normal', 'Nightmare needs 1740, counted as Hard']))
+      .toBe('Mixed modes, no gold (Hard needs 1730, counted as Normal; Nightmare needs 1740, counted as Hard)');
+  });
+
   it('covers a coin without a mode', () => {
     expect(goldBadgeTooltip('', true)).toBe('Earns gold');
   });

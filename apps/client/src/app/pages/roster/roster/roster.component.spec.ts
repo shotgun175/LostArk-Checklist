@@ -100,13 +100,13 @@ describe('RosterComponent', () => {
       expect(written.find(c => c.id === 12)?.ilvl).toBe(1610);
     });
 
-    it('refuses a duplicate name', () => {
+    it('adds a character with a name another character already has, under its own id', () => {
       const r = roster([character(1, 'Arwen')]);
-      component.form.setValue({ name: 'arwen', ilvl: 1600, lazy: false, class: 4 });
+      component.form.setValue({ name: 'Arwen', ilvl: 1600, lazy: false, class: 4 });
       component.addCharacter(r);
-      expect(r.characters).toHaveLength(1);
-      expect(rosterService.setOne).not.toHaveBeenCalled();
-      expect(message.error).toHaveBeenCalled();
+      expect(r.characters.map(c => [c.id, c.name])).toEqual([[1, 'Arwen'], [2, 'Arwen']]);
+      expect(rosterService.setOne).toHaveBeenCalledTimes(1);
+      expect(message.error).not.toHaveBeenCalled();
     });
 
     it('rejects a whitespace name and an item level outside 0 to 2000 in the form', () => {
@@ -141,15 +141,36 @@ describe('RosterComponent', () => {
   });
 
   describe('renaming a character', () => {
-    it('rejects a blank or duplicate name, restores the old one and shows a message', () => {
+    it('rejects a blank name, restores the old one and shows a message', () => {
       const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
       const model = { control: { setValue: jest.fn() } };
       component.saveCharacterName(r.characters[0], r, '  ​ ', model);
-      component.saveCharacterName(r.characters[0], r, 'BRAKKA', model);
-      expect(model.control.setValue).toHaveBeenCalledTimes(2);
       expect(model.control.setValue).toHaveBeenCalledWith('Arwen', { emitViewToModelChange: false });
-      expect(message.error).toHaveBeenCalledTimes(2);
+      expect(message.error).toHaveBeenCalledTimes(1);
       expect(rosterService.updateOne).not.toHaveBeenCalled();
+    });
+
+    // Names are unique only per region (NA and EU), so one roster may hold the same name twice
+    it('saves a name another character already has, and leaves that character alone', () => {
+      const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
+      component.saveCharacterName(r.characters[0], r, 'Brakka', { control: { setValue: jest.fn() } });
+      expect(message.error).not.toHaveBeenCalled();
+      const saved: Character[] = rosterService.updateOne.mock.calls[0][1].characters;
+      expect(saved.map(c => [c.id, c.name])).toEqual([[1, 'Brakka'], [2, 'Brakka']]);
+    });
+
+    it('renaming one of two same-named characters gives both their copy of the old name keys', () => {
+      completion.data = { 'Arwen:t1': { amount: 1 }, '2:t2': { amount: 3 } };
+      energy.data = { 'Arwen:t1': { amount: 40 } };
+      settingsDoc['lazytracking'] = { 'Arwen:t1': false };
+      const r = roster([character(1, 'Arwen'), character(2, 'Arwen')]);
+      component.saveCharacterName(r.characters[0], r, 'Elkie', { control: { setValue: jest.fn() } });
+      expect(completion.data).toEqual({ '1:t1': { amount: 1 }, '2:t1': { amount: 1 }, '2:t2': { amount: 3 } });
+      expect(energy.data).toEqual({ '1:t1': { amount: 40 }, '2:t1': { amount: 40 } });
+      const lazy = applyFieldWrites(settingsDoc, settingsPatch.mock.calls[0][1])['lazytracking'];
+      expect(lazy).toEqual({ '1:t1': false, '2:t1': false });
+      const saved: Character[] = rosterService.updateOne.mock.calls[0][1].characters;
+      expect(saved.map(c => [c.id, c.name])).toEqual([[1, 'Elkie'], [2, 'Arwen']]);
     });
 
     it('moves only that name\'s old completion and rest bonus keys, and removes the old rest bonus key', () => {

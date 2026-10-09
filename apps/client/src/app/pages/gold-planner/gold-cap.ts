@@ -29,6 +29,7 @@ function releaseIndex(gTask: GoldTask): number {
  * selected modes stay (ties go to the newer raid) and Taking Gold is unticked on every gate of the rest.
  * A saved Hard or Nightmare the character's item level cannot run is ranked by the mode it counts as (getCountedRunningMode).
  * Without the task list nothing is capped, since tracking and item level ranges are unknown then.
+ * When two characters share a name (the same name on NA and EU), each one's item level is added to its name in the result.
  *
  * Args:
  *   characters: every character of the roster.
@@ -82,7 +83,9 @@ export function capGoldTracking(characters: Character[], tracking: Record<string
       }
     }));
     unticked.push({
-      characterName: character.name,
+      characterName: characters.some(other => other !== character && other.name === character.name)
+        ? `${character.name} (${character.ilvl})`
+        : character.name,
       raids: dropped.map(raid => raid.gTask.name),
       kept: ranked.slice(0, MAX_GOLD_RAIDS).map(raid => raid.gTask.name)
     });

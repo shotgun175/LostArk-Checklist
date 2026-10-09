@@ -6,8 +6,7 @@ import { Settings } from "../../../model/settings";
 import { combineLatest, filter, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 import { RosterService } from "./roster.service";
-import { Character } from "../../../model/character/character";
-import { characterKeyMigrationWrites, readCharacterFlag } from "../../character-keys";
+import { characterKeyMigrationWrites } from "../../character-keys";
 
 @Injectable({
   providedIn: "root"
@@ -74,12 +73,6 @@ export class SettingsService extends FirestoreStorage<Settings> {
       map(([settings, roster]) => ({ key: settings.$key, writes: characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, roster.characters) })),
       filter(({ writes }) => writes.length > 0)
     ).subscribe(({ key, writes }) => this.patchFields(key, writes));
-  }
-
-  public getRunningModeFlag(raidModesForGoldPlanner: Record<string, string>, character: Pick<Character, "id" | "name">, gateNames: string[]): string {
-    const getGateMode = (gateName: string): string => readCharacterFlag(raidModesForGoldPlanner, character, `runningMode:${gateName}`) as string;
-    const firstGateMode = getGateMode(gateNames[0]);
-    return gateNames.every(gateName => getGateMode(gateName) === firstGateMode) ? firstGateMode : "Mixed";
   }
 
   protected getCollectionName(): string {

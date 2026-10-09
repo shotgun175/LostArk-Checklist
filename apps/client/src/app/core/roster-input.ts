@@ -19,20 +19,12 @@ export function cleanCharacterName(raw: unknown): string {
 }
 
 /**
- * Why a cleaned name cannot be saved, or null when it can: it is empty, or another character
- * already has it (ignoring case).
- *
- * Args:
- *   name: the cleaned name (see cleanCharacterName).
- *   characters: the roster's characters.
- *   selfId: the id of the character being renamed, which may keep its own name.
+ * Why a cleaned name cannot be saved, or null when it can: only an empty name is refused. Two
+ * characters may share a name (names are unique only per region, NA or EU); every per-character
+ * choice is keyed by the character id, so they stay apart.
  */
-export function characterNameError(name: string, characters: Pick<Character, "id" | "name">[], selfId?: number): string | null {
-  if (name === "") {
-    return "A character name cannot be empty.";
-  }
-  const taken = characters.some(c => (selfId === undefined || c.id !== selfId) && c.name?.toLowerCase() === name.toLowerCase());
-  return taken ? `Another character is already named ${name}.` : null;
+export function characterNameError(name: string): string | null {
+  return name === "" ? "A character name cannot be empty." : null;
 }
 
 /** The id for a new character: one more than the highest id, compared as numbers. Ids start at 1, since 0 counts as no id. */
