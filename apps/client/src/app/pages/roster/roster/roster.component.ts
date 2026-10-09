@@ -197,18 +197,32 @@ export class RosterComponent {
   /** Opening the note popup starts from the saved note; closing it without Save drops the edits. */
   onNoteVisible(character: Character, visible: boolean): void {
     if (!visible) {
-      this.openNoteId = null;
+      this.closeNote(character);
       return;
     }
     this.openNoteId = character.id ?? null;
     this.noteDraft = character.note ?? "";
-    setTimeout(() => document.querySelector<HTMLTextAreaElement>(".note-popover textarea")?.focus());
+    // A popup that is still fading out is also in the page, so look for this character's own text box
+    setTimeout(() => document.querySelector<HTMLTextAreaElement>(`.note-editor[data-note-id="${character.id}"] textarea`)?.focus());
+  }
+
+  /** Closes the popup. Keyboard focus that was in it, or was lost with it, goes back to the character's note button. */
+  private closeNote(character: Character): void {
+    if (this.openNoteId === character.id) {
+      this.openNoteId = null;
+    }
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body || active.closest(`.note-editor[data-note-id="${character.id}"]`)) {
+        document.querySelector<HTMLElement>(`.note-button[data-note-id="${character.id}"]`)?.focus();
+      }
+    });
   }
 
   /** Saves the trimmed note (a blank one is stored as an empty note, as before) and closes the popup. */
   saveNote(character: Character, roster: Roster): void {
     const note = this.noteDraft.trim();
-    this.openNoteId = null;
+    this.closeNote(character);
     if (note === (character.note ?? "")) {
       return;
     }

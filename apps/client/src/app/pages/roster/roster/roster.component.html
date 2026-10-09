@@ -82,7 +82,7 @@
           </ng-template>
           <ng-template #noteAction>
             <!-- The note opens in a popup; on phones this button moves up to the name line (see the less) -->
-            <button type="button" nz-button class="note-button" [class.has-note]="hasNote(character)"
+            <button type="button" nz-button class="note-button" [class.has-note]="hasNote(character)" [attr.data-note-id]="character.id"
               nz-popover nzPopoverTrigger="click" nzPopoverPlacement="bottomRight" nzPopoverOverlayClassName="note-popover"
               [nzPopoverTitle]="'Note for ' + character.name" [nzPopoverContent]="noteEditor"
               [nzPopoverVisible]="openNoteId === character.id" (nzPopoverVisibleChange)="onNoteVisible(character, $event)"
@@ -98,7 +98,7 @@
               }
             </button>
             <ng-template #noteEditor>
-              <div class="note-editor">
+              <div class="note-editor" [attr.data-note-id]="character.id">
                 <textarea nz-input
                   placeholder="Notes (for example Bifrost spots or Song of Return location)"
                   rows="3"

@@ -191,7 +191,8 @@
       margin-inline-end: 16px;
     }
 
-    // The note button, at the end of the name line
+    // The note button, at the end of the name line. Only its place on screen moves: Tab still reaches
+    // it after the class select, as on wider screens (a known tradeoff of moving it with CSS alone).
     > li:nth-last-child(2) {
       order: 1;
       flex: none;

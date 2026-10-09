@@ -270,6 +270,67 @@ describe('RosterComponent', () => {
       expect(long).toBe(`${'a'.repeat(300)}...`);
     });
 
+    describe('keyboard focus', () => {
+      // Two rows' buttons, and two popups as when one is still fading out while the next opens
+      const addNoteDom = (): Record<string, HTMLElement> => {
+        document.body.innerHTML = `
+          <button class="note-button" data-note-id="1"></button>
+          <button class="note-button" data-note-id="2"></button>
+          <div class="note-editor" data-note-id="1"><textarea></textarea><button class="save"></button></div>
+          <div class="note-editor" data-note-id="2"><textarea></textarea></div>`;
+        const q = (selector: string) => document.querySelector<HTMLElement>(selector) as HTMLElement;
+        return {
+          button1: q('.note-button[data-note-id="1"]'), button2: q('.note-button[data-note-id="2"]'),
+          textarea1: q('[data-note-id="1"] textarea'), textarea2: q('[data-note-id="2"] textarea'), save1: q('.save')
+        };
+      };
+
+      beforeEach(() => jest.useFakeTimers());
+      afterEach(() => {
+        jest.useRealTimers();
+        document.body.innerHTML = '';
+      });
+
+      it('focuses the text box of the popup that opened, even while another one is still closing', () => {
+        const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
+        const el = addNoteDom();
+        component.onNoteVisible(r.characters[1], true);
+        jest.runAllTimers();
+        expect(document.activeElement).toBe(el.textarea2);
+      });
+
+      it('gives focus back to the note button after Save, Clear or Escape', () => {
+        const r = roster([character(1, 'Arwen')]);
+        const el = addNoteDom();
+        el.save1.focus();
+        component.saveNote(r.characters[0], r);
+        jest.runAllTimers();
+        expect(document.activeElement).toBe(el.button1);
+
+        el.textarea1.focus();
+        component.clearNote(r.characters[0], r);
+        jest.runAllTimers();
+        expect(document.activeElement).toBe(el.button1);
+
+        el.textarea1.focus();
+        component.onNoteVisible(r.characters[0], false);
+        jest.runAllTimers();
+        expect(document.activeElement).toBe(el.button1);
+      });
+
+      it('leaves focus alone when it already moved on, such as to another note button', () => {
+        const r = roster([character(1, 'Arwen'), character(2, 'Brakka')]);
+        const el = addNoteDom();
+        component.onNoteVisible(r.characters[0], true);
+        el.button2.focus();
+        component.onNoteVisible(r.characters[1], true);
+        component.onNoteVisible(r.characters[0], false);
+        jest.runAllTimers();
+        expect(component.openNoteId).toBe(2);
+        expect(document.activeElement).toBe(el.textarea2);
+      });
+    });
+
     it('wires the note button into the row actions just before Delete, with no note text box on the row', () => {
       const html = fs.readFileSync(path.resolve(__dirname, 'roster.component.html'), 'utf8');
       expect(html).toMatch(/\[nzActions\]="\[[^\]]*setClassAction, noteAction, deleteAction\]"/);
