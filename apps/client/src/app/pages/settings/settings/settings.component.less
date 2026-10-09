@@ -301,3 +301,62 @@
   display: block;
   margin-bottom: 10px;
 }
+
+// Bring data over: the one-click bookmark is a link styled as a dashed button, made to be dragged
+.bookmark-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.bookmarklet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border: 1px dashed #1890ff;
+  border-radius: 16px;
+  color: #1890ff;
+  cursor: grab;
+  white-space: nowrap;
+}
+
+.bookmark-steps,
+.how-to-steps {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.bookmark-steps {
+  flex: 1 1 260px;
+  opacity: .75;
+}
+
+.how-to-steps {
+  margin-bottom: 12px;
+
+  li {
+    margin-bottom: 6px;
+  }
+}
+
+.bridge-note {
+  margin-bottom: 10px;
+  color: #faad14;
+}
+
+.how-to-link {
+  cursor: pointer;
+}
+
+.copy-failed {
+  margin: 10px 0 6px;
+}
+
+.script-text {
+  height: 160px;
+  font-family: monospace;
+  font-size: 12px;
+}

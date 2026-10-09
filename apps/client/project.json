@@ -22,6 +22,11 @@
           "apps/client/src/favicon.ico",
           "apps/client/src/assets",
           {
+            "glob": "export-from-lostark-helper.js",
+            "input": "tools",
+            "output": "/assets/"
+          },
+          {
             "glob": "**/*",
             "input": "./node_modules/@ant-design/icons-angular/src/inline-svg/",
             "output": "/assets/"

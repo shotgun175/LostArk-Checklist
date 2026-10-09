@@ -1,6 +1,10 @@
 /*
  * Export your Lostark-helper data so LostArk-Checklist can import it.
  *
+ * The easier way on a computer is the "Send to Lost Ark Checklist" bookmark on LostArk-Checklist's
+ * Settings page (Bring data over): it runs the export-core part of this file in one click. This
+ * file is the fallback; the "Copy script" button in Settings, How to export, copies it as is.
+ *
  * How to use (Chrome, on the PC where you use lostark-helper.com):
  * 1. Open https://lostark-helper.com/checklist and wait until your checklist shows.
  *    (Opening the checklist first also brings the rest bonus up to date.)
@@ -14,6 +18,10 @@
  * own sign-in token, and talks only to the Google Firebase APIs that lostark-helper.com uses.
  */
 (async () => {
+  // BEGIN export-core
+  // The Settings page of LostArk-Checklist builds its "Send to Lost Ark Checklist" bookmark from
+  // this block, so the bookmark and this snippet read exactly the same data. Keep everything the
+  // export needs inside it, use only "//" comments on their own lines, and keep collectExport().
   const PROJECT_ID = "lostark-helper-8dfb0";
   const DOCUMENTS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
@@ -68,13 +76,13 @@
     const db = await idbRequest(indexedDB.open("firebaseLocalStorageDb"));
     try {
       if (!db.objectStoreNames.contains("firebaseLocalStorage")) {
-        throw new Error("No Firebase sign-in data in this browser. Open https://lostark-helper.com in this tab, wait for it to load, then run the snippet again.");
+        throw new Error("No Firebase sign-in data in this browser. Open https://lostark-helper.com in this tab, wait for it to load, then try again.");
       }
       const store = db.transaction("firebaseLocalStorage", "readonly").objectStore("firebaseLocalStorage");
       const records = await idbRequest(store.getAll());
       const record = records.find(r => typeof r.fbase_key === "string" && r.fbase_key.startsWith("firebase:authUser:"));
       if (!record) {
-        throw new Error("No signed-in Firebase user found. Open https://lostark-helper.com in this tab, wait for it to load, then run the snippet again.");
+        throw new Error("No signed-in Firebase user found. Open https://lostark-helper.com in this tab, wait for it to load, then try again.");
       }
       const user = record.value;
       return {
@@ -104,7 +112,7 @@
     const response = await fetch(`${DOCUMENTS}/${path}`, { headers: { Authorization: `Bearer ${idToken}` } });
     if (response.status === 404) {
       if (required) {
-        throw new Error(`${path} does not exist. Open the Roster and Settings pages on lostark-helper.com once, then run the snippet again.`);
+        throw new Error(`${path} does not exist. Open the Roster and Settings pages on lostark-helper.com once, then try again.`);
       }
       console.warn(`${path} does not exist; it is exported as null.`);
       return null;
@@ -138,19 +146,23 @@
       }));
   }
 
-  const user = await readSignedInUser();
-  console.log(`Exporting the ${user.isAnonymous ? "anonymous" : "registered"} account ${user.uid}`);
-  const idToken = await getIdToken(user.apiKey, user.refreshToken);
-  const [roster, settings, completion, energy, tasks] = await Promise.all([
-    getDocument(`roster/${user.uid}`, idToken, true),
-    getDocument(`settings/${user.uid}`, idToken, true),
-    getDocument(`completion/${user.uid}`, idToken, false),
-    getDocument(`energy/${user.uid}`, idToken, false),
-    getTasks(user.uid, idToken)
-  ]);
+  async function collectExport() {
+    const user = await readSignedInUser();
+    console.log(`Exporting the ${user.isAnonymous ? "anonymous" : "registered"} account ${user.uid}`);
+    const idToken = await getIdToken(user.apiKey, user.refreshToken);
+    const [roster, settings, completion, energy, tasks] = await Promise.all([
+      getDocument(`roster/${user.uid}`, idToken, true),
+      getDocument(`settings/${user.uid}`, idToken, true),
+      getDocument(`completion/${user.uid}`, idToken, false),
+      getDocument(`energy/${user.uid}`, idToken, false),
+      getTasks(user.uid, idToken)
+    ]);
+    return { format: 1, exportedAt: new Date().toISOString(), sourceUid: user.uid, roster, settings, completion, energy, tasks };
+  }
+  // END export-core
 
-  const exportedAt = new Date().toISOString();
-  const data = { format: 1, exportedAt, sourceUid: user.uid, roster, settings, completion, energy, tasks };
+  const data = await collectExport();
+  const { exportedAt, roster, completion, tasks } = data;
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
   const link = document.createElement("a");
   link.href = url;

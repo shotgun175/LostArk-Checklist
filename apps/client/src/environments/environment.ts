@@ -7,6 +7,11 @@ export const environment = {
   useEmulators: false,
   recaptchaEnterpriseKey: '6Lf1N-UtAAAAAMw5kjJJ3KAscnDlkxUycxCi5-Fg',
   appCheckDebug: true,
+  // One-click import (Settings, Bring data over): null means this page's own origin.
+  importBridge: {
+    appOrigin: null as string | null,
+    sourceOrigins: ['https://lostark-helper.com']
+  },
   firebase: {
     projectId: 'loa-checklist',
     appId: '1:840196169331:web:fa4f4dc69b8cd95d5f9406',

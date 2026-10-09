@@ -5,6 +5,12 @@ export const environment = {
   useEmulators: true,
   recaptchaEnterpriseKey: '',
   appCheckDebug: false,
+  // One-click import (Settings, Bring data over): null means this page's own origin. Only this emulator
+  // build also accepts the local stand-in for lostark-helper.com that the end-to-end test serves on port 4320.
+  importBridge: {
+    appOrigin: null as string | null,
+    sourceOrigins: ['http://localhost:4320']
+  },
   firebase: {
     projectId: 'demo-loa-checklist',
     appId: '1:000000000000:web:0000000000000000000000',

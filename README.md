@@ -97,11 +97,21 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 
 ## Bringing data over from lostark-helper.com
 
-1. In Chrome, in the same browser profile where you use lostark-helper.com, open https://lostark-helper.com/checklist (signed in as you, if you use an account there) and wait for the checklist to load. Opening the checklist first also brings the rest bonus up to date.
-2. Press F12, open the Console tab, paste the whole content of `tools/export-from-lostark-helper.js` and press Enter. If Chrome shows a warning about pasting instead of running it, type `allow pasting`, press Enter, then paste again and press Enter. Chrome downloads `lostark-helper-export-<date>.json`, and the console shows `Export done: N characters, N tasks, N completion entries`.
+### The one-click bookmark (computer)
+
+1. On this site, open **Settings**, **Bring data over**, and drag the **Send to Lost Ark Checklist** button to your browser's bookmarks bar. You only do this once.
+2. Open https://lostark-helper.com/checklist (signed in as you, if you use an account there) and wait for your checklist to load. Opening the checklist first also brings the rest bonus up to date.
+3. Click the **Send to Lost Ark Checklist** bookmark. This site opens in a new tab on **Settings** with your data and its counts. Click **Import this file** and confirm. Nothing is changed until you confirm.
+
+If the browser blocks the new tab, allow pop-ups for lostark-helper.com and click the bookmark again, or use the console steps below. The bookmark only works on lostark-helper.com; it sends the data only to this site, and this site only accepts it from lostark-helper.com.
+
+### The console script (fallback)
+
+1. In the same browser profile where you use lostark-helper.com, open https://lostark-helper.com/checklist (signed in as you, if you use an account there) and wait for the checklist to load.
+2. On this site, open **Settings**, **Bring data over**, **how to export**, and click **Copy script** (it copies `tools/export-from-lostark-helper.js`). Back on lostark-helper.com, press F12, open the Console tab, paste and press Enter. If the browser shows a warning about pasting instead of running it, type `allow pasting`, press Enter, then paste again and press Enter. The browser downloads `lostark-helper-export-<date>.json`, and the console shows `Export done: N characters, N tasks, N completion entries`.
 3. On this site, open **Settings**, **Bring data over**, **Import from Lostark-helper**, and pick the file. Check the counts, then click **Import this file** and confirm. The page reloads when the import is done.
 
-The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. Raid tracking choices from lostark-helper.com are not brought over, so every character starts on its 3 newest raids; daily and weekly choices are kept. Choices for tasks that are not in the file are dropped. The snippet reads only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
+The import replaces this account's roster, tasks, ticks, rest bonus and settings. Tasks get new ids in this account and ticks, tracking and lazy flags are moved to them, so the same file can be imported into more than one account. Raid tracking choices from lostark-helper.com are not brought over, so every character starts on its 3 newest raids; daily and weekly choices are kept. Choices for tasks that are not in the file are dropped. The bookmark and the script read only your own documents with your own sign-in. Export right before you import, so the rest bonus and ticks are current.
 
 ## Backups
 
@@ -147,6 +157,8 @@ npx -y firebase-tools emulators:start --only auth,firestore --project demo-loa-c
 Auth runs on port 9099 and Firestore on 8085 (see `firebase.json`). In a second terminal run `npx nx serve client --configuration=emulator`. That configuration uses the project id `demo-loa-checklist`, which can never reach a real project, and App Check is off there. The emulators start empty every time.
 
 For test data, open http://localhost:4200/settings, choose **Bring data over**, **Import from Lostark-helper** and pick `tools/fixtures/lostark-helper-export-synthetic.json` (15 made-up characters, 6 of them visible). Never use a real export for local testing.
+
+To try the one-click bookmark locally, serve a stand-in page for lostark-helper.com at http://localhost:4320/checklist. Only the emulator configuration accepts that origin (see `importBridge` in `apps/client/src/environments/environment.emulator.ts`); production accepts only https://lostark-helper.com. The bookmark reads the signed-in user from the `firebaseLocalStorageDb` IndexedDB database and calls `securetoken.googleapis.com` and `firestore.googleapis.com`, so a stand-in page has to seed that database and answer those requests from a synthetic fixture.
 
 To check the database rules against the running emulators:
 

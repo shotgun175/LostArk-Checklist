@@ -18,6 +18,7 @@ import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { NzInputModule } from "ng-zorro-antd/input";
 import { NzIconModule } from "ng-zorro-antd/icon";
 import { NzTypographyModule } from "ng-zorro-antd/typography";
+import { NzModalModule } from "ng-zorro-antd/modal";
 
 const routes: Routes = [{
   path: "",
@@ -44,7 +45,8 @@ const routes: Routes = [{
     NzDropdownModule,
     NzInputModule,
     NzIconModule,
-    NzTypographyModule
+    NzTypographyModule,
+    NzModalModule
   ]
 })
 export class SettingsModule {
