@@ -147,10 +147,24 @@
     .character-name-input {
       width: 100%;
     }
+
+    // The note button shares this line, so the item level box is narrower and stays beside "ilvl"
+    nz-input-number {
+      width: 64px;
+    }
   }
 
   :host ::ng-deep .roster-list .ant-list-item {
     justify-content: flex-start;
+  }
+
+  :host ::ng-deep .character-meta .ant-list-item-meta-description {
+    white-space: nowrap;
+  }
+
+  .note-button {
+    padding: 0 7px;
+    gap: 5px;
   }
 
   // The actions' list box steps aside, so each action is placed in the row on its own: the note
@@ -165,8 +179,15 @@
       height: 0;
     }
 
+    // Actions in order: Lazy, Hide, Weekly Gold, class, note, Delete. The space sits after an action
+    // that another one follows, so a line never ends in a margin and a wrapped line starts flush.
     > li {
       order: 3;
+    }
+
+    > li:nth-child(1),
+    > li:nth-child(2),
+    > li:nth-child(4) {
       margin-inline-end: 16px;
     }
 
@@ -174,17 +195,12 @@
     > li:nth-last-child(2) {
       order: 1;
       flex: none;
-      margin-inline: 8px 0;
+      margin-inline-start: 8px;
     }
 
     // The class select takes most of a line, so it always starts a new one, with Delete beside it
     > li:nth-last-child(3) {
       flex: 1 0 70%;
-      margin-inline-end: 8px;
-    }
-
-    > li:last-child {
-      margin-inline-end: 0;
     }
   }
 
