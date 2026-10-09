@@ -14,6 +14,7 @@ import { CompletionService } from "../../../core/database/services/completion.se
 import { EnergyService } from "../../../core/database/services/energy.service";
 import { combineLatest, of } from "rxjs";
 import { LostarkClass } from "../../../model/character/lostark-class";
+import { CLASS_OPTIONS } from "../../../model/character/class-names";
 import { Character } from "../../../model/character/character";
 import { countWeeklyGoldCharacters, getWeeklyGoldLimitWarning, isWeeklyGoldTickDisabled, newCharacterWeeklyGold } from "../../../core/weekly-gold";
 import { characterNameError, cleanCharacterName, MAX_CHARACTER_ILVL, MAX_CHARACTER_NAME_LENGTH, nextCharacterId, parseRosterImport } from "../../../core/roster-input";
@@ -33,16 +34,9 @@ export class RosterComponent {
 
   public LostarkClass = LostarkClass;
 
-  public classes = Object.keys(LostarkClass)
-    .filter(key => !isNaN(+key) && !LostarkClass[key].startsWith("UNRELEASED"))
-    .map(key => {
-      return {
-        // Numbers, as classes are stored (a string option would not match a stored class)
-        id: +key,
-        name: `${LostarkClass[key][0]}${LostarkClass[key].slice(1).toLowerCase()}`,
-        icon: `class_${key.padStart(2, "0")}.png`
-      };
-    });
+  // Number ids, as classes are stored (a string option would not match a stored class). Base classes
+  // and unreleased placeholders are hidden from the list but still show for characters saved with them.
+  public classes = CLASS_OPTIONS;
 
   public roster$ = this.rosterService.roster$;
 

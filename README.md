@@ -49,12 +49,17 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - Names are trimmed, invisible characters are removed and they are at most 16 characters long. An empty name or a name another character already has is refused, and the old name shows again. Item levels go from 0 to 2000.
 - Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character, not its name, so renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
 - **Import roster** replaces every character in the roster. It checks each character first (an id, a name, a numeric item level and a known class) and lists what is wrong instead of importing a bad paste.
+- Class names are the ones the Global client uses (for example Arcanist, Machinist, Guardian Knight), in alphabetical order. Base classes (Warrior, Mage, Gunner, Assassin) are not offered, but a character saved with one still shows it.
+- On a narrower screen (for example a 1080 monitor in portrait) each character's note moves to its own line under the character. At phone width each character is a stacked card.
 
 ### Tasks Manager
 
 - **Import custom tasks** checks each task (a name, a known frequency and scope, numeric item levels) and skips tasks you already have with the same name and frequency, so importing your own export again adds nothing. **Export** copies only what another account needs (not the task ids).
 - A new custom task goes to the end of the list, and the list scrolls to it. The form refuses an empty name, fewer than 1 repetition and a minimum item level above the maximum.
 - **Track all tasks** and **Untrack all tasks** ask first.
+- **Days** picks the days a task shows on the Checklist. Leave it blank (**Every day**) or pick all 7 for every day.
+- The icon picker shows each icon's name and can be searched by typing.
+- When the table is wider than the screen it scrolls sideways with the grip and Name columns pinned (screens at least 900 px wide).
 
 ### Heads-up for existing users
 
@@ -73,6 +78,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - Lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts were saved under the character's name. The first time the site loads they move to the character itself, so a rename keeps them. Nothing else changes.
 - If two characters of an older roster share an internal id (a past bug when adding characters), the second one gets a new id the next time the site loads, so editing one no longer overwrites the other. Its checkmarks, rest bonus and per-character choices were shared with the other character, so they start fresh for it.
 - Classes saved as numbers by a backup restore now show in the Roster class picker.
+- Class names now match the Global client: Arcana shows as **Arcanist** and Scouter as **Machinist**. Saved characters do not change.
 
 ## Signing in and syncing
 

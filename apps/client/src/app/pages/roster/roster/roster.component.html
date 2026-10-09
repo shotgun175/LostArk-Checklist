@@ -1,19 +1,19 @@
 @if (roster$ | async; as roster) {
-  <nz-page-header nzTitle="Roster manager" nzSubtitle="Manage & configure your roster">
+  <nz-page-header class="wrapping-header" nzTitle="Roster Manager" nzSubtitle="Manage & configure your roster">
     <nz-page-header-extra>
       @if (hasLocalstorageRoster) {
         <button nz-button
           nzType="primary"
           nz-popconfirm
-          nzPopconfirmTitle="This will overwrite your current roster with previously saved local data and clear it from localstorage !"
+          nzPopconfirmTitle="Replace your roster with the copy an older version of this site saved in this browser? That copy is then deleted."
           (nzOnConfirm)="importFromLocalStorage(roster.$key)">
           Import from LocalStorage
         </button>
       }
-      <button nz-button (click)="exportRoster(roster)" nz-tooltip nzTooltipTitle="Export roster">
+      <button nz-button (click)="exportRoster(roster)" nz-tooltip nzTooltipTitle="Export: copy your roster to the clipboard" aria-label="Export roster">
         <span nz-icon nzType="upload" nzTheme="outline"></span>
       </button>
-      <button nz-button (click)="importRoster()" nz-tooltip nzTooltipTitle="Import roster">
+      <button nz-button (click)="importRoster()" nz-tooltip nzTooltipTitle="Import: paste a roster copied with Export" aria-label="Import roster">
         <span nz-icon nzType="download" nzTheme="outline"></span>
       </button>
     </nz-page-header-extra>
@@ -22,7 +22,7 @@
     <nz-alert class="weekly-gold-warning" nzType="warning" nzShowIcon [nzMessage]="warning"></nz-alert>
   }
   <nz-card nzTitle="Characters">
-    <nz-list [nzDataSource]="roster.characters" cdkDropList [cdkDropListData]="roster.characters" (cdkDropListDropped)="drop(roster, $event)">
+    <nz-list class="roster-list" nzNoResult="No characters yet. Add one below." [nzDataSource]="roster.characters" cdkDropList [cdkDropListData]="roster.characters" (cdkDropListDropped)="drop(roster, $event)">
       @for (character of roster.characters; track trackByCharacter($index, character)) {
         <nz-list-item
           [nzContent]="noteEditor"
@@ -40,7 +40,7 @@
           <ng-template #noteEditor>
             <div class="note-editor">
               <textarea nz-input
-                placeholder="Custom note, you also can use it to set your BiFrost information or song of return location"
+                placeholder="Notes (for example Bifrost spots or Song of Return location)"
                 cols="50"
                 rows="3"
                 [(ngModel)]="character.note"
@@ -80,9 +80,9 @@
               [(ngModel)]="character.class"
               (ngModelChange)="saveCharacter(character, roster)"
               nzShowSearch>
-              @for (row of classes; track row) {
+              @for (row of classes; track row.id) {
                 <nz-option
-                  [nzValue]="row.id" [nzLabel]="row.name"
+                  [nzValue]="row.id" [nzLabel]="row.name" [nzHide]="row.hide"
                   nzCustomContent>
                   <div class="class-row">
                     <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
@@ -94,7 +94,9 @@
           </ng-template>
           <ng-template #deleteAction>
             <button nz-button nzDanger nz-popconfirm
-              nzPopconfirmTitle="Are you sure?"
+              nzPopconfirmTitle="Delete {{ character.name }}?"
+              nzOkText="Delete" [nzOkDanger]="true"
+              [attr.aria-label]="'Delete ' + character.name"
               (nzOnConfirm)="removeCharacter(character, roster)" nzShape="circle">
               <span nz-icon nzType="delete" nzTheme="outline"></span>
             </button>
@@ -105,30 +107,33 @@
   </nz-card>
   <nz-divider></nz-divider>
   <nz-card nzTitle="Add a character">
-    <form nz-form [formGroup]="form" (ngSubmit)="addCharacter(roster)">
-      <nz-form-item>
+    <form nz-form nzLayout="vertical" class="add-form" [formGroup]="form" (ngSubmit)="addCharacter(roster)">
+      <nz-form-item class="name-field">
+        <nz-form-label nzFor="add-character-name">Name</nz-form-label>
         <nz-form-control nzErrorTip="Please input a character name">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="user"></span>
-            <input type="text" nz-input formControlName="name" placeholder="Name" [maxlength]="maxNameLength" />
+            <input type="text" nz-input id="add-character-name" formControlName="name" placeholder="Character name" [maxlength]="maxNameLength" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item class="ilvl-field">
+        <nz-form-label nzFor="add-character-ilvl">Item level</nz-form-label>
         <nz-form-control nzErrorTip="Please input an item level from 0 to 2000">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="info"></span>
-            <input nz-input formControlName="ilvl" placeholder="Item Level" type="number" min="0" [max]="maxIlvl" />
+            <input nz-input id="add-character-ilvl" formControlName="ilvl" placeholder="For example 1640" type="number" min="0" [max]="maxIlvl" />
           </nz-input-wrapper>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
-        <nz-form-control nzErrorTip="Please input a class">
-          <nz-select nzPrefix="Class" formControlName="class" class="class-selector" nzShowSearch>
-            @for (row of classes; track row) {
+      <nz-form-item class="class-field">
+        <nz-form-label nzFor="add-character-class">Class</nz-form-label>
+        <nz-form-control nzErrorTip="Please choose a class">
+          <nz-select nzId="add-character-class" formControlName="class" class="class-selector" nzShowSearch nzPlaceHolder="Choose a class">
+            @for (row of classes; track row.id) {
               <nz-option
-                [nzValue]="row.id" [nzLabel]="row.name"
-                nzCustomContent class="class-row">
+                [nzValue]="row.id" [nzLabel]="row.name" [nzHide]="row.hide"
+                nzCustomContent>
                 <div class="class-row">
                   <img src="./assets/icons/classes/{{row.icon}}" alt="" class="class-icon">
                   <div>{{row.name}}</div>
@@ -138,13 +143,13 @@
           </nz-select>
         </nz-form-control>
       </nz-form-item>
-      <nz-form-item>
+      <nz-form-item class="check-field">
         <label nz-checkbox formControlName="lazy">
           Lazy
           <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
         </label>
       </nz-form-item>
-      <button nz-button [nzType]="'primary'" [disabled]="!form.valid">Add</button>
+      <button nz-button class="add-button" [nzType]="'primary'" [disabled]="!form.valid">Add</button>
     </form>
   </nz-card>
 }
