@@ -250,6 +250,113 @@ nz-content {
     .github-menu-entry {
       background-color: black;
     }
+
+    // "Part of Lost Ark Tools": the hub's badge (colours from shotgun175.github.io/snippets/hub-badge.html)
+    // fitted to the sidebar width; collapsed, only its mark shows, with a tooltip.
+    > .hub-menu-entry {
+      height: auto;
+      padding: 8px;
+
+      // The badge's own transitions, not the "all" of the other sidebar links (which would also fade the focus ring in)
+      > a.lat-badge {
+        color: #ece8df;
+        transition: border-color 0.18s ease, transform 0.18s ease;
+
+        @media (prefers-reduced-motion: reduce) {
+          transition: none;
+        }
+      }
+
+      &.collapsed {
+        padding: 8px 0;
+
+        > a.lat-badge {
+          padding: 6px;
+        }
+
+        > a > .lat-badge__text,
+        > a > .lat-badge__arrow {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
+.lat-badge {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(240, 185, 77, 0.45);
+  border-radius: 10px;
+  background: #14172a;
+  color: #ece8df;
+  text-decoration: none;
+  line-height: 1.2;
+  font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.18s ease, transform 0.18s ease;
+
+  .hub-menu-entry.collapsed & {
+    flex: 0 0 auto;
+  }
+
+  &:hover {
+    color: #ece8df;
+    border-color: #f0b94d;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #54d8d2;
+    outline-offset: 2px;
+  }
+}
+
+.lat-badge__mark {
+  flex: none;
+  display: block;
+}
+
+.lat-badge__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lat-badge__kicker {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aab0d2;
+}
+
+.lat-badge__name {
+  font-family: "Cinzel", Georgia, serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #f0b94d;
+  white-space: nowrap;
+}
+
+.lat-badge__arrow {
+  flex: none;
+  color: #54d8d2;
+  transition: transform 0.18s ease;
+
+  .lat-badge:hover & {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lat-badge__arrow {
+    transition: none;
   }
 }
 
