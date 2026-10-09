@@ -141,6 +141,16 @@ describe('capGoldTracking', () => {
     expect(takingRaids(result.tracking, 'Char1')).toHaveLength(3);
     expect(result.unticked[0].raids).toHaveLength(2);
   });
+  it('adds the item level to the name when two characters share it, so the message says which one', () => {
+    const na = { id: 1, name: 'Arwen', ilvl: 1780, weeklyGold: true } as Character;
+    const eu = { id: 2, name: 'Arwen', ilvl: 1770, weeklyGold: true } as Character;
+    const solo = { id: 3, name: 'Brakka', ilvl: 1775, weeklyGold: true } as Character;
+    const tracking = { ...ticked('Char1', five), ...ticked('Char2', five), ...ticked('Char3', five) };
+    const raidModes = { ...modes('Char1', five), ...modes('Char2', five), ...modes('Char3', five) };
+    const tracked = Object.fromEntries([1, 2, 3].flatMap(id => [[`${id}:Armoche`, true], [`${id}:Mordum`, true]]));
+    const result = capGoldTracking([na, eu, solo], tracking, raidModes, tasks, tracked, gTasks);
+    expect(result.unticked.map(u => u.characterName)).toEqual(['Arwen (1780)', 'Arwen (1770)', 'Brakka']);
+  });
 });
 
 describe('formatGoldCapMessage', () => {
