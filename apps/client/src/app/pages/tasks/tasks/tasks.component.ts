@@ -66,6 +66,7 @@ export class TasksComponent {
     { path: "abyssal-dungeon.webp", label: "Abyssal dungeon" },
     { path: "abyssal-raid.webp", label: "Abyssal raid" },
     { path: "legion_raid.png", label: "Legion raid" },
+    { path: "kazeros-raid.webp", label: "Kazeros raid" },
     { path: "chaos-dungeon.webp", label: "Chaos dungeon" },
     { path: "chaos_gate.png", label: "Chaos gate" },
     { path: "daily.webp", label: "Daily" },
@@ -104,6 +105,9 @@ export class TasksComponent {
     { path: "guild.webp", label: "Guild" },
     { path: "cardpack.png", label: "Card pack" }
   ];
+
+  /** Paths in `icons`; a custom task can carry any other path, from an import or a retired built-in task. */
+  public listedIcons = new Set(this.icons.map(icon => icon.path));
 
   /** Day options for the Days column, Sunday first as in the saved values (0 is Sunday). */
   public days = [

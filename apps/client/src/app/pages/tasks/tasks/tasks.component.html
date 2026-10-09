@@ -67,6 +67,15 @@
                       nzAllowClear nzShowSearch nzPlaceHolder="No icon"
                       [nzCustomTemplate]="chosenIcon"
                       class="icon-select">
+                      <!-- An icon that is not in the list still shows, named by its file -->
+                      @if (task.iconPath && !listedIcons.has(task.iconPath)) {
+                        <nz-option [nzValue]="task.iconPath" [nzLabel]="task.iconPath" nzCustomContent>
+                          <span class="icon-option">
+                            <img src="./assets/icons/{{task.iconPath}}" alt="" class="task-icon">
+                            {{ task.iconPath }}
+                          </span>
+                        </nz-option>
+                      }
                       @for (icon of icons; track icon.path) {
                         <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
                           <span class="icon-option">
