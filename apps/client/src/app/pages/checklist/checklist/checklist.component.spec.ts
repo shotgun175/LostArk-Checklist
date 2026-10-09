@@ -48,7 +48,7 @@ describe('ChecklistComponent', () => {
         lastBiWeeklyOffsetReset$: NEVER
       } as unknown as TimeService,
       completionService as unknown as CompletionService,
-      { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false) } as unknown as LayoutStateService,
+      { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
       new ElementRef(document.createElement('div')),
       { run: (fn: () => void) => fn() } as unknown as NgZone
     );

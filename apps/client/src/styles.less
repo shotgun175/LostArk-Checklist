@@ -132,3 +132,24 @@ tr.drag-preview {
     background: fade(@primary-color, 12%);
   }
 }
+
+// Keyboard focus rings: a clear outline when an element is reached with Tab (not on a mouse click).
+.ant-btn,
+.ant-alert-close-icon,
+.app-footer a,
+.github-menu-entry a,
+.user-menu,
+.header-menu-button,
+.sider-trigger-button,
+.user-menu-overlay .menu-item {
+  &:focus-visible {
+    outline: 2px solid @primary-color;
+    outline-offset: 2px;
+  }
+}
+
+// Inside the sider trigger and the menu the ring would be cut off by the parent, so it sits inside.
+.sider-trigger-button:focus-visible,
+.user-menu-overlay .menu-item:focus-visible {
+  outline-offset: -2px;
+}

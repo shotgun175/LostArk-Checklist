@@ -11,6 +11,8 @@ export interface ChecklistScrollInput {
   innerHeight: number;
   visibleCharacterCount: number;
   sidebarCollapsed: boolean;
+  /** Width the sidebar takes from the page (0 on a phone, where it opens over the page); from sidebarCollapsed when not given. */
+  sidebarWidth?: number;
   /** Measured table body height (see checklistBodyHeight); null until the table has rendered. */
   bodyHeight?: number | null;
 }
@@ -43,7 +45,7 @@ function characterColumnWidth(innerWidth: number): number {
 }
 
 function availableTableWidth(input: ChecklistScrollInput): number {
-  const sidebarWidth = input.sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_OPEN;
+  const sidebarWidth = input.sidebarWidth ?? (input.sidebarCollapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_OPEN);
   return input.innerWidth - sidebarWidth - TABLE_BODY_CHROME;
 }
 

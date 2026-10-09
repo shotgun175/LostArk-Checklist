@@ -1,7 +1,10 @@
 <nz-layout class="app-layout">
   <nz-sider class="menu-sidebar"
+    [class.phone]="isPhone()"
     nzCollapsible
     [(nzCollapsed)]="isCollapsed"
+    [nzCollapsedWidth]="isPhone() ? 0 : 80"
+    [nzTrigger]="isPhone() ? null : siderTrigger"
     (nzCollapsedChange)="saveCollapsed($event)">
     <div class="sidebar-logo">
       <img src="./assets/logo.png" alt="logo">
@@ -9,7 +12,7 @@
     </div>
     <div class="sidebar-container">
       <div class="main-navbar">
-        <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed">
+        <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed && !isPhone()" (nzClick)="closeSiderOnPhone()">
           <li nz-submenu nzTitle="Helpers" nzIcon="appstore" nzOpen>
             <ul>
               <li>
@@ -51,55 +54,71 @@
         </ul>
       </div>
       <div class="bottom-navbar">
-        <div class="github-menu-entry" [class.collapsed]="isCollapsed">
-          <a href="https://github.com/shotgun175/LostArk-Checklist" target="_blank">
+        <div class="github-menu-entry" [class.collapsed]="isCollapsed && !isPhone()">
+          <a href="https://github.com/shotgun175/LostArk-Checklist" target="_blank" rel="noopener noreferrer"
+             aria-label="GitHub repository (opens in a new tab)">
             <span nz-icon nzType="github" nzTheme="outline" class="icon"></span>
-            <span>Github</span>
+            <span>GitHub</span>
           </a>
         </div>
       </div>
     </div>
+    <ng-template #siderTrigger>
+      <button type="button" class="sider-trigger-button" [attr.aria-label]="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+              [attr.aria-expanded]="!isCollapsed">
+        <span nz-icon [nzType]="isCollapsed ? 'right' : 'left'"></span>
+      </button>
+    </ng-template>
   </nz-sider>
+  @if (isPhone() && !isCollapsed) {
+    <button type="button" class="sider-backdrop" aria-label="Close menu" (click)="closeSiderOnPhone()"></button>
+  }
   <nz-layout>
     <nz-header>
-      <div class="user-menu" [class.anonymous]="anonymous$ | async" nz-dropdown [nzDropdownMenu]="menu"
-        nzOverlayClassName="user-menu">
+      @if (isPhone()) {
+        <button type="button" class="header-menu-button" aria-label="Open menu" [attr.aria-expanded]="!isCollapsed" (click)="openSider()">
+          <span nz-icon nzType="menu"></span>
+        </button>
+      }
+      <button #userMenuButton type="button" class="user-menu" [class.guest]="anonymous$ | async"
+        nz-dropdown nzTrigger="click" [nzDropdownMenu]="menu" nzPlacement="bottomRight" nzOverlayClassName="user-menu-overlay"
+        aria-haspopup="menu" (nzVisibleChange)="onUserMenuVisibleChange($event, userMenuButton)">
         <span nz-icon nzType="user" nzTheme="outline"></span>
         @if (user$ | async; as user) {
-          @if (user.notFound) {
-            Anonymous
-          }
-          @if (!user.notFound) {
-            {{user.name}}
+          @if (anonymous$ | async) {
+            <span class="user-name">Guest</span>
+          } @else {
+            <span class="user-name" [title]="user.name">{{user.name}}</span>
           }
         }
-        <nz-dropdown-menu #menu="nzDropdownMenu">
-          <ul nz-menu>
-            @if (anonymous$ | async) {
-              <li nz-menu-item class="menu-item" (click)="signIn()">
-                <span nz-icon nzType="login" nzTheme="outline"></span>
-                Sign in
-              </li>
-              <li nz-menu-item class="menu-item" (click)="register()">
-                <span nz-icon nzType="form" nzTheme="outline"></span>
-                Register
-              </li>
-            }
-            @if ((anonymous$ | async) === false) {
-              @if (user$ | async; as user) {
-                <li nz-menu-item (click)="updateUserName(user)" class="menu-item">
-                  <span nz-icon nzType="user-switch" nzTheme="outline"></span>
-                  Change user name
-                </li>
-              }
-              <li nz-menu-item nzDanger (click)="disconnect()" class="menu-item">
-                <span nz-icon nzType="logout" nzTheme="outline"></span>
-                Log out
+        <span nz-icon nzType="down" class="caret"></span>
+      </button>
+      <nz-dropdown-menu #menu="nzDropdownMenu">
+        <ul nz-menu>
+          @if (anonymous$ | async) {
+            <li nz-menu-item class="menu-item" tabindex="-1" (click)="signIn()" (keydown)="onUserMenuKeydown($event)">
+              <span nz-icon nzType="login" nzTheme="outline"></span>
+              Sign in
+            </li>
+            <li nz-menu-item class="menu-item" tabindex="-1" (click)="register()" (keydown)="onUserMenuKeydown($event)">
+              <span nz-icon nzType="form" nzTheme="outline"></span>
+              Register
+            </li>
+          }
+          @if ((anonymous$ | async) === false) {
+            @if (user$ | async; as user) {
+              <li nz-menu-item class="menu-item" tabindex="-1" (click)="updateUserName(user)" (keydown)="onUserMenuKeydown($event)">
+                <span nz-icon nzType="user-switch" nzTheme="outline"></span>
+                Change user name
               </li>
             }
-          </ul>
-        </nz-dropdown-menu>
-      </div>
+            <li nz-menu-item nzDanger class="menu-item" tabindex="-1" (click)="disconnect()" (keydown)="onUserMenuKeydown($event)">
+              <span nz-icon nzType="logout" nzTheme="outline"></span>
+              Log out
+            </li>
+          }
+        </ul>
+      </nz-dropdown-menu>
     </nz-header>
     <nz-content>
       <div class="inner-content">
@@ -116,7 +135,7 @@
       <footer class="app-footer">
         <span>Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Lost Ark names and icons belong to their owners.</span>
         <span>This site is protected by reCAPTCHA and the Google <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Terms of Service</a> apply.</span>
-        <a routerLink="/privacy">Privacy</a>
+        <a routerLink="/privacy" class="privacy-link">Privacy</a>
       </footer>
     </nz-content>
   </nz-layout>
