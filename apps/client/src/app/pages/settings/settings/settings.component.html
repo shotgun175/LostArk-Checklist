@@ -18,7 +18,7 @@
       </div>
     </div>
     <div nz-row class="lazy-matrix">
-      <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">
+      <nz-card nz-col nzSpan="24" nzTitle="Bring data over" nzSize="small">
         <input #importFile type="file" accept=".json,application/json" hidden
           (change)="onImportFileSelected(importFile)">
           <div class="bookmark-row">
@@ -123,7 +123,7 @@
         @if (roster$ | async; as roster) {
           @if (lazyFlags$ | async; as lazyFlags) {
             <div nz-row class="lazy-matrix">
-              <nz-card nz-col nzMd="24" nzTitle="Lazy tasks" nzSize="small">
+              <nz-card nz-col nzSpan="24" nzTitle="Lazy tasks" nzSize="small">
                 <p class="card-help">A lazy character's daily tasks reset every 3 days instead of every day. Mark characters as Lazy on the <a routerLink="/roster">Roster</a> page, then switch a task to Not Lazy here to keep its daily reset.</p>
                 @if (hasLazyCharacters$ | async) {
                   @if (lazyFlags.length > 0) {
@@ -174,7 +174,7 @@
             @if (energy$ | async; as energy) {
               @if (restBonus$ | async; as restBonus) {
                 <div nz-row>
-                  <nz-card nz-col nzMd="24" nzTitle="Rest bonus" [nzExtra]="reset" nzSize="small" class="lazy-matrix rest-card">
+                  <nz-card nz-col nzSpan="24" nzTitle="Rest bonus" [nzExtra]="reset" nzSize="small" class="lazy-matrix rest-card">
                     <ng-template #reset>
                       @if (restBonus.hiddenCount > 0) {
                         <label nz-checkbox class="rest-show-hidden" [ngModel]="restShowHidden$ | async" (ngModelChange)="setRestShowHidden($event)">Show hidden characters ({{restBonus.hiddenCount}})</label>
@@ -238,7 +238,7 @@
             }
             @if (rawRoster$ | async; as rawRoster) {
               @if (taskTracking$ | async; as taskTracking) {
-                <nz-card nz-col nzMd="24" nzTitle="Task tracking" [nzExtra]="trackingExtra" nzSize="small" class="lazy-matrix tracking-card">
+                <nz-card nz-col nzSpan="24" nzTitle="Task tracking" [nzExtra]="trackingExtra" nzSize="small" class="lazy-matrix tracking-card">
                   <ng-template #trackingExtra>
                     <span class="set-count">{{taskTracking.setByYou}} set by you</span>
                     <button nz-button nzSize="small" [disabled]="taskTracking.setByYou === 0"
@@ -382,7 +382,7 @@
   </nz-empty>
 </ng-template>
 <div nz-row class="lazy-matrix">
-  <nz-card nz-col nzMd="24" nzTitle="Delete my account and data" nzSize="small">
+  <nz-card nz-col nzSpan="24" nzTitle="Delete my account and data" nzSize="small">
     <form (ngSubmit)="requestDelete()">
       @if (anonymous$ | async) {
         <p>This deletes the roster, tasks, ticks, rest bonus and settings of this browser's guest account, then starts a new empty guest account. Download a backup first if you may want the data back.</p>
