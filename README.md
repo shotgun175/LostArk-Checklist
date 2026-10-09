@@ -52,7 +52,8 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - Checkmarks, rest bonus, task tracking, lazy choices, Gold Planner ticks and modes, and Chaos Dungeons and Other sources amounts belong to the character (its internal id), not its name, so two characters with the same name keep their own, and renaming a character keeps them. Deleting a character also deletes them, so a character added later starts with none.
 - **Import roster** replaces every character in the roster. It checks each character first (an id, a name, a numeric item level and a known class) and lists what is wrong instead of importing a bad paste.
 - Class names are the ones the Global client uses (for example Arcanist, Machinist, Guardian Knight), in alphabetical order. Base classes (Warrior, Mage, Gunner, Assassin) are not offered, but a character saved with one still shows it.
-- On a narrower screen (for example a 1080 monitor in portrait) each character's note moves to its own line under the character. At phone width each character is a stacked card.
+- Each character has a note button: **Add note** when it has none, a blue **Note** when it has one (hover it to read the note). Click it to edit the note in a small popup (up to 500 characters); **Save** keeps it, **Clear** removes it, and clicking outside or pressing Escape closes without saving. The note shows as a hover icon on the Checklist and Gold Planner.
+- At phone width each character is a stacked card, with the note button on the name line.
 
 ### Tasks Manager
 
