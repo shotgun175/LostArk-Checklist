@@ -148,8 +148,15 @@ tr.drag-preview {
   }
 }
 
-// Inside the sider trigger and the menu the ring would be cut off by the parent, so it sits inside.
+// The sider trigger, the user menu button (at the window's top right edge) and the menu items would
+// have their ring cut off, so it sits inside them.
 .sider-trigger-button:focus-visible,
+.user-menu:focus-visible,
 .user-menu-overlay .menu-item:focus-visible {
   outline-offset: -2px;
+}
+
+// The menu items have tabindex="-1", which the ng-zorro base styles strip of any outline with !important.
+.user-menu-overlay .menu-item:focus-visible {
+  outline: 2px solid @primary-color !important;
 }
