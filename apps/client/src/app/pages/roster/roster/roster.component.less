@@ -177,28 +177,3 @@
 :host ::ng-deep .cdk-drop-list-dragging * {
   cursor: grabbing;
 }
-
-// When the title and the buttons do not fit on one line, the buttons move below the title
-// instead of cutting it off, and the subtitle can go under the title.
-:host ::ng-deep .ant-page-header-heading {
-  flex-wrap: wrap;
-}
-
-:host ::ng-deep .ant-page-header-heading-left {
-  flex-wrap: wrap;
-
-  .ant-page-header-heading-title,
-  .ant-page-header-heading-sub-title {
-    white-space: normal;
-  }
-}
-
-:host ::ng-deep .ant-page-header-heading-extra {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-
-  > * {
-    margin-inline-start: 0;
-  }
-}
