@@ -60,18 +60,18 @@
           </ng-template>
           <ng-template #setWeeklyGoldAction>
             <span nz-tooltip [nzTooltipTitle]="isWeeklyGoldTickDisabled(roster, character) ? '6 weekly gold characters already. Untick one to choose this character.' : ''">
-              <label nz-checkbox [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
+              <label nz-checkbox aria-label="Weekly Gold" [(ngModel)]="character.weeklyGold" [nzDisabled]="isWeeklyGoldTickDisabled(roster, character)" (ngModelChange)="saveCharacter(character, roster)"></label>
               Weekly Gold
             </span>
             <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Enable weekly gold for this character"></span>
           </ng-template>
           <ng-template #setHideAction>
-            <label nz-checkbox [(ngModel)]="character.isHide" (ngModelChange)="saveCharacter(character, roster)"></label>
+            <label nz-checkbox aria-label="Hide" [(ngModel)]="character.isHide" (ngModelChange)="saveCharacter(character, roster)"></label>
             Hide
             <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Hide character from the checklist"></span>
           </ng-template>
           <ng-template #setLazyAction>
-            <label nz-checkbox [(ngModel)]="character.lazy" (ngModelChange)="saveCharacter(character, roster)"></label>
+            <label nz-checkbox aria-label="Lazy" [(ngModel)]="character.lazy" (ngModelChange)="saveCharacter(character, roster)"></label>
             Lazy
             <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
           </ng-template>
