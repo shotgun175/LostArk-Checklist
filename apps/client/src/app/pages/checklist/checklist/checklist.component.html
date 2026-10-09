@@ -128,7 +128,7 @@
           @if (taskColumnWidth$ | async; as taskColumnWidth) {
             @if (tableBox$ | async; as tableBox) {
             @if (tableDisplay$ | async; as display) {
-              <nz-table class="checklist-table" [nzData]="[{}]" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
+              <nz-table class="checklist-table page-scroll" [nzData]="[{}]" [nzScroll]="scrolling" [nzPageSize]="999" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle">
                 <table>
                   <thead>
                     <tr>

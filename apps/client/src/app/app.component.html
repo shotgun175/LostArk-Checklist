@@ -132,7 +132,8 @@
         </ul>
       </nz-dropdown-menu>
     </nz-header>
-    <nz-content>
+    <!-- cdkScrollable: on a phone the page scrolls here, so dragging a row to the edge scrolls it -->
+    <nz-content cdkScrollable>
       <div class="inner-content">
         @if ((anonymous$ | async) && !guestBannerDismissed()) {
           <nz-alert class="guest-banner" nzType="warning" nzShowIcon nzCloseable
