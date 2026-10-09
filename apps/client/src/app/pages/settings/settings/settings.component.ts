@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from "@angular/core";
+import { Component, ChangeDetectionStrategy, inject, OnDestroy, OnInit, signal } from "@angular/core";
+import { ActivatedRoute, Router } from "@angular/router";
+import { DomSanitizer, SafeUrl } from "@angular/platform-browser";
 import { BehaviorSubject, combineLatest, map, Observable, pluck } from "rxjs";
 import { NgModel } from "@angular/forms";
 import { TaskFrequency } from "../../../model/task-frequency";
@@ -32,6 +34,15 @@ import { AccountDeletionService } from "../../../core/account/account-deletion.s
 import { authErrorMessage, WRONG_CREDENTIALS } from "../../../core/firebase/auth-errors";
 import { characterFlagKey, characterKey, readCharacterFlag } from "../../../core/character-keys";
 import { normalizeRestBonus, restBonusMax } from "./rest-bonus";
+import {
+  BridgeWindow,
+  buildBookmarklet,
+  EXPORT_SCRIPT_URL,
+  IMPORT_QUERY_PARAM,
+  IMPORT_QUERY_VALUE,
+  listenForBridgeExport
+} from "../../../core/import/lostark-helper-bridge";
+import { environment } from "../../../../environments/environment";
 
 /** Task tracking grid column widths in px; the grid scrolls sideways when they do not fit. */
 const TRACKING_TASK_COLUMN_WIDTH = 150;
@@ -71,7 +82,7 @@ function storeFlag(key: string, value: boolean): void {
   changeDetection: ChangeDetectionStrategy.Eager,
   standalone: false
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit, OnDestroy {
   public uid$ = this.auth.uid$;
 
   public anonymous$ = this.auth.isAnonymous$;
@@ -210,10 +221,104 @@ export class SettingsComponent {
 
   public olderRaidsOpen = readStoredFlag(OLDER_RAIDS_OPEN_KEY);
 
+  /** Text of tools/export-from-lostark-helper.js (published under assets): the bookmark is built from it and Copy script copies it. */
+  public exportScript: string | null = null;
+
+  public exportScriptFailed = false;
+
+  /** The "Send to Lost Ark Checklist" bookmark; a javascript: URL, so it is marked as trusted for the href. */
+  public bookmarkletUrl: SafeUrl | null = null;
+
+  public howToExportVisible = false;
+
+  /** Copying to the clipboard failed, so the popup shows the script to copy by hand. */
+  public copyFailed = false;
+
+  /** One-click import: waiting for the bookmark's data, opened without the bookmark's tab, or nothing arrived in time. */
+  public bridgeState: "idle" | "waiting" | "no-opener" | "timed-out" = "idle";
+
+  private stopBridge: (() => void) | null = null;
+
+  private readonly route = inject(ActivatedRoute);
+
+  private readonly router = inject(Router);
+
+  private readonly sanitizer = inject(DomSanitizer);
+
   constructor(private rosterService: RosterService, private tasksService: TasksService,
               private settings: SettingsService, private energyService: EnergyService,
               private auth: AuthService,
               private dataTransfer: DataTransferService, private message: NzMessageService) {
+  }
+
+  ngOnInit(): void {
+    this.loadExportScript();
+    if (this.route.snapshot.queryParamMap.get(IMPORT_QUERY_PARAM) === IMPORT_QUERY_VALUE) {
+      this.startBridgeImport();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.stopBridge?.();
+  }
+
+  private async loadExportScript(): Promise<void> {
+    try {
+      const response = await fetch(EXPORT_SCRIPT_URL);
+      if (!response.ok) {
+        throw new Error(`Loading the export script failed: HTTP ${response.status}`);
+      }
+      const script = await response.text();
+      const appOrigin = environment.importBridge.appOrigin ?? window.location.origin;
+      this.bookmarkletUrl = this.sanitizer.bypassSecurityTrustUrl(buildBookmarklet(script, appOrigin, environment.importBridge.sourceOrigins));
+      this.exportScript = script;
+    } catch (error) {
+      console.error(error);
+      this.exportScriptFailed = true;
+    }
+  }
+
+  /**
+   * Opened by the bookmark (?import=lostark-helper): asks the lostark-helper.com tab for the data, then shows it
+   * in the same preview as an imported file. Nothing is written until the user confirms there.
+   */
+  private startBridgeImport(): void {
+    if (!window.opener) {
+      this.bridgeState = "no-opener";
+      return;
+    }
+    this.bridgeState = "waiting";
+    this.stopBridge = listenForBridgeExport(window as unknown as BridgeWindow, {
+      allowedOrigins: environment.importBridge.sourceOrigins,
+      onExport: json => {
+        this.bridgeState = "idle";
+        this.pendingImport = { fileName: "The data from lostark-helper.com", validation: parseExportFile(json), fromLostarkHelper: true };
+        // A reload (after the import, or by hand) then shows the normal page instead of asking again
+        this.router.navigate([], { relativeTo: this.route, queryParams: { [IMPORT_QUERY_PARAM]: null }, queryParamsHandling: "merge", replaceUrl: true });
+      },
+      onTimeout: () => {
+        this.bridgeState = "timed-out";
+      }
+    });
+  }
+
+  /** Clicking the bookmark here does nothing: it only works on lostark-helper.com. */
+  onBookmarkletClick(event: Event): void {
+    event.preventDefault();
+    this.message.info("Drag this button to your bookmarks bar, then click it on lostark-helper.com/checklist.");
+  }
+
+  async copyExportScript(): Promise<void> {
+    if (!this.exportScript) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(this.exportScript);
+      this.copyFailed = false;
+      this.message.success("Script copied. Paste it into the console on lostark-helper.com.");
+    } catch {
+      this.copyFailed = true;
+    }
   }
 
   saveSetting(settings: Settings, field: "crystallineAura" | "hiddenOnCompletion"): void {

@@ -26,9 +26,31 @@
       <nz-card nz-col nzMd="24" nzTitle="Bring data over" nzSize="small">
         <input #importFile type="file" accept=".json,application/json" hidden
           (change)="onImportFileSelected(importFile)">
+          <div class="bookmark-row">
+            @if (bookmarkletUrl) {
+              <a class="bookmarklet" [href]="bookmarkletUrl" (click)="onBookmarkletClick($event)"
+                nz-tooltip nzTooltipTitle="Drag me to your bookmarks bar">
+                <span nz-icon nzType="book"></span> Send to Lost Ark Checklist
+              </a>
+            } @else if (exportScriptFailed) {
+              <span class="import-failed">The bookmark could not be prepared. Reload the page, or use Import from Lostark-helper with a file.</span>
+            }
+            <ol class="bookmark-steps">
+              <li>Drag this button to your bookmarks bar (once, on a computer).</li>
+              <li>Open <strong>lostark-helper.com/checklist</strong> and wait for your checklist to load.</li>
+              <li>Click the bookmark. This page opens with your data, ready to check and import.</li>
+            </ol>
+          </div>
+          @if (bridgeState === 'waiting') {
+            <p class="bridge-note">Waiting for your data from lostark-helper.com...</p>
+          } @else if (bridgeState === 'no-opener') {
+            <p class="bridge-note">This page was opened for an import from lostark-helper.com, but not by the bookmark, so no data came with it. Open lostark-helper.com/checklist and click the bookmark there.</p>
+          } @else if (bridgeState === 'timed-out') {
+            <p class="bridge-note">No data arrived from lostark-helper.com. Look at that tab for a message, then click the bookmark again.</p>
+          }
           <p class="card-help">
             <strong>Import from Lostark-helper</strong> brings over a file exported from lostark-helper.com
-            (<a href="https://github.com/shotgun175/LostArk-Checklist#bringing-data-over-from-lostark-helpercom" target="_blank" rel="noopener">how to export</a>).
+            (<a class="how-to-link" role="button" tabindex="0" (click)="howToExportVisible = true" (keydown.enter)="howToExportVisible = true">how to export</a>).
             <strong>Restore backup</strong> brings back a file saved with <strong>Download backup</strong>. Both replace this account's data.
           </p>
           <div nz-row [nzGutter]="[10, 10]">
@@ -81,6 +103,25 @@
               }
             </div>
           }
+          <nz-modal [(nzVisible)]="howToExportVisible" nzTitle="How to export from lostark-helper.com" [nzFooter]="null"
+            (nzOnCancel)="howToExportVisible = false">
+            <ng-container *nzModalContent>
+              <p class="card-help">On a computer, the <strong>Send to Lost Ark Checklist</strong> bookmark on this page is easier: it does all of this in one click.</p>
+              <ol class="how-to-steps">
+                <li>Open <strong>lostark-helper.com/checklist</strong> in this browser, signed in as you if you use an account there, and wait for your checklist to load.</li>
+                <li>Press <strong>F12</strong> and open the <strong>Console</strong> tab.</li>
+                <li>Click <strong>Copy script</strong> below, paste it into the console and press <strong>Enter</strong>. If the browser asks, type <strong>allow pasting</strong>, press Enter, then paste again and press Enter.</li>
+                <li>The browser downloads a <strong>lostark-helper-export</strong> file. Come back here, click <strong>Import from Lostark-helper</strong> and pick that file.</li>
+              </ol>
+              <button nz-button nzType="primary" [disabled]="!exportScript" (click)="copyExportScript()">
+                <span nz-icon nzType="copy"></span> Copy script
+              </button>
+              @if (copyFailed) {
+                <p class="card-help copy-failed">Copying did not work in this browser. Select the script below and copy it by hand.</p>
+                <textarea nz-input readonly class="script-text" [value]="exportScript" aria-label="Export script"></textarea>
+              }
+            </ng-container>
+          </nz-modal>
         </nz-card>
       </div>
       @if (lazyTracking$ | async; as tracking) {
