@@ -3,14 +3,14 @@ import { ApplicationRef } from "@angular/core";
 import { SwUpdate, UnrecoverableStateEvent, VersionEvent } from "@angular/service-worker";
 import { BehaviorSubject, Subject } from "rxjs";
 import { NzMessageService } from "ng-zorro-antd/message";
-import { AppUpdateService, UNRECOVERABLE_RELOAD_DELAY_MS, UPDATE_CHECK_INTERVAL_MS } from "./app-update.service";
+import { AppUpdateService, STABLE_WAIT_MS, UNRECOVERABLE_RELOAD_DELAY_MS, UPDATE_CHECK_INTERVAL_MS } from "./app-update.service";
 import { FirestoreStorage } from "../database/firestore-storage";
 
 const calls: string[] = [];
 
 jest.mock("../database/firestore-storage", () => ({
   FirestoreStorage: {
-    flushPending: jest.fn(() => calls.push("flushPending"))
+    flushPendingLocally: jest.fn(() => { calls.push("flushPendingLocally"); return Promise.resolve(); })
   }
 }));
 
@@ -59,7 +59,7 @@ describe("AppUpdateService", () => {
 
   beforeEach(() => {
     calls.length = 0;
-    jest.mocked(FirestoreStorage.flushPending).mockClear();
+    jest.mocked(FirestoreStorage.flushPendingLocally).mockClear();
     message = { error: jest.fn() };
     stable = new BehaviorSubject(false);
   });
@@ -80,10 +80,10 @@ describe("AppUpdateService", () => {
     expect(service.updateReady()).toBe(true);
   });
 
-  it("reload sends queued ticks, then switches version, then reloads", async () => {
+  it("reload saves queued ticks on the device, then switches version, then reloads", async () => {
     const service = create();
     await service.reload();
-    expect(calls).toEqual(["flushPending", "activateUpdate", "reload"]);
+    expect(calls).toEqual(["flushPendingLocally", "activateUpdate", "reload"]);
   });
 
   it("reload still reloads when switching version fails", async () => {
@@ -91,10 +91,10 @@ describe("AppUpdateService", () => {
     jest.spyOn(console, "error").mockImplementation(() => undefined);
     sw.activateUpdate.mockRejectedValueOnce(new Error("no update"));
     await service.reload();
-    expect(calls).toEqual(["flushPending", "reload"]);
+    expect(calls).toEqual(["flushPendingLocally", "reload"]);
   });
 
-  it("an unrecoverable state shows a message, then reloads after a short wait", () => {
+  it("an unrecoverable state shows a message, then reloads after a short wait", async () => {
     jest.useFakeTimers();
     create();
     jest.spyOn(console, "error").mockImplementation(() => undefined);
@@ -102,7 +102,9 @@ describe("AppUpdateService", () => {
     expect(message.error).toHaveBeenCalledWith("This page is out of date and will reload.", { nzDuration: UNRECOVERABLE_RELOAD_DELAY_MS });
     expect(calls).toEqual([]);
     jest.advanceTimersByTime(UNRECOVERABLE_RELOAD_DELAY_MS);
-    expect(calls).toEqual(["flushPending", "reload"]);
+    expect(calls).toEqual(["flushPendingLocally"]);
+    await Promise.resolve();
+    expect(calls).toEqual(["flushPendingLocally", "reload"]);
   });
 
   it("checks for a new version when the tab becomes visible, not when it is hidden", () => {
@@ -123,11 +125,10 @@ describe("AppUpdateService", () => {
     expect(warn).toHaveBeenCalledWith("Could not check for a new version:", expect.any(Error));
   });
 
-  it("checks every six hours, starting only once the app is stable", () => {
+  it("checks every six hours, starting once the app is stable", () => {
     jest.useFakeTimers();
     create();
-    jest.advanceTimersByTime(UPDATE_CHECK_INTERVAL_MS);
-    expect(sw.checkForUpdate).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(STABLE_WAIT_MS / 2);
     stable.next(true);
     jest.advanceTimersByTime(UPDATE_CHECK_INTERVAL_MS - 1);
     expect(sw.checkForUpdate).not.toHaveBeenCalled();
@@ -135,6 +136,31 @@ describe("AppUpdateService", () => {
     expect(sw.checkForUpdate).toHaveBeenCalledTimes(1);
     jest.advanceTimersByTime(UPDATE_CHECK_INTERVAL_MS);
     expect(sw.checkForUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  it("still starts the six-hourly checks when the app never becomes stable (the Checklist page)", () => {
+    jest.useFakeTimers();
+    create();
+    jest.advanceTimersByTime(STABLE_WAIT_MS - 1);
+    jest.advanceTimersByTime(UPDATE_CHECK_INTERVAL_MS);
+    expect(sw.checkForUpdate).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+    expect(sw.checkForUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for the reload until the queued ticks are saved on the device", async () => {
+    let saved: () => void = () => undefined;
+    jest.mocked(FirestoreStorage.flushPendingLocally).mockImplementationOnce(() => {
+      calls.push("flushPendingLocally");
+      return new Promise<void>(resolve => saved = resolve);
+    });
+    const service = create();
+    const reloading = service.reload();
+    await Promise.resolve();
+    expect(calls).toEqual(["flushPendingLocally"]);
+    saved();
+    await reloading;
+    expect(calls).toEqual(["flushPendingLocally", "activateUpdate", "reload"]);
   });
 
   it("stops checking when destroyed", () => {
