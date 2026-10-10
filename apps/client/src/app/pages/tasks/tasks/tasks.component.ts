@@ -148,17 +148,64 @@ export class TasksComponent {
       this.isPhone.set(phone);
       // A sheet left open when the screen gets wide closes: the form moves back to its card
       if (!phone) {
-        this.sheetOpen.set(false);
+        this.setSheetOpen(false);
       }
     });
+    destroyRef.onDestroy(() => this.stopFollowingKeyboard());
   }
 
   openSheet(): void {
-    this.sheetOpen.set(true);
+    this.setSheetOpen(true);
   }
 
   closeSheet(): void {
-    this.sheetOpen.set(false);
+    this.setSheetOpen(false);
+  }
+
+  /** Every open and close of the sheet goes here, so the keyboard is followed exactly while it is open. */
+  private setSheetOpen(open: boolean): void {
+    this.sheetOpen.set(open);
+    if (open) {
+      this.followKeyboard();
+    } else {
+      this.stopFollowingKeyboard();
+    }
+  }
+
+  private stopFollowingKeyboard: () => void = () => undefined;
+
+  /**
+   * Browsers do not shrink the page for the on-screen keyboard (iOS Safari never, Android Chrome by default
+   * since version 108), so a sheet fixed to the bottom of the page would stay behind it, Add button included.
+   * While the sheet is open this keeps two CSS variables on the page root that its style (styles.less) uses:
+   * --sheet-visible-height, the height of the part of the screen the keyboard leaves, and --sheet-keyboard,
+   * how far the keyboard covers the bottom of the page.
+   */
+  private followKeyboard(): void {
+    this.stopFollowingKeyboard();
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+    const root = document.documentElement;
+    const update = () => {
+      // Zoomed in with two fingers the visible part is not about the keyboard: keep the sheet as it is
+      if (Math.abs(viewport.scale - 1) > 0.01) {
+        return;
+      }
+      root.style.setProperty("--sheet-visible-height", `${viewport.height}px`);
+      root.style.setProperty("--sheet-keyboard", `${Math.max(0, root.clientHeight - viewport.height - viewport.offsetTop)}px`);
+    };
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    this.stopFollowingKeyboard = () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+      root.style.removeProperty("--sheet-visible-height");
+      root.style.removeProperty("--sheet-keyboard");
+      this.stopFollowingKeyboard = () => undefined;
+    };
   }
 
   /** One handler: Angular binds only the last of several listeners for the same event. */
@@ -202,7 +249,7 @@ export class TasksComponent {
         this.saving = false;
         // On a phone the sheet closes so the new row can be seen; after an error it stays open to try again
         const fromSheet = this.sheetOpen();
-        this.sheetOpen.set(false);
+        this.setSheetOpen(false);
         this.form.reset({
           frequency: TaskFrequency.DAILY,
           scope: TaskScope.CHARACTER

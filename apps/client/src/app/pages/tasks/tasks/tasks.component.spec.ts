@@ -142,6 +142,51 @@ describe('TasksComponent', () => {
     }));
   });
 
+  describe('keyboard', () => {
+    let viewport: EventTarget & { height: number; offsetTop: number; scale: number };
+    const root = document.documentElement;
+    const vars = () => [root.style.getPropertyValue('--sheet-visible-height'), root.style.getPropertyValue('--sheet-keyboard')];
+
+    beforeEach(() => {
+      viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0, scale: 1 });
+      Object.defineProperty(window, 'visualViewport', { value: viewport, configurable: true });
+      jest.spyOn(root, 'clientHeight', 'get').mockReturnValue(844);
+    });
+
+    afterEach(() => {
+      component.closeSheet();
+      delete (window as { visualViewport?: unknown }).visualViewport;
+      jest.restoreAllMocks();
+    });
+
+    it('lifts the open sheet above the keyboard and fits it in what the keyboard leaves', () => {
+      component.openSheet();
+      expect(vars()).toEqual(['844px', '0px']);
+      // The keyboard opens: the visible part shrinks and moves down a little as the browser shows the field
+      viewport.height = 500;
+      viewport.offsetTop = 20;
+      viewport.dispatchEvent(new Event('resize'));
+      expect(vars()).toEqual(['500px', '324px']);
+    });
+
+    it('stops following the keyboard when the sheet closes, after an add included', () => {
+      tasksService.addTask.mockReturnValue(of('new-key'));
+      component.openSheet();
+      fillForm();
+      component.addTask('uid1');
+      expect(vars()).toEqual(['', '']);
+      viewport.height = 500;
+      viewport.dispatchEvent(new Event('resize'));
+      expect(vars()).toEqual(['', '']);
+    });
+
+    it('stops following the keyboard when the screen gets wide', () => {
+      component.openSheet();
+      phone$.next(false);
+      expect(vars()).toEqual(['', '']);
+    });
+  });
+
   it('closes the sheet when the screen gets wide', () => {
     component.openSheet();
     phone$.next(false);

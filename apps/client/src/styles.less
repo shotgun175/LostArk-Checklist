@@ -85,11 +85,13 @@
 
 // Tasks Manager on a phone: the add form's bottom sheet (nzWrapClassName="add-task-sheet"). It is in an
 // overlay outside the page, so these rules are global. As tall as the form, up to 90% of the screen;
-// the form scrolls inside it when it is taller (a short screen, or the keyboard open). The bottom padding
-// keeps the Add button above the iPhone home bar.
+// the form scrolls inside it when it is taller. With the keyboard open the sheet sits on top of the
+// keyboard and fits in what is left of the screen: the page does not shrink for the keyboard, so
+// TasksComponent sets --sheet-keyboard and --sheet-visible-height from the visual viewport while the
+// sheet is open. The bottom padding keeps the Add button above the iPhone home bar.
 .add-task-sheet {
   max-height: 90vh;
-  max-height: 90dvh;
+  max-height: calc(var(--sheet-visible-height, 100dvh) * 0.9);
 
   .ant-drawer-content,
   .ant-drawer-wrapper-body {
@@ -104,6 +106,11 @@
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     overflow-x: hidden;
   }
+}
+
+// Beats ng-zorro's .ant-drawer-bottom > .ant-drawer-content-wrapper { bottom: 0 }
+.ant-drawer-bottom > .add-task-sheet {
+  bottom: var(--sheet-keyboard, 0px);
 }
 
 // The footer shows Google's reCAPTCHA notice (with its Privacy Policy and Terms links) on every page instead of the floating badge.
