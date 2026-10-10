@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, ElementRef, signal, ViewChild } from "@angular/core";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { NavigationEnd, NavigationStart, Router } from "@angular/router";
-import { pairwise } from "rxjs";
+import { fromEvent, merge, pairwise } from "rxjs";
 import { NzContentComponent } from "ng-zorro-antd/layout";
 import { AuthService } from "./core/database/services/auth.service";
 import { UserService } from "./core/database/services/user.service";
@@ -11,6 +11,7 @@ import { DataTransferService } from "./core/import/data-transfer.service";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { LAHUser } from "./model/lah-user";
 import { authErrorMessage } from "./core/firebase/auth-errors";
+import { AppUpdateService } from "./core/services/app-update.service";
 
 const GUEST_BANNER_DISMISSED = "guest-banner:dismissed";
 
@@ -43,6 +44,17 @@ export class AppComponent {
 
   public readonly guestBannerText = "You are using a guest account on this browser. Register to keep your checklist safe and use it on other devices.";
 
+  /** A new version of the site is downloaded; Reload shows it. */
+  public readonly updateReady = this.appUpdate.updateReady;
+
+  /**
+   * What the browser says about the network, for the offline banner only. It can be wrong (a network
+   * with no internet), so actions that need the server check it with ServerConnectionService.
+   */
+  public readonly offline = signal(typeof navigator !== "undefined" && navigator.onLine === false);
+
+  public readonly offlineBannerText = "You're offline. Your ticks are saved on this device and sync when you're back online.";
+
   /** The page's scroll container, scrolled back to the top when another page opens. */
   @ViewChild(NzContentComponent, { read: ElementRef }) private content?: ElementRef<HTMLElement>;
 
@@ -51,6 +63,7 @@ export class AppComponent {
               private auth: AuthService,
               private authPopups: AuthPopupsService,
               private message: NzMessageService,
+              private appUpdate: AppUpdateService,
               router: Router,
               dataTransfer: DataTransferService
   ) {
@@ -60,6 +73,8 @@ export class AppComponent {
       this.isPhone.set(phone);
       this.isCollapsed = this.layoutState.sidebarCollapsedForScreen();
     });
+    merge(fromEvent(window, "online"), fromEvent(window, "offline")).pipe(takeUntilDestroyed())
+      .subscribe(event => this.offline.set(event.type === "offline"));
     // A new page starts at the top. Back and Forward (popstate) keep the browser's own position.
     let trigger: NavigationStart["navigationTrigger"];
     router.events.pipe(takeUntilDestroyed()).subscribe(event => {
@@ -140,6 +155,10 @@ export class AppComponent {
     } catch {
       // Storage blocked: the banner stays closed until the page reloads.
     }
+  }
+
+  reloadForUpdate(): void {
+    void this.appUpdate.reload();
   }
 
   /** True while logging out, so a second click cannot start it again. */
