@@ -127,7 +127,7 @@ describe('TasksComponent', () => {
     it('starts right away after an add from the card', fakeAsync(() => {
       component.addTask('uid1');
       tick(0);
-      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
       tick(4000);
     }));
 
@@ -138,6 +138,8 @@ describe('TasksComponent', () => {
       expect(scrollIntoView).not.toHaveBeenCalled();
       tick(100);
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      // Centred on a phone, so the row is not at the very bottom under the home bar
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
       tick(4000);
     }));
   });

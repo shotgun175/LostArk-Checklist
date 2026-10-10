@@ -285,7 +285,7 @@ export class TasksComponent {
         this.message.success("Custom task added to the list");
         // The closing sheet gives focus back to its open button at the top of the page when its animation
         // ends, which scrolls the page there: scroll to the new row after that
-        this.showNewTask(key, fromSheet ? DRAWER_ANIMATE_DURATION + 100 : 0);
+        this.showNewTask(key, fromSheet ? DRAWER_ANIMATE_DURATION + 100 : 0, fromSheet);
       },
       error: (e: unknown) => {
         this.saving = false;
@@ -294,14 +294,18 @@ export class TasksComponent {
     });
   }
 
-  /** Scrolls the table to the task just added once it is listed, and highlights it for a few seconds. */
-  private showNewTask(key: string, delay: number): void {
+  /**
+   * Scrolls the table to the task just added once it is listed, and highlights it for a few seconds.
+   * After an add from the phone sheet the row is centred: at the very bottom of a phone screen it would
+   * sit under the home bar.
+   */
+  private showNewTask(key: string, delay: number, centre = false): void {
     this.highlightKey = key;
     let tries = 0;
     const scroll = () => {
       const row = document.querySelector(`tr[data-task-key="${key}"]`);
       if (row) {
-        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        row.scrollIntoView({ block: centre ? "center" : "nearest", behavior: "smooth" });
       } else if (tries++ < 20) {
         setTimeout(scroll, 150);
       }
