@@ -59,6 +59,7 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 
 - **Import custom tasks** checks each task (a name, a known frequency and scope, numeric item levels) and skips tasks you already have with the same name and frequency, so importing your own export again adds nothing. **Export** copies only what another account needs (not the task ids).
 - A new custom task goes to the end of the list, and the list scrolls to it. The form refuses an empty name, fewer than 1 repetition and a minimum item level above the maximum.
+- On a phone (under 768 px wide), **Add a custom task** is a button under the page header that opens the form in a sheet from the bottom of the screen; it closes after the task is added. On a PC the form stays in its card below the list.
 - **Track all tasks** and **Untrack all tasks** ask first.
 - **Days** picks the days a task shows on the Checklist. Leave it blank (**Every day**) or pick all 7 for every day.
 - The icon picker shows each icon's name and can be searched by typing.

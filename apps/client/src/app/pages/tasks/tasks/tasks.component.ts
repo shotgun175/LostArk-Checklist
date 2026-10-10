@@ -1,4 +1,5 @@
-import { Component, HostListener, ChangeDetectionStrategy } from "@angular/core";
+import { Component, HostListener, ChangeDetectionStrategy, DestroyRef, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { createTask, LostarkTask } from "../../../model/lostark-task";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
@@ -15,6 +16,8 @@ import { distinctUntilChanged, map, merge, Subject, tap } from "rxjs";
 import { customTasksExport, ilvlRangeValidator, nextTaskIndex, parseTasksImport } from "../task-input";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
+import { LayoutStateService } from "../../../core/services/layout-state.service";
+import { DRAWER_ANIMATE_DURATION } from "ng-zorro-antd/drawer";
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
 
@@ -125,14 +128,112 @@ export class TasksComponent {
   /** Pin the grip and Name columns while the table scrolls sideways; on a narrow screen they would fill it. */
   public pinColumns = true;
 
+  /** Below the md breakpoint the add form opens in a bottom sheet from a button at the top, instead of a card below the long list. */
+  public readonly isPhone = signal(this.layoutState.isPhone);
+
+  /** True while the add form's bottom sheet is open (phones only). */
+  public readonly sheetOpen = signal(false);
+
   constructor(private tasksService: TasksService,
               private fb: UntypedFormBuilder,
               private message: NzMessageService,
               private clipboard: Clipboard,
               private modal: NzModalService,
-              private authService: AuthService) {
+              private authService: AuthService,
+              private layoutState: LayoutStateService,
+              destroyRef: DestroyRef) {
     this.setTableHeight();
     this.setPinColumns();
+    this.layoutState.isPhone$.pipe(takeUntilDestroyed(destroyRef)).subscribe(phone => {
+      this.isPhone.set(phone);
+      // A sheet left open when the screen gets wide closes: the form moves back to its card
+      if (!phone) {
+        this.setSheetOpen(false);
+      }
+    });
+    destroyRef.onDestroy(() => this.stopFollowingKeyboard());
+  }
+
+  openSheet(): void {
+    this.setSheetOpen(true);
+  }
+
+  closeSheet(): void {
+    this.setSheetOpen(false);
+  }
+
+  /**
+   * ng-zorro's drawer is not marked as a dialog, and when closed it only moves off the screen. Open, the
+   * sheet (header and close button included) is a modal dialog a screen reader announces and keeps to;
+   * closed, it is hidden from the screen reader.
+   */
+  labelSheet(open: boolean): void {
+    const sheet = document.querySelector(".ant-drawer-content-wrapper.add-task-sheet");
+    if (!sheet) {
+      return;
+    }
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-label", "Add a custom task");
+    if (open) {
+      sheet.setAttribute("aria-modal", "true");
+      sheet.removeAttribute("aria-hidden");
+    } else {
+      sheet.removeAttribute("aria-modal");
+      // Hiding an element that has the focus is refused (Chrome): wait until the drawer gives focus back
+      const hide = () => !this.sheetOpen() && sheet.setAttribute("aria-hidden", "true");
+      if (sheet.contains(document.activeElement)) {
+        setTimeout(hide, DRAWER_ANIMATE_DURATION + 100);
+      } else {
+        hide();
+      }
+    }
+  }
+
+  /** Every open and close of the sheet goes here, so the keyboard is followed exactly while it is open. */
+  private setSheetOpen(open: boolean): void {
+    this.sheetOpen.set(open);
+    this.labelSheet(open);
+    if (open) {
+      this.followKeyboard();
+    } else {
+      this.stopFollowingKeyboard();
+    }
+  }
+
+  private stopFollowingKeyboard: () => void = () => undefined;
+
+  /**
+   * Browsers do not shrink the page for the on-screen keyboard (iOS Safari never, Android Chrome by default
+   * since version 108), so a sheet fixed to the bottom of the page would stay behind it, Add button included.
+   * While the sheet is open this keeps two CSS variables on the page root that its style (styles.less) uses:
+   * --sheet-visible-height, the height of the part of the screen the keyboard leaves, and --sheet-keyboard,
+   * how far the keyboard covers the bottom of the page.
+   */
+  private followKeyboard(): void {
+    this.stopFollowingKeyboard();
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+    const root = document.documentElement;
+    const update = () => {
+      // Zoomed in with two fingers the visible part is not about the keyboard: keep the sheet as it is
+      if (Math.abs(viewport.scale - 1) > 0.01) {
+        return;
+      }
+      root.style.setProperty("--sheet-visible-height", `${viewport.height}px`);
+      root.style.setProperty("--sheet-keyboard", `${Math.max(0, root.clientHeight - viewport.height - viewport.offsetTop)}px`);
+    };
+    update();
+    viewport.addEventListener("resize", update);
+    viewport.addEventListener("scroll", update);
+    this.stopFollowingKeyboard = () => {
+      viewport.removeEventListener("resize", update);
+      viewport.removeEventListener("scroll", update);
+      root.style.removeProperty("--sheet-visible-height");
+      root.style.removeProperty("--sheet-keyboard");
+      this.stopFollowingKeyboard = () => undefined;
+    };
   }
 
   /** One handler: Angular binds only the last of several listeners for the same event. */
@@ -174,12 +275,17 @@ export class TasksComponent {
     this.tasksService.addTask(task).subscribe({
       next: key => {
         this.saving = false;
+        // On a phone the sheet closes so the new row can be seen; after an error it stays open to try again
+        const fromSheet = this.sheetOpen();
+        this.setSheetOpen(false);
         this.form.reset({
           frequency: TaskFrequency.DAILY,
           scope: TaskScope.CHARACTER
         });
         this.message.success("Custom task added to the list");
-        this.showNewTask(key);
+        // The closing sheet gives focus back to its open button at the top of the page when its animation
+        // ends, which scrolls the page there: scroll to the new row after that
+        this.showNewTask(key, fromSheet ? DRAWER_ANIMATE_DURATION + 100 : 0, fromSheet);
       },
       error: (e: unknown) => {
         this.saving = false;
@@ -188,19 +294,23 @@ export class TasksComponent {
     });
   }
 
-  /** Scrolls the table to the task just added once it is listed, and highlights it for a few seconds. */
-  private showNewTask(key: string): void {
+  /**
+   * Scrolls the table to the task just added once it is listed, and highlights it for a few seconds.
+   * After an add from the phone sheet the row is centred: at the very bottom of a phone screen it would
+   * sit under the home bar.
+   */
+  private showNewTask(key: string, delay: number, centre = false): void {
     this.highlightKey = key;
     let tries = 0;
     const scroll = () => {
       const row = document.querySelector(`tr[data-task-key="${key}"]`);
       if (row) {
-        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        row.scrollIntoView({ block: centre ? "center" : "nearest", behavior: "smooth" });
       } else if (tries++ < 20) {
         setTimeout(scroll, 150);
       }
     };
-    setTimeout(scroll);
+    setTimeout(scroll, delay);
     setTimeout(() => {
       if (this.highlightKey === key) {
         this.highlightKey = null;

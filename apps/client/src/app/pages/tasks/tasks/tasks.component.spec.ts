@@ -1,6 +1,6 @@
 import { BehaviorSubject, of, Subject } from 'rxjs';
 import { UntypedFormBuilder } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
@@ -11,6 +11,8 @@ import { TaskScope } from '../../../model/task-scope';
 import { TasksModule } from '../tasks.module';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { AuthService } from '../../../core/database/services/auth.service';
+import { LayoutStateService } from '../../../core/services/layout-state.service';
+import { DRAWER_ANIMATE_DURATION } from 'ng-zorro-antd/drawer';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
 jest.mock('firebase/app', () => ({}));
@@ -26,6 +28,7 @@ describe('TasksComponent', () => {
   let message: { success: jest.Mock, error: jest.Mock, info: jest.Mock };
   let clipboard: { copy: jest.Mock };
   let modalClose: Subject<string | undefined>;
+  let phone$: BehaviorSubject<boolean>;
   let component: TasksComponent;
 
   beforeEach(() => {
@@ -34,6 +37,7 @@ describe('TasksComponent', () => {
     message = { success: jest.fn(), error: jest.fn(), info: jest.fn() };
     clipboard = { copy: jest.fn() };
     modalClose = new Subject<string | undefined>();
+    phone$ = new BehaviorSubject<boolean>(true);
     component = new TasksComponent(
       tasksService as never,
       new UntypedFormBuilder(),
@@ -41,7 +45,9 @@ describe('TasksComponent', () => {
       clipboard as never,
       // A popup's afterClose emits once: each popup gets its own subject
       { create: () => ({ afterClose: modalClose = new Subject<string | undefined>() }) } as never,
-      { uid$: of('uid1') } as never
+      { uid$: of('uid1') } as never,
+      { isPhone$: phone$, isPhone: true } as never,
+      { onDestroy: () => () => undefined, destroyed: false } as never
     );
     component.tasks$.subscribe();
   });
@@ -77,6 +83,117 @@ describe('TasksComponent', () => {
     failing.error(new Error('denied'));
     expect(component.saving).toBe(false);
     expect(message.error).toHaveBeenCalled();
+  });
+
+  it('closes the phone sheet after a successful add', () => {
+    tasksService.addTask.mockReturnValue(of('new-key'));
+    component.openSheet();
+    fillForm();
+    component.addTask('uid1');
+    expect(component.sheetOpen()).toBe(false);
+    expect(message.success).toHaveBeenCalled();
+    expect(component.form.get('label')?.value).toBeNull();
+    expect(component.highlightKey).toBe('new-key');
+  });
+
+  it('keeps the phone sheet open when the add fails', () => {
+    const failing = new Subject<string>();
+    tasksService.addTask.mockReturnValue(failing);
+    component.openSheet();
+    fillForm();
+    component.addTask('uid1');
+    failing.error(new Error('denied'));
+    expect(component.sheetOpen()).toBe(true);
+    expect(component.form.get('label')?.value).toBe('Island Run');
+    expect(message.error).toHaveBeenCalled();
+  });
+
+  describe('scroll to the new row', () => {
+    let row: HTMLTableRowElement;
+    let scrollIntoView: jest.Mock;
+
+    beforeEach(() => {
+      row = document.createElement('tr');
+      row.dataset['taskKey'] = 'new-key';
+      // jsdom has no scrollIntoView
+      scrollIntoView = row.scrollIntoView = jest.fn();
+      document.body.appendChild(row);
+      tasksService.addTask.mockReturnValue(of('new-key'));
+      fillForm();
+    });
+
+    afterEach(() => row.remove());
+
+    it('starts right away after an add from the card', fakeAsync(() => {
+      component.addTask('uid1');
+      tick(0);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
+      tick(4000);
+    }));
+
+    it('waits for the sheet to finish closing, so its focus return to the open button does not undo it', fakeAsync(() => {
+      component.openSheet();
+      component.addTask('uid1');
+      tick(DRAWER_ANIMATE_DURATION);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      tick(100);
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      // Centred on a phone, so the row is not at the very bottom under the home bar
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' });
+      tick(4000);
+    }));
+  });
+
+  describe('keyboard', () => {
+    let viewport: EventTarget & { height: number; offsetTop: number; scale: number };
+    const root = document.documentElement;
+    const vars = () => [root.style.getPropertyValue('--sheet-visible-height'), root.style.getPropertyValue('--sheet-keyboard')];
+
+    beforeEach(() => {
+      viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0, scale: 1 });
+      Object.defineProperty(window, 'visualViewport', { value: viewport, configurable: true });
+      jest.spyOn(root, 'clientHeight', 'get').mockReturnValue(844);
+    });
+
+    afterEach(() => {
+      component.closeSheet();
+      delete (window as { visualViewport?: unknown }).visualViewport;
+      jest.restoreAllMocks();
+    });
+
+    it('lifts the open sheet above the keyboard and fits it in what the keyboard leaves', () => {
+      component.openSheet();
+      expect(vars()).toEqual(['844px', '0px']);
+      // The keyboard opens: the visible part shrinks and moves down a little as the browser shows the field
+      viewport.height = 500;
+      viewport.offsetTop = 20;
+      viewport.dispatchEvent(new Event('resize'));
+      expect(vars()).toEqual(['500px', '324px']);
+    });
+
+    it('stops following the keyboard when the sheet closes, after an add included', () => {
+      tasksService.addTask.mockReturnValue(of('new-key'));
+      component.openSheet();
+      fillForm();
+      component.addTask('uid1');
+      expect(vars()).toEqual(['', '']);
+      viewport.height = 500;
+      viewport.dispatchEvent(new Event('resize'));
+      expect(vars()).toEqual(['', '']);
+    });
+
+    it('stops following the keyboard when the screen gets wide', () => {
+      component.openSheet();
+      phone$.next(false);
+      expect(vars()).toEqual(['', '']);
+    });
+  });
+
+  it('closes the sheet when the screen gets wide', () => {
+    component.openSheet();
+    phone$.next(false);
+    expect(component.isPhone()).toBe(false);
+    expect(component.sheetOpen()).toBe(false);
   });
 
   it('rejects a blank name, zero repetitions and a minimum above the maximum', () => {
@@ -135,6 +252,158 @@ describe('TasksComponent', () => {
 });
 
 describe('TasksComponent page', () => {
+  let phone$: BehaviorSubject<boolean>;
+
+  const setup = (phone: boolean, addTask = jest.fn(() => of('new-key'))) => {
+    phone$ = new BehaviorSubject<boolean>(phone);
+    TestBed.configureTestingModule({
+      imports: [TasksModule, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        provideNzIconsTesting(),
+        { provide: TasksService, useValue: { tasks$: of([task('Guild Chores', 0)]), setTrackAll: jest.fn(), addTask } },
+        { provide: AuthService, useValue: { uid$: of('uid1') } },
+        { provide: LayoutStateService, useValue: { isPhone$: phone$, isPhone: phone } }
+      ]
+    });
+    const fixture = TestBed.createComponent(TasksComponent);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  // The sheet is in an overlay on the page body, outside the component
+  const forms = () => document.querySelectorAll('form.add-form');
+  const sheetForm = () => document.querySelector('.add-task-sheet form.add-form');
+  const cardTitles = (el: HTMLElement) => [...el.querySelectorAll('.ant-card-head-title')].map(t => t.textContent?.trim());
+  const openButton = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('button.add-task-open');
+
+  it('on a PC shows the add form in the card below the list, with no button or sheet', () => {
+    const fixture = setup(false);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(cardTitles(el)).toEqual(['Tasks', 'Add a custom task']);
+    expect(openButton(el)).toBeNull();
+    expect(el.querySelector('nz-drawer')).toBeNull();
+    expect(forms().length).toBe(1);
+  });
+
+  it('on a phone shows a button under the header that opens the form in a bottom sheet', fakeAsync(() => {
+    const fixture = setup(true);
+    const el: HTMLElement = fixture.nativeElement;
+    expect(cardTitles(el)).toEqual(['Tasks']);
+    const button = openButton(el);
+    expect(button?.textContent).toContain('Add a custom task');
+    expect(button?.querySelector('[nz-icon]')?.getAttribute('nzType')).toBe('plus');
+    // Right under the page header, above the Tasks card
+    expect(el.querySelector('nz-page-header')?.nextElementSibling).toBe(button);
+    // The closed drawer keeps its content for the length of its closing animation after the first render
+    tick(400);
+    fixture.detectChanges();
+    expect(forms().length).toBe(0);
+
+    button?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(fixture.componentInstance.sheetOpen()).toBe(true);
+    expect(document.querySelector('.add-task-sheet .ant-drawer-title')?.textContent).toContain('Add a custom task');
+    expect(sheetForm()).not.toBeNull();
+    expect(forms().length).toBe(1);
+
+    document.querySelector<HTMLButtonElement>('.add-task-sheet .ant-drawer-close')?.click();
+    fixture.detectChanges();
+    tick(400);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.sheetOpen()).toBe(false);
+    expect(forms().length).toBe(0);
+  }));
+
+  it('tells a screen reader the button opens a dialog, and that the sheet is one', fakeAsync(() => {
+    const fixture = setup(true);
+    tick(0);
+    const sheet = document.querySelector('.ant-drawer-content-wrapper.add-task-sheet');
+    // Closed, the sheet is only moved off the screen: hidden from the screen reader, and not modal
+    expect(sheet?.getAttribute('aria-hidden')).toBe('true');
+    expect(sheet?.hasAttribute('aria-modal')).toBe(false);
+    const button = openButton(fixture.nativeElement);
+    expect(button?.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(button?.getAttribute('aria-expanded')).toBe('false');
+    button?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(button?.getAttribute('aria-expanded')).toBe('true');
+    expect(sheet?.getAttribute('role')).toBe('dialog');
+    expect(sheet?.hasAttribute('aria-hidden')).toBe(false);
+    expect(sheet?.getAttribute('aria-modal')).toBe('true');
+    expect(sheet?.getAttribute('aria-label')).toBe('Add a custom task');
+    // The title and close button are inside the dialog
+    expect(sheet?.querySelector('.ant-drawer-title')).not.toBeNull();
+    expect(sheet?.querySelector('.ant-drawer-close')).not.toBeNull();
+    // Closed from its close button, which keeps the focus until the drawer's closing animation ends
+    sheet?.querySelector<HTMLButtonElement>('.ant-drawer-close')?.focus();
+    sheet?.querySelector<HTMLButtonElement>('.ant-drawer-close')?.click();
+    fixture.detectChanges();
+    expect(sheet?.hasAttribute('aria-hidden')).toBe(false);
+    tick(400);
+    expect(sheet?.getAttribute('aria-hidden')).toBe('true');
+    expect(sheet?.hasAttribute('aria-modal')).toBe(false);
+  }));
+
+  it('closes the sheet on a tap outside it', fakeAsync(() => {
+    const fixture = setup(true);
+    openButton(fixture.nativeElement)?.click();
+    fixture.detectChanges();
+    tick(400);
+    document.querySelector<HTMLElement>('.ant-drawer-mask')?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(fixture.componentInstance.sheetOpen()).toBe(false);
+  }));
+
+  it('closes the sheet with Escape', fakeAsync(() => {
+    const fixture = setup(true);
+    openButton(fixture.nativeElement)?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(fixture.componentInstance.sheetOpen()).toBe(true);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true } as KeyboardEventInit));
+    fixture.detectChanges();
+    tick(400);
+    expect(fixture.componentInstance.sheetOpen()).toBe(false);
+  }));
+
+  it('closes the sheet after a successful add from it', fakeAsync(() => {
+    const addTask = jest.fn(() => of('new-key'));
+    const fixture = setup(true, addTask);
+    openButton(fixture.nativeElement)?.click();
+    fixture.detectChanges();
+    tick(400);
+    fixture.componentInstance.form.setValue({ label: 'Island Run', frequency: TaskFrequency.DAILY, scope: TaskScope.ROSTER, amount: 1, minIlvl: 1500, maxIlvl: 1700, iconPath: null });
+    fixture.detectChanges();
+    sheetForm()?.querySelector<HTMLButtonElement>('button.add-button')?.click();
+    fixture.detectChanges();
+    expect(addTask).toHaveBeenCalledTimes(1);
+    expect(fixture.componentInstance.sheetOpen()).toBe(false);
+    tick(4000);
+  }));
+
+  it('moves the form back to its card when the screen gets wide with the sheet open', fakeAsync(() => {
+    const fixture = setup(true);
+    const el: HTMLElement = fixture.nativeElement;
+    openButton(el)?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(sheetForm()).not.toBeNull();
+
+    phone$.next(false);
+    fixture.detectChanges();
+    tick(400);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.sheetOpen()).toBe(false);
+    expect(openButton(el)).toBeNull();
+    expect(sheetForm()).toBeNull();
+    expect(cardTitles(el)).toEqual(['Tasks', 'Add a custom task']);
+    expect(forms().length).toBe(1);
+  }));
+
   it('asks before Track all and Untrack all change every task', async () => {
     const setTrackAll = jest.fn();
     TestBed.configureTestingModule({

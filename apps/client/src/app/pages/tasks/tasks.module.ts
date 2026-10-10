@@ -18,6 +18,7 @@ import { IconsProviderModule } from "../../icons-provider.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { TextQuestionPopupModule } from "../../components/text-question-popup/text-question-popup.module";
 import { DragDropModule } from "@angular/cdk/drag-drop";
+import { NzDrawerModule } from "ng-zorro-antd/drawer";
 
 const routes: Routes = [{
   path: "",
@@ -46,7 +47,8 @@ const routes: Routes = [{
     NzTooltipModule,
     IconsProviderModule,
     NzModalModule,
-    DragDropModule
+    DragDropModule,
+    NzDrawerModule
   ]
 })
 export class TasksModule {

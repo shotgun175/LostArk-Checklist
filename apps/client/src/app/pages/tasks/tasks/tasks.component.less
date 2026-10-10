@@ -127,6 +127,67 @@ nz-card {
   color: #a61d24;
 }
 
+// Phones: the button that opens the add form's bottom sheet, under the page header
+.add-task-open {
+  margin-bottom: 10px;
+}
+
+// The add form in the bottom sheet: a compact grid, so the whole form fits a phone screen. Name, Icon
+// and Repetitions take a line each, Frequency and Scope share one, Min and Max ilvl share one. The Add
+// button stays pinned to the bottom of the sheet, so it is in view even when the keyboard is open.
+.sheet-form .add-form {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  column-gap: 10px;
+
+  nz-form-item {
+    width: auto;
+    margin-bottom: 10px;
+  }
+
+  .name-field,
+  .icon-field,
+  .form-error {
+    grid-column: span 6;
+  }
+
+  .select-field,
+  .number-field {
+    grid-column: span 3;
+  }
+
+  // Repetitions (the third number field) on a line of its own
+  .number-field:last-of-type {
+    grid-column: span 6;
+  }
+
+  .add-button {
+    grid-column: span 6;
+    width: 100%;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 4px 0 0;
+
+    // Opaque, so fields scrolling under the pinned button do not show through it: the same look as
+    // the disabled button's 8% white over the sheet's #1f1f1f
+    &[disabled] {
+      background-color: #313131;
+    }
+  }
+
+  ::ng-deep .ant-form-item-label {
+    padding-bottom: 4px;
+  }
+
+  // 16px text, so iOS does not zoom the page in when a field gets the keyboard (the select's own
+  // search box included)
+  ::ng-deep input,
+  ::ng-deep .ant-select-selector {
+    font-size: 16px;
+  }
+}
+
 :host ::ng-deep tbody.cdk-drop-list-dragging,
 :host ::ng-deep tbody.cdk-drop-list-dragging * {
   cursor: grabbing;
