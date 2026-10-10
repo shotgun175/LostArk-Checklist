@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@angular/core";
 import { doc, Firestore, where } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
+import { QueryState } from "../../firebase/rx";
 import { FirestoreStorage } from "../firestore-storage";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 import { AuthService } from "./auth.service";
@@ -77,14 +78,28 @@ export function renameUserTask(t: LostarkTask): LostarkTask {
  * when the account is deleted (possibly in another tab), and the default tasks must not be created
  * again for it. Import replaces the tasks in one batch, so it never shows an empty list.
  */
-export function skipDeletedTaskList(): MonoTypeOperatorFunction<LostarkTask[]> {
+export function skipDeletedTaskList(): MonoTypeOperatorFunction<QueryState<LostarkTask>> {
   return source => {
     let hadTasks = false;
-    return source.pipe(filter(list => {
-      hadTasks = hadTasks || list.length > 0;
-      return list.length > 0 || !hadTasks;
+    return source.pipe(filter(({ docs }) => {
+      hadTasks = hadTasks || docs.length > 0;
+      return docs.length > 0 || !hadTasks;
     }));
   };
+}
+
+/**
+ * Drops an empty task list read from this device's cache. Offline, a list that was never cached is
+ * empty in the cache, and treating it as a new account would create the default tasks again.
+ */
+export function skipEmptyCachedTaskList(): MonoTypeOperatorFunction<QueryState<LostarkTask>> {
+  return filter(({ docs, fromCache }) => docs.length > 0 || !fromCache);
+}
+
+/** The task list to show, and whether it was read from this device's cache rather than the server. */
+export interface TaskList {
+  tasks: LostarkTask[];
+  fromCache: boolean;
 }
 
 @Injectable({
@@ -102,11 +117,14 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
   public baseData$ = this.auth.uid$.pipe(
     switchMap(uid => {
       return this.getUserTasks(uid).pipe(
+        skipEmptyCachedTaskList(),
         skipDeletedTaskList(),
         debounceTime(100),
-        map(storedTasks => {
+        map(({ docs: storedTasks, fromCache }) => {
           const userTasks = storedTasks.map(renameUserTask);
-          const toCreate = this.sortedTasks
+          // Creating, upgrading and cleaning up tasks waits for the server's list: a cached list
+          // may be incomplete or older, and would create duplicates or write old copies back.
+          const toCreate = fromCache ? [] : this.sortedTasks
             .filter(defaultTask => {
               return !userTasks.some(t => t.label?.toLowerCase() === defaultTask.label?.toLowerCase() && t.frequency === defaultTask.frequency && !t.custom);
             })
@@ -115,18 +133,18 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
               task.authorId = uid;
               return task;
             });
-          const toUpdate: LostarkTask[] = [];
+          const upgrades: LostarkTask[] = [];
           const result = [
             ...toCreate,
             ...userTasks
               .map((t, i) => {
                 const upgraded = upgradeUserTask(t, this.sortedTasks, uid);
                 if (upgraded) {
-                  toUpdate.push(upgraded);
+                  upgrades.push(upgraded);
                   return upgraded;
                 }
                 if (t !== storedTasks[i]) {
-                  toUpdate.push(t);
+                  upgrades.push(t);
                 }
                 return { ...t };
               })
@@ -136,8 +154,9 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
 
           return {
             toCreate,
-            toUpdate,
-            result
+            toUpdate: fromCache ? [] : upgrades,
+            result,
+            fromCache
           };
         })
       );
@@ -145,12 +164,16 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     shareReplay(1)
   );
 
-  public tasks$ = this.baseData$.pipe(
-    pluck("result"),
-    map(tasks => {
+  public taskList$: Observable<TaskList> = this.baseData$.pipe(
+    map(({ result, fromCache }) => {
       const now = new Date();
-      return tasks.map(task => withDailyAmount(task, now));
+      return { tasks: result.map(task => withDailyAmount(task, now)), fromCache };
     }),
+    shareReplay(1)
+  );
+
+  public tasks$ = this.taskList$.pipe(
+    pluck("tasks"),
     shareReplay(1)
   );
 
@@ -194,8 +217,13 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
       })
     ).subscribe();
 
-    const duplicates$ = this.baseData$.pipe(
-      pluck("result"),
+    // Deleting duplicates and old tasks also waits for the server's list.
+    const serverResult$ = this.baseData$.pipe(
+      filter(data => !data.fromCache),
+      pluck("result")
+    );
+
+    const duplicates$ = serverResult$.pipe(
       debounceTime(1000),
       map((tasks) => {
         return tasks
@@ -213,8 +241,7 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
       })
     );
 
-    const oldTasksCleanup$ = this.baseData$.pipe(
-      pluck("result"),
+    const oldTasksCleanup$ = serverResult$.pipe(
       debounceTime(1000),
       map((tasks) => {
         return tasks
@@ -282,7 +309,7 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     });
   }
 
-  public getUserTasks(uid: string): Observable<LostarkTask[]> {
+  public getUserTasks(uid: string): Observable<QueryState<LostarkTask>> {
     return this.query(where("authorId", "==", uid));
   }
 

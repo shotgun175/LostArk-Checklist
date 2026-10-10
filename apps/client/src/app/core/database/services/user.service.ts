@@ -35,8 +35,9 @@ export class UserService extends FirestoreStorage<LAHUser> {
         switchMap(user => {
           this.removeLeftoverFields(user);
           // While an account is deleted its users document disappears before the auth account
-          // does; asking for a display name then would open a popup that cannot be closed.
-          if (!anonymous && !user.name && !registeredInPlace && !FirestoreStorage.writesArePaused()) {
+          // does; asking for a display name then would open a popup that cannot be closed. A cached
+          // copy may be older than the server's, which can already have the name.
+          if (!anonymous && !user.name && !registeredInPlace && !user.fromCache && !FirestoreStorage.writesArePaused()) {
             this.updateUserName(user, false).subscribe({
               error: (error: unknown) => console.error("Could not save the display name:", error)
             });
@@ -94,12 +95,13 @@ export class UserService extends FirestoreStorage<LAHUser> {
   /**
    * Removes fields this app no longer uses (friends, region, availability and the like, left by
    * Lostark-helper) from an existing users document, in one write. A clean or missing document is
-   * not written, and nothing is written while writes are paused (account deletion, import). Each key
+   * not written, nor is a cached copy (the server's copy follows), and nothing is written while
+   * writes are paused (account deletion, import). Each key
    * is a FieldPath, so a name with a dot is removed as itself, and a name Firestore rejects is only
    * logged: it must not end the users stream.
    */
   private removeLeftoverFields(user: LAHUser): void {
-    if (user.notFound || this.cleanedUsers.has(user.$key) || FirestoreStorage.writesArePaused()) {
+    if (user.notFound || user.fromCache || this.cleanedUsers.has(user.$key) || FirestoreStorage.writesArePaused()) {
       return;
     }
     const leftovers = Object.keys(user).filter(key => !["$key", "name"].includes(key));

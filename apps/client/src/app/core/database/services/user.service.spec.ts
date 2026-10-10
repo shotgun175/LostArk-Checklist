@@ -2,7 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { BehaviorSubject, of, Subject } from "rxjs";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { FieldPath, updateDoc } from "firebase/firestore";
-import { docData$ } from "../../firebase/rx";
+import { docSnapshot$ } from "../../firebase/rx";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { FirestoreStorage } from "../firestore-storage";
 import { AuthService } from "./auth.service";
@@ -26,7 +26,12 @@ jest.mock("firebase/firestore", () => {
     }
   };
 });
-jest.mock("../../firebase/rx", () => ({ docData$: jest.fn(), collectionData$: jest.fn(), authState$: jest.fn() }));
+jest.mock("../../firebase/rx", () => ({ docSnapshot$: jest.fn(), collectionSnapshot$: jest.fn(), authState$: jest.fn() }));
+
+/** The users document as the listener reports it; undefined is a missing document. */
+function snap(data: unknown, fromCache = false) {
+  return { data, exists: data !== undefined, fromCache, hasPendingWrites: false };
+}
 jest.mock("../../../components/text-question-popup/text-question-popup/text-question-popup.component", () => ({
   TextQuestionPopupComponent: class {}
 }));
@@ -38,7 +43,7 @@ describe("UserService.user$", () => {
 
   beforeEach(() => {
     userDoc = new Subject<unknown>();
-    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    jest.mocked(docSnapshot$).mockReturnValue(userDoc as never);
     create = jest.fn(() => ({ afterClose: new Subject<string>() }));
     TestBed.configureTestingModule({
       providers: [
@@ -56,14 +61,28 @@ describe("UserService.user$", () => {
 
   it("asks a registered user without a name for one", () => {
     service.user$.subscribe();
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask for a name from a cached copy, only once the server's copy has none", () => {
+    service.user$.subscribe();
+    userDoc.next(snap({ $key: "u1" }, true));
+    expect(create).not.toHaveBeenCalled();
+    userDoc.next(snap({ $key: "u1" }));
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not ask for a name when the cache only says the document is missing", () => {
+    service.user$.subscribe();
+    userDoc.next(snap(undefined, true));
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("does not ask for a name while writes are paused for account deletion", () => {
     service.user$.subscribe();
     FirestoreStorage.pauseWrites();
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     expect(create).not.toHaveBeenCalled();
   });
 });
@@ -76,7 +95,7 @@ describe("UserService.user$ cleaning leftover fields", () => {
   beforeEach(() => {
     jest.mocked(updateDoc).mockClear();
     userDoc = new Subject<unknown>();
-    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    jest.mocked(docSnapshot$).mockReturnValue(userDoc as never);
     isAnonymous$ = new BehaviorSubject(true);
     TestBed.configureTestingModule({
       providers: [
@@ -97,10 +116,10 @@ describe("UserService.user$ cleaning leftover fields", () => {
 
   it("removes every field but name with one write, once", () => {
     service.user$.subscribe();
-    userDoc.next(dirty);
+    userDoc.next(snap(dirty));
     // A guest who registers in place replays the same document before the write lands.
     isAnonymous$.next(false);
-    userDoc.next({ ...dirty, version: 2 });
+    userDoc.next(snap({ ...dirty, version: 2 }));
     expect(updateDoc).toHaveBeenCalledTimes(1);
     expect(jest.mocked(updateDoc).mock.calls[0][0]).toEqual(expect.objectContaining({ path: "users/u1" }));
     expect(jest.mocked(updateDoc).mock.calls[0].slice(1)).toEqual([
@@ -112,7 +131,7 @@ describe("UserService.user$ cleaning leftover fields", () => {
 
   it("removes a field whose name has a dot as that field, not a nested one", () => {
     service.user$.subscribe();
-    userDoc.next({ $key: "u1", name: "Synthetic Sorc", "a.b": 1 });
+    userDoc.next(snap({ $key: "u1", name: "Synthetic Sorc", "a.b": 1 }));
     expect(jest.mocked(updateDoc).mock.calls[0].slice(1)).toEqual([new FieldPath("a.b"), "<deleteField>"]);
   });
 
@@ -124,33 +143,41 @@ describe("UserService.user$ cleaning leftover fields", () => {
     const seen: unknown[] = [];
     const errors: unknown[] = [];
     service.user$.subscribe({ next: user => seen.push(user), error: error => errors.push(error) });
-    userDoc.next({ $key: "u1", name: "Synthetic Sorc", __x__: 1 });
-    userDoc.next({ $key: "u1", name: "Synthetic Sorc 2", __x__: 1 });
+    userDoc.next(snap({ $key: "u1", name: "Synthetic Sorc", __x__: 1 }));
+    userDoc.next(snap({ $key: "u1", name: "Synthetic Sorc 2", __x__: 1 }));
     expect(errors).toEqual([]);
     expect(seen).toHaveLength(2);
     expect(consoleError).toHaveBeenCalledWith("Could not remove old fields from the users document:", expect.any(Error));
     consoleError.mockRestore();
   });
 
+  it("waits for the server's copy before cleaning: a cached copy may be older", () => {
+    service.user$.subscribe();
+    userDoc.next(snap(dirty, true));
+    expect(updateDoc).not.toHaveBeenCalled();
+    userDoc.next(snap(dirty));
+    expect(updateDoc).toHaveBeenCalledTimes(1);
+  });
+
   it("writes nothing for a document that has only a name", () => {
     service.user$.subscribe();
-    userDoc.next({ $key: "u1", name: "Synthetic Sorc" });
+    userDoc.next(snap({ $key: "u1", name: "Synthetic Sorc" }));
     expect(updateDoc).not.toHaveBeenCalled();
   });
 
   it("writes nothing for a missing document", () => {
     service.user$.subscribe();
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     expect(updateDoc).not.toHaveBeenCalled();
   });
 
   it("writes nothing while writes are paused, and cleans on the next load after they resume", () => {
     service.user$.subscribe();
     FirestoreStorage.pauseWrites();
-    userDoc.next(dirty);
+    userDoc.next(snap(dirty));
     expect(updateDoc).not.toHaveBeenCalled();
     FirestoreStorage.resumeWrites();
-    userDoc.next({ ...dirty, region: "NAE" });
+    userDoc.next(snap({ ...dirty, region: "NAE" }));
     expect(updateDoc).toHaveBeenCalledTimes(1);
   });
 });
@@ -158,7 +185,7 @@ describe("UserService.user$ cleaning leftover fields", () => {
 describe("UserService.user$ when a guest registers", () => {
   it("does not ask for a name: the register popup saves the one the user typed", () => {
     const userDoc = new Subject<unknown>();
-    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    jest.mocked(docSnapshot$).mockReturnValue(userDoc as never);
     const create = jest.fn(() => ({ afterClose: new Subject<string>() }));
     const isAnonymous$ = new BehaviorSubject(true);
     TestBed.configureTestingModule({
@@ -170,9 +197,9 @@ describe("UserService.user$ when a guest registers", () => {
     });
     const service = TestBed.inject(UserService);
     service.user$.subscribe();
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     isAnonymous$.next(false);
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     expect(create).not.toHaveBeenCalled();
   });
 });
@@ -184,7 +211,7 @@ describe("UserService.updateUserName", () => {
   let setOne: jest.SpyInstance;
 
   beforeEach(() => {
-    jest.mocked(docData$).mockReturnValue(new Subject() as never);
+    jest.mocked(docSnapshot$).mockReturnValue(new Subject() as never);
     afterClose = new Subject<string | undefined>();
     create = jest.fn(() => ({ afterClose }));
     TestBed.configureTestingModule({
@@ -237,9 +264,9 @@ describe("UserService.updateUserName", () => {
 
   it("saves what is typed in the automatic prompt, which has no Cancel button", () => {
     const userDoc = new Subject<unknown>();
-    jest.mocked(docData$).mockReturnValue(userDoc as never);
+    jest.mocked(docSnapshot$).mockReturnValue(userDoc as never);
     service.user$.subscribe();
-    userDoc.next(undefined);
+    userDoc.next(snap(undefined));
     expect(create.mock.calls[0][0].nzData.cancellable).toBe(false);
     afterClose.next("Synthetic Sorc");
     expect(setOne).toHaveBeenCalledWith("u1", { name: "Synthetic Sorc" });

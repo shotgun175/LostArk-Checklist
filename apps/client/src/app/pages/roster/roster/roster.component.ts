@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { UntypedFormBuilder, Validators } from "@angular/forms";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
-import { filter, first, map, switchMap, withLatestFrom } from "rxjs/operators";
+import { filter, first, map, withLatestFrom } from "rxjs/operators";
 import { Clipboard } from "@angular/cdk/clipboard";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { NzModalService } from "ng-zorro-antd/modal";
@@ -12,7 +12,7 @@ import { arrayRemove } from "firebase/firestore";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { CompletionService } from "../../../core/database/services/completion.service";
 import { EnergyService } from "../../../core/database/services/energy.service";
-import { combineLatest, of } from "rxjs";
+import { combineLatest } from "rxjs";
 import { LostarkClass } from "../../../model/character/lostark-class";
 import { CLASS_OPTIONS } from "../../../model/character/class-names";
 import { Character } from "../../../model/character/character";
@@ -144,23 +144,25 @@ export class RosterComponent {
       this.energyService.energy$,
       this.settings.settings$
     ]).pipe(
-      first(),
-      switchMap(([completion, energy, settings]) => {
-        const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, sameName);
-        if (settingsWrites.length > 0) {
-          this.settings.patchFields(settings.$key, settingsWrites);
-        }
-        const completionMoved = moveNameKeysToIds(completion.data, sameName);
-        const energyMoved = moveNameKeysToIds(energy.data, sameName);
-        if (completionMoved || energyMoved) {
-          return combineLatest([
-            this.completionService.setOne(completion.$key, completion),
-            this.energyService.setOne(energy.$key, energy)
-          ]);
-        }
-        return of(null);
-      })
-    ).subscribe();
+      first()
+    ).subscribe(([completion, energy, settings]) => {
+      // A cached copy may be older than the server's: moving its keys could write old values over
+      // newer ones. Offline the move is skipped; the name itself is still saved.
+      if (completion.fromCache || energy.fromCache || settings.fromCache) {
+        console.warn("Offline: keys saved under the old character name were not moved.");
+        return;
+      }
+      const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, sameName);
+      if (settingsWrites.length > 0) {
+        this.settings.patchFields(settings.$key, settingsWrites);
+      }
+      const completionMoved = moveNameKeysToIds(completion.data, sameName);
+      const energyMoved = moveNameKeysToIds(energy.data, sameName);
+      if (completionMoved || energyMoved) {
+        this.completionService.setOneInBackground(completion.$key, completion);
+        this.energyService.setOneInBackground(energy.$key, energy);
+      }
+    });
     this.saveCharacter({ ...character, name }, roster);
   }
 
@@ -260,16 +262,16 @@ export class RosterComponent {
           }
           return result.ok;
         }),
-        withLatestFrom(this.auth.uid$),
-        switchMap(([result, uid]) => this.rosterService.updateOne(uid, { characters: result.characters }))
+        withLatestFrom(this.auth.uid$)
       )
-      .subscribe({
-        next: () => {
-          this.message.success("Roster imported");
-        },
-        error: e => {
-          this.message.error((e as Error).message || String(e));
-        }
+      .subscribe(([result, uid]) => {
+        // The new roster shows at once; offline the write only settles when the device is back online.
+        this.rosterService.updateOne(uid, { characters: result.characters }).subscribe({
+          error: e => {
+            this.message.error((e as Error).message || String(e));
+          }
+        });
+        this.message.success("Roster imported");
       });
   }
 

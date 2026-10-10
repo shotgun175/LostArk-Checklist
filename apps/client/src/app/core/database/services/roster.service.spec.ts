@@ -1,10 +1,14 @@
-import { normalizeRosterCharacters } from "./roster.service";
+import { NEVER, of } from "rxjs";
+import { normalizeRosterCharacters, RosterService } from "./roster.service";
 import { Roster } from "../../../model/roster";
+import { FirestoreStorage } from "../firestore-storage";
 
 // No real Firebase in unit tests (same as energy.service.spec.ts)
 jest.mock("firebase/app", () => ({}));
 jest.mock("firebase/auth", () => ({}));
-jest.mock("firebase/firestore", () => ({}));
+jest.mock("firebase/firestore", () => ({
+  collection: jest.fn(() => ({ withConverter: jest.fn(() => ({})) }))
+}));
 
 const roster = (characters: unknown[]): Roster => ({ $key: "uid1", characters, trackedTasks: {}, showAllTasks: false } as Roster);
 
@@ -33,5 +37,36 @@ describe("normalizeRosterCharacters", () => {
   it("leaves a clean roster unchanged", () => {
     const r = roster([{ id: 1, name: "Brakka", ilvl: 1700, class: 4, tickets: {}, weeklyGold: false }]);
     expect(normalizeRosterCharacters(r)).toBe(false);
+  });
+});
+
+describe("RosterService repair", () => {
+  // A string class needs a repair, which is saved as a whole document.
+  const needsRepair = (fromCache: boolean): Roster => ({
+    ...roster([{ id: 1, name: "Brakka", ilvl: 1700, class: "4", tickets: {}, weeklyGold: false }]),
+    ...(fromCache ? { fromCache: true as const } : {})
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  function load(copy: Roster): { shown: Roster[]; saved: jest.SpyInstance } {
+    jest.spyOn(FirestoreStorage.prototype, "getOne").mockReturnValue(of(copy));
+    const service = new RosterService({ uid$: NEVER } as never, {} as never);
+    const saved = jest.spyOn(service, "setOneInBackground").mockImplementation(() => undefined);
+    const shown: Roster[] = [];
+    service.getOne("uid1", true).subscribe(r => shown.push(r));
+    return { shown, saved };
+  }
+
+  it("shows the repair of a cached copy but does not save it", () => {
+    const { shown, saved } = load(needsRepair(true));
+    expect(shown[0].characters[0].class).toBe(4);
+    expect(saved).not.toHaveBeenCalled();
+  });
+
+  it("saves the repair of the server's copy in the background", () => {
+    const { shown, saved } = load(needsRepair(false));
+    expect(shown).toHaveLength(1);
+    expect(saved).toHaveBeenCalledWith("uid1", expect.objectContaining({ characters: [expect.objectContaining({ class: 4 })] }));
   });
 });

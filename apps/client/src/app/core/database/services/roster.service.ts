@@ -1,12 +1,11 @@
 import { Inject, Injectable } from "@angular/core";
-import { map, Observable, of, shareReplay, switchMap } from "rxjs";
+import { map, Observable, shareReplay, switchMap } from "rxjs";
 import { FirestoreStorage } from "../firestore-storage";
 import { Roster } from "../../../model/roster";
 import { LostarkClass } from "../../../model/character/lostark-class";
 import { AuthService } from "./auth.service";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
-import { mapTo } from "rxjs/operators";
 import { applyWeeklyGoldDefaults } from "../../weekly-gold";
 import { fixDuplicateCharacterIds, toClassNumber } from "../../roster-input";
 
@@ -82,7 +81,7 @@ export class RosterService extends FirestoreStorage<Roster> {
 
   override getOne(key: string, isCurrentUser = false): Observable<Roster> {
     return super.getOne(key).pipe(
-      switchMap(roster => {
+      map(roster => {
         let shouldSave = normalizeRosterCharacters(roster);
         if (!roster.trackedTasks) {
           roster.trackedTasks = {};
@@ -91,12 +90,12 @@ export class RosterService extends FirestoreStorage<Roster> {
           shouldSave = true;
           roster.showAllTasks = false;
         }
-        if (shouldSave && isCurrentUser && roster.characters.length > 0) {
-          return this.setOne(key, roster).pipe(
-            mapTo(roster)
-          );
+        // The repair is shown at once but only saved from the server's copy: saving a cached copy,
+        // which may be older, would undo roster changes made on another device.
+        if (shouldSave && isCurrentUser && roster.characters.length > 0 && !roster.fromCache) {
+          this.setOneInBackground(key, roster);
         }
-        return of(roster);
+        return roster;
       })
     );
   }

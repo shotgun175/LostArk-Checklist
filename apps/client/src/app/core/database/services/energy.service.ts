@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@angular/core";
 import { FirestoreStorage } from "../firestore-storage";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
-import { combineLatest, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
+import { combineLatest, map, Observable, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 import { Energy } from "../../../model/energy";
 import { getCompletionEntry, moveNameKeysToIds, setCompletionEntry } from "../../get-completion-entry-key";
@@ -40,15 +40,22 @@ export class EnergyService extends FirestoreStorage<Energy> {
       return combineLatest([
         this.timeService.lastDailyReset$,
         this.rosterService.roster$,
-        this.tasksService.tasks$,
+        this.tasksService.taskList$,
         this.completionService.completion$
       ]).pipe(
-        switchMap(([reset, roster, tasks, completion]) => {
+        map(([reset, roster, taskList, completion]) => {
+          const tasks = taskList.tasks;
           // Entries saved under a character's name (older data) move to its id first, so two characters
           // with the same name (one on NA, one on EU) never share ticks or rest bonus through that name
           const energyMoved = moveNameKeysToIds(energy.data, roster.characters);
           const completionMoved = moveNameKeysToIds(completion.data, roster.characters);
           const newEnergy = Object.keys(energy.data).length === 0;
+          // The daily reset and the key move replace both whole documents, so they wait until every
+          // input is the server's copy: one computed from an older cached copy would undo ticks and
+          // rest bonus saved on another device. Offline, the reset waits until the device is online.
+          if (energy.fromCache || completion.fromCache || roster.fromCache || taskList.fromCache) {
+            return energy;
+          }
           if (energy.updated < reset) {
             roster.characters.forEach(character => {
               tasks
@@ -75,22 +82,17 @@ export class EnergyService extends FirestoreStorage<Energy> {
                 });
             });
             energy.updated = Date.now();
-            return combineLatest([
-              this.setOne(energy.$key, energy),
-              this.completionService.setOne(completion.$key, completion)
-            ]).pipe(
-              mapTo(energy)
-            );
+            this.setOneInBackground(energy.$key, energy);
+            this.completionService.setOneInBackground(completion.$key, completion);
+            return energy;
           }
-          if (energyMoved || completionMoved) {
-            return combineLatest([
-              energyMoved ? this.setOne(energy.$key, energy) : of(void 0),
-              completionMoved ? this.completionService.setOne(completion.$key, completion) : of(void 0)
-            ]).pipe(
-              mapTo(energy)
-            );
+          if (energyMoved) {
+            this.setOneInBackground(energy.$key, energy);
           }
-          return of(energy);
+          if (completionMoved) {
+            this.completionService.setOneInBackground(completion.$key, completion);
+          }
+          return energy;
         })
       );
     }),
