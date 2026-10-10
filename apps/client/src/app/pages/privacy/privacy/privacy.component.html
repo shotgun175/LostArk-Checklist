@@ -1,4 +1,4 @@
-<nz-page-header nzTitle="Privacy" nzSubtitle="Last updated 2026-10-08"></nz-page-header>
+<nz-page-header nzTitle="Privacy" nzSubtitle="Last updated 2026-10-09"></nz-page-header>
 <div class="privacy">
   <section>
     <h2>In short</h2>
@@ -33,8 +33,9 @@
     <ul>
       <li><strong>Get a copy:</strong> on <a routerLink="/settings">Settings</a>, Bring data over, <strong>Download backup</strong> saves your characters, checklist state, settings and display name as a file. It does not include your account email, which you entered yourself.</li>
       <li><strong>Correct it:</strong> change anything on the Roster, Tasks Manager and Settings pages.</li>
-      <li><strong>Erase it:</strong> on <a routerLink="/settings">Settings</a>, <strong>Delete my account and data</strong> removes everything stored for your account, then the account itself. For a guest, the data is removed and the browser starts a new, empty guest account.</li>
+      <li><strong>Erase it:</strong> on <a routerLink="/settings">Settings</a>, <strong>Delete my account and data</strong> removes everything stored for your account, then the account itself, and removes the copy kept in this browser. For a guest, the data is removed and the browser starts a new, empty guest account.</li>
     </ul>
+    <p>Download backup, account deletion, Log out and Sign in need an internet connection. Offline they are refused with a message, so no change made on this device is lost.</p>
     <p>You can also complain to your data protection authority.</p>
   </section>
   <section>
@@ -44,7 +45,7 @@
   </section>
   <section>
     <h2>Storage in your browser</h2>
-    <p>The site keeps your sign-in session and an App Check token in your browser (IndexedDB), a few display preferences in local storage (for example whether the sidebar is collapsed), data saved by older versions of the site until it is moved to your account, and whether you closed the guest banner in session storage. reCAPTCHA stores a <code>_grecaptcha</code> entry for security. All of this is strictly necessary for the site to work and stay secure, so there is no cookie banner.</p>
+    <p>The site keeps your sign-in session and an App Check token in your browser (IndexedDB). It also keeps a copy of your checklist data there (characters, checklist state, settings, tasks and display name), so it keeps working when the connection drops, and changes made offline are sent when you are back online. That copy is removed from this browser when you Log out, Sign in to another account or delete your account. It also keeps a few display preferences in local storage (for example whether the sidebar is collapsed), data saved by older versions of the site until it is moved to your account, and whether you closed the guest banner in session storage. reCAPTCHA stores a <code>_grecaptcha</code> entry for security. All of this is strictly necessary for the site to work and stay secure, so there is no cookie banner.</p>
   </section>
   <section>
     <h2>Fan content</h2>

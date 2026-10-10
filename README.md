@@ -94,8 +94,20 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - **Sign in is not Register.** On a browser that already has anonymous data, **Sign in** switches to the other account and leaves the anonymous data behind, so it no longer shows (it is not merged). The Sign in popup warns a guest who has characters before this happens, with a **Download backup** button and a **Register instead** link. Use **Register** the first time on the browser that holds your data. The original code also tries to delete the previous anonymous account's tasks during that switch. On this site the database rules block that, so nothing is deleted and the app ignores the refusal.
 - **Display name:** shown in the header (a guest shows **Guest**). It is optional when you register; left blank, it is the part of your email before the @. Change it from the user menu, **Change display name**. Names are trimmed, invisible characters are removed, and the limit is 32 characters. You still sign in with your email, not the display name.
 - The Sign in and Create an account popups link to each other, and Register, Sign in and Log out each confirm with a short message.
-- **Log out** starts a fresh, empty anonymous account in that browser. Your registered account's data is untouched. Sign in again to get it back.
+- **Log out** first makes sure every change reached the server, then reloads the page: the account's data is removed from that browser and a fresh, empty anonymous account starts. Your registered account's data is untouched. Sign in again to get it back.
+- **Sign in** also reloads the page and removes the previous account's data from that browser (a guest's data stays on the server, see above).
 - **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
+- Log out, Sign in and account deletion reload every open tab of the site in that browser.
+
+## Offline
+
+The site keeps a copy of your data in the browser (Firestore's IndexedDB cache, shared by all open tabs). If the connection drops while the site is open, it keeps working: ticks and edits are saved on the device and sent when you are back online, even if you close the tab first.
+
+- Data from another device shows as soon as the site reaches the server again. Until then you see this device's last copy.
+- The daily rest bonus update and other automatic fixes to your data wait until the device is online, so they never write an old copy over newer data.
+- A page whose data was never loaded on this device stays empty until the device is online.
+- **Log out**, **Sign in**, **Register**, **Delete my account and data**, **Import from Lostark-helper**, **Restore backup** and **Download backup** need the server. Offline they show "You're offline. Connect to the internet to ...". Log out, Sign in and account deletion also wait until every change made on the device has reached the server; if that takes more than 10 seconds they are refused, so nothing is lost.
+- Opening the site with no connection at all is not supported yet: the page itself still loads from the network.
 
 ## Install on your phone
 
