@@ -10,6 +10,7 @@ import { AuthPopupsService } from "./components/auth-popups/auth-popups.service"
 import { DataTransferService } from "./core/import/data-transfer.service";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { LAHUser } from "./model/lah-user";
+import { authErrorMessage } from "./core/firebase/auth-errors";
 
 const GUEST_BANNER_DISMISSED = "guest-banner:dismissed";
 
@@ -141,9 +142,25 @@ export class AppComponent {
     }
   }
 
+  /** True while logging out, so a second click cannot start it again. */
+  private loggingOut = false;
+
+  /**
+   * Logs out once every change has reached the server, then the page reloads with this account's
+   * data removed from this browser and a new, empty guest checklist. Offline it is refused.
+   */
   disconnect(): void {
-    this.auth.disconnect();
-    this.message.success("Logged out. This browser now starts a new, empty guest checklist; sign in to see your account's checklist again.", { nzDuration: 6000 });
+    if (this.loggingOut) {
+      return;
+    }
+    this.loggingOut = true;
+    const progress = this.message.loading("Logging out and removing your checklist from this browser...", { nzDuration: 0 });
+    this.auth.disconnect().catch((error: unknown) => {
+      this.loggingOut = false;
+      this.message.remove(progress.messageId);
+      console.error(error);
+      this.message.error(authErrorMessage(error), { nzDuration: 6000 });
+    });
   }
 
   updateUserName(user: LAHUser): void {

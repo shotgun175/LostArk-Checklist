@@ -1,4 +1,4 @@
-import { NgModule } from "@angular/core";
+import { inject, NgModule, provideAppInitializer } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 
 import { AppComponent } from "./app.component";
@@ -12,7 +12,8 @@ import { IconsProviderModule } from "./icons-provider.module";
 import { NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzMenuModule } from "ng-zorro-antd/menu";
 import { environment } from "../environments/environment";
-import { provideFirebase } from "./core/firebase/firebase.providers";
+import { FIRESTORE, provideFirebase } from "./core/firebase/firebase.providers";
+import { clearRequestedLocalData, localDataClearRequested } from "./core/firebase/local-data.service";
 import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
@@ -45,6 +46,9 @@ registerLocaleData(en);
   providers: [
     { provide: NZ_I18N, useValue: en_US },
     ...provideFirebase(environment),
+    // After Log out, Sign in or an account deletion, the previous account's data is deleted from
+    // this browser before anything reads Firestore.
+    provideAppInitializer(() => localDataClearRequested() ? clearRequestedLocalData(inject(FIRESTORE)) : undefined),
     provideHttpClient(withInterceptorsFromDi()), provideNzDateFnsAdapter()
   ],
   bootstrap: [AppComponent]

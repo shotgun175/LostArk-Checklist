@@ -1,18 +1,18 @@
 import { Component, ChangeDetectionStrategy } from "@angular/core";
 import { UntypedFormBuilder, Validators } from "@angular/forms";
 import { TextQuestionPopupComponent } from "../../../components/text-question-popup/text-question-popup/text-question-popup.component";
-import { filter, first, map, switchMap, withLatestFrom } from "rxjs/operators";
+import { filter, first, map, withLatestFrom } from "rxjs/operators";
 import { Clipboard } from "@angular/cdk/clipboard";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { CdkDragDrop, moveItemInArray } from "@angular/cdk/drag-drop";
-import { RosterService } from "../../../core/database/services/roster.service";
+import { ROSTER_NOT_LOADED_MESSAGE, RosterService } from "../../../core/database/services/roster.service";
 import { Roster } from "../../../model/roster";
 import { arrayRemove } from "firebase/firestore";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { CompletionService } from "../../../core/database/services/completion.service";
 import { EnergyService } from "../../../core/database/services/energy.service";
-import { combineLatest, of } from "rxjs";
+import { combineLatest } from "rxjs";
 import { LostarkClass } from "../../../model/character/lostark-class";
 import { CLASS_OPTIONS } from "../../../model/character/class-names";
 import { Character } from "../../../model/character/character";
@@ -79,6 +79,9 @@ export class RosterComponent {
   }
 
   public addCharacter(roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     const form = this.form.getRawValue();
     const name = cleanCharacterName(form.name);
     const nameError = characterNameError(name);
@@ -110,6 +113,9 @@ export class RosterComponent {
   }
 
   public removeCharacter(character: Character, roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     this.rosterService.updateOne(roster.$key, {
       characters: arrayRemove(character)
     });
@@ -136,6 +142,10 @@ export class RosterComponent {
       this.message.error(nameError);
       return;
     }
+    if (this.refuseCachedRoster(roster)) {
+      showSavedValue(nameModel, character.name);
+      return;
+    }
     // Keys saved under the old name (from older data) move to the character id before the name changes.
     // Every character with that name gets its copy, so renaming one does not take them from the other.
     const sameName = roster.characters.filter(c => c.name === character.name);
@@ -144,23 +154,25 @@ export class RosterComponent {
       this.energyService.energy$,
       this.settings.settings$
     ]).pipe(
-      first(),
-      switchMap(([completion, energy, settings]) => {
-        const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, sameName);
-        if (settingsWrites.length > 0) {
-          this.settings.patchFields(settings.$key, settingsWrites);
-        }
-        const completionMoved = moveNameKeysToIds(completion.data, sameName);
-        const energyMoved = moveNameKeysToIds(energy.data, sameName);
-        if (completionMoved || energyMoved) {
-          return combineLatest([
-            this.completionService.setOne(completion.$key, completion),
-            this.energyService.setOne(energy.$key, energy)
-          ]);
-        }
-        return of(null);
-      })
-    ).subscribe();
+      first()
+    ).subscribe(([completion, energy, settings]) => {
+      // A cached copy may be older than the server's: moving its keys could write old values over
+      // newer ones. Offline the move is skipped; the name itself is still saved.
+      if (completion.fromCache || energy.fromCache || settings.fromCache) {
+        console.warn("Offline: keys saved under the old character name were not moved.");
+        return;
+      }
+      const settingsWrites = characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, sameName);
+      if (settingsWrites.length > 0) {
+        this.settings.patchFields(settings.$key, settingsWrites);
+      }
+      const completionMoved = moveNameKeysToIds(completion.data, sameName);
+      const energyMoved = moveNameKeysToIds(energy.data, sameName);
+      if (completionMoved || energyMoved) {
+        this.completionService.setOneInBackground(completion.$key, completion);
+        this.energyService.setOneInBackground(energy.$key, energy);
+      }
+    });
     this.saveCharacter({ ...character, name }, roster);
   }
 
@@ -169,11 +181,18 @@ export class RosterComponent {
       showSavedValue(ilvlModel, character.ilvl);
       return;
     }
+    if (this.refuseCachedRoster(roster)) {
+      showSavedValue(ilvlModel, character.ilvl);
+      return;
+    }
     character.ilvl = value;
     this.saveCharacter(character, roster);
   }
 
   public saveCharacter(character: Character, roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     // Only a unique id may be matched: an id used twice would overwrite the other character
     if (!character.id || roster.characters.filter(char => char.id === character.id).length !== 1) {
       this.message.error("This character could not be saved. Reload the page and try again.");
@@ -223,7 +242,7 @@ export class RosterComponent {
   saveNote(character: Character, roster: Roster): void {
     const note = this.noteDraft.trim();
     this.closeNote(character);
-    if (note === (character.note ?? "")) {
+    if (note === (character.note ?? "") || this.refuseCachedRoster(roster)) {
       return;
     }
     character.note = note;
@@ -260,16 +279,16 @@ export class RosterComponent {
           }
           return result.ok;
         }),
-        withLatestFrom(this.auth.uid$),
-        switchMap(([result, uid]) => this.rosterService.updateOne(uid, { characters: result.characters }))
+        withLatestFrom(this.auth.uid$)
       )
-      .subscribe({
-        next: () => {
-          this.message.success("Roster imported");
-        },
-        error: e => {
-          this.message.error((e as Error).message || String(e));
-        }
+      .subscribe(([result, uid]) => {
+        // The new roster shows at once; offline the write only settles when the device is back online.
+        this.rosterService.updateOne(uid, { characters: result.characters }).subscribe({
+          error: e => {
+            this.message.error((e as Error).message || String(e));
+          }
+        });
+        this.message.success("Roster imported");
       });
   }
 
@@ -278,6 +297,17 @@ export class RosterComponent {
     this.rosterService.setOne(uid, { characters, trackedTasks: {}, showAllTasks: false });
     localStorage.removeItem("roster");
     this.hasLocalstorageRoster = false;
+  }
+
+  /**
+   * True, with a message, while the roster shown is a cached copy: a change saves the whole
+   * character list, which must not be built from a copy that may be older than the server's.
+   */
+  private refuseCachedRoster(roster: Roster): boolean {
+    if (roster.fromCache) {
+      this.message.error(ROSTER_NOT_LOADED_MESSAGE);
+    }
+    return !!roster.fromCache;
   }
 
   isWeeklyGoldTickDisabled(roster: Roster, character: Character): boolean {
@@ -293,6 +323,9 @@ export class RosterComponent {
   }
 
   drop(roster: Roster, event: CdkDragDrop<Character[], Character>): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     moveItemInArray(roster.characters, event.previousIndex, event.currentIndex);
     roster.characters = roster.characters.map((c, i) => {
       return {

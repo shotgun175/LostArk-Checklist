@@ -1,7 +1,6 @@
 import { DataModel } from "./data-model";
-import { catchError, distinctUntilChanged, EMPTY, filter, finalize, first, from, map, merge, Observable, of, shareReplay, Subject, tap } from "rxjs";
+import { catchError, delay, distinctUntilChanged, EMPTY, filter, finalize, first, from, map, merge, Observable, of, share, shareReplay, Subject, takeUntil, tap, throwError } from "rxjs";
 import {
-  addDoc,
   collection,
   deleteDoc,
   deleteField,
@@ -23,12 +22,18 @@ import {
   QueryConstraint,
   writeBatch
 } from "firebase/firestore";
-import { collectionData$, docData$ } from "../firebase/rx";
+import { collectionSnapshot$, docSnapshot$, QueryState } from "../firebase/rx";
 import { environment } from "../../../environments/environment";
 import { startWith, switchMap } from "rxjs/operators";
 import { applyFieldWrites, FieldWrite, WriteCoalescer } from "./write-coalescer";
 
 export abstract class FirestoreStorage<T extends DataModel> {
+
+  /**
+   * How long a current-user document waits for the server's copy before it shows this device's
+   * cached copy instead (offline). The server's copy still replaces it when it arrives.
+   */
+  public static readonly SERVER_COPY_WAIT_MS = 2000;
 
   protected static OPERATIONS: Record<string, Record<"read" | "write" | "delete", number>> = {};
 
@@ -39,6 +44,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
       const workingCopy: Partial<WithFieldValue<T>> = (this.shouldClone ? { ...modelObject } : modelObject) as Partial<WithFieldValue<T>>;
       delete workingCopy.$key;
       delete workingCopy.notFound;
+      delete workingCopy.fromCache;
       Object.entries(workingCopy)
         .forEach(([key, value]) => {
           if (value === undefined) {
@@ -70,6 +76,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   private static readonly coalescers: WriteCoalescer[] = [];
   private static flushOnHideRegistered = false;
   private static writesPaused = false;
+  private static writesHeld = false;
   private readonly coalescer = new WriteCoalescer((key, writes) => this.commitFieldWrites(key, writes));
   protected setSources: Record<string, Subject<T>> = {};
 
@@ -130,13 +137,32 @@ export abstract class FirestoreStorage<T extends DataModel> {
     FirestoreStorage.coalescers.forEach(coalescer => coalescer.discard());
   }
 
-  public static resumeWrites(): void {
-    FirestoreStorage.writesPaused = false;
+  /**
+   * Used while Log out, Sign in or account deletion waits for this device's changes to reach the
+   * server. Field changes still show at once but are only queued, and flushPending sends them, so
+   * the wait can include them; whole-document writes are skipped as with pauseWrites. resumeWrites
+   * ends it and sends what was queued.
+   */
+  public static holdWrites(): void {
+    FirestoreStorage.writesHeld = true;
+    // A window closing during the hold would write outside the wait.
+    FirestoreStorage.coalescers.forEach(coalescer => coalescer.closeWindows());
   }
 
-  /** True while writes are paused (account deletion, import), so services can skip prompts that would write. */
+  public static resumeWrites(): void {
+    FirestoreStorage.writesPaused = false;
+    FirestoreStorage.writesHeld = false;
+    FirestoreStorage.flushPending();
+  }
+
+  /** Whether any field change is waiting to be written. */
+  public static hasPending(): boolean {
+    return FirestoreStorage.coalescers.some(coalescer => coalescer.hasQueued());
+  }
+
+  /** True while writes are paused or held (account change, import), so services can skip prompts that would write. */
   public static writesArePaused(): boolean {
-    return FirestoreStorage.writesPaused;
+    return FirestoreStorage.writesPaused || FirestoreStorage.writesHeld;
   }
 
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
@@ -155,46 +181,73 @@ export abstract class FirestoreStorage<T extends DataModel> {
     return doc(this.firestore, this.getCollectionName(), key).withConverter(this.converter);
   }
 
-  public query(...filterQuery: QueryConstraint[]): Observable<T[]> {
-    return collectionData$(query(this.collection, ...filterQuery).withConverter(this.converter)).pipe(
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+  /**
+   * Live query results. fromCache is true while they come from this device's cache: offline, a
+   * query that was never cached gives an empty list from the cache, which does not mean it is empty.
+   */
+  public query(...filterQuery: QueryConstraint[]): Observable<QueryState<T>> {
+    return collectionSnapshot$(query(this.collection, ...filterQuery).withConverter(this.converter)).pipe(
+      // fromCache is compared too, so the server's copy is emitted even when it matches the cached one.
+      distinctUntilChanged((a, b) => a.fromCache === b.fromCache && JSON.stringify(a.docs) === JSON.stringify(b.docs)),
       catchError(err => this.endListener(err))
     );
   }
 
+  /**
+   * The live document, with { $key, notFound: true } when the server says it does not exist. A copy
+   * from this device's cache carries fromCache: true. A cached "missing" emits nothing: offline it
+   * only means this device never stored the document, and treating it as missing would write
+   * defaults over the real data.
+   *
+   * The current-user path (isForCurrentUser) keeps one base copy and only applies this page's own
+   * changes to it, so later echoes of those changes cannot make ticks flicker. The base is the
+   * server's first copy; offline, the cached copy is shown after SERVER_COPY_WAIT_MS and replaced
+   * once by the server's copy when it arrives.
+   */
   public getOne(key: string, isForCurrentUser = false): Observable<T> {
     if (!this.cache[key]) {
-      const source$ = docData$(this.docRef(key)).pipe(
-        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
-        tap(() => this.recordOperation("read", "wtf")),
-        tap(res => {
-          if (res) {
+      const source$ = docSnapshot$(this.docRef(key)).pipe(
+        filter(state => !!state.data || !state.fromCache),
+        tap(state => {
+          if (state.data) {
             this.seenPresent.add(key);
           }
         }),
         // A document seen before that is now gone was deleted with the account: keep the last copy.
-        filter(res => !!res || !this.seenPresent.has(key)),
-        map(res => {
-          if (!res) {
+        filter(state => !!state.data || !this.seenPresent.has(key)),
+        map(state => {
+          if (!state.data) {
             return {
               $key: key,
               notFound: true
             } as T;
           }
-          return res;
-        })
+          return state.fromCache ? { ...state.data, fromCache: true } as T : state.data;
+        }),
+        // The marker is compared too, so the server's copy is emitted even when it matches the cached one.
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        tap(() => this.recordOperation("read", "wtf"))
       );
       if (isForCurrentUser) {
         this.updateSources[key] = new Subject<FieldWrite[]>();
         this.setSources[key] = new Subject<T>();
+        const snapshots$ = source$.pipe(share());
+        const serverCopy$ = snapshots$.pipe(filter(obj => !obj.fromCache), first());
+        const cachedCopy$ = snapshots$.pipe(
+          filter(obj => !!obj.fromCache),
+          first(),
+          delay(FirestoreStorage.SERVER_COPY_WAIT_MS),
+          takeUntil(serverCopy$)
+        );
         this.cache[key] = merge(
           this.setSources[key],
-          source$.pipe(first())
+          merge(serverCopy$, cachedCopy$)
         ).pipe(
           switchMap((obj) => {
             return this.updateSources[key].pipe(
               map(writes => this.withLocalWrites(obj, writes)),
-              startWith(obj)
+              // Changes still waiting in their one-second window are not in a replacing server copy yet.
+              startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
             );
           })
         );
@@ -235,6 +288,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
       return;
     }
     (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
+    if (FirestoreStorage.writesHeld) {
+      this.coalescer.queue(key, writes);
+      return;
+    }
     this.coalescer.enqueue(key, writes);
   }
 
@@ -268,18 +325,28 @@ export abstract class FirestoreStorage<T extends DataModel> {
     return EMPTY;
   }
 
+  /**
+   * Creates a document with an id made on this device and returns the id at once: the write itself
+   * only settles when the server confirms it, which offline can take until the next visit.
+   */
   public addOne(row: Omit<T, "$key">): Observable<string> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return EMPTY;
     }
-    return from(addDoc(this.collection, row)).pipe(
-      tap(() => this.recordOperation("write")),
-      map(ref => ref.id)
-    );
+    const ref = doc(this.collection);
+    try {
+      setDoc(ref, row as WithFieldValue<T>)
+        .catch(error => console.error(`Could not save ${this.getCollectionName()}/${ref.id}:`, error));
+    } catch (error) {
+      // Data Firestore cannot store is refused at once.
+      return throwError(() => error);
+    }
+    this.recordOperation("write", ref.id);
+    return of(ref.id);
   }
 
   public deleteOne(key: string): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.recordOperation("delete", key);
@@ -287,7 +354,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public setOne(key: string, row: Omit<T, "$key" | "notFound">): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.coalescer.discard(key);
@@ -298,8 +365,18 @@ export abstract class FirestoreStorage<T extends DataModel> {
     return from(setDoc(this.docRef(key), row));
   }
 
+  /**
+   * Replaces a whole document without waiting for the server, which offline would hold up the
+   * stream that asked for it. The new data shows at once; a failure is only logged.
+   */
+  public setOneInBackground(key: string, row: Omit<T, "$key" | "notFound">): void {
+    this.setOne(key, row).subscribe({
+      error: (error: unknown) => console.error(`Could not save ${this.getCollectionName()}/${key}:`, error)
+    });
+  }
+
   public updateOne(key: string, row: UpdateData<T>): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.recordOperation("write", key);
@@ -317,7 +394,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   protected batch(): WriteBatch {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       const paused = { set: () => paused, update: () => paused, delete: () => paused, commit: () => Promise.resolve() };
       return paused as unknown as WriteBatch;
     }
