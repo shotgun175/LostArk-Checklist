@@ -10,6 +10,7 @@ import {
   FieldPath,
   Firestore,
   FirestoreDataConverter,
+  getDocFromCache,
   query,
   QueryDocumentSnapshot,
   runTransaction,
@@ -73,7 +74,11 @@ export abstract class FirestoreStorage<T extends DataModel> {
    */
   private readonly seenPresent = new Set<string>();
 
+  /** How long flushPendingLocally waits for the local write at most, so a stuck write never blocks a reload. */
+  public static readonly LOCAL_HANDOFF_TIMEOUT_MS = 2000;
+
   private static readonly coalescers: WriteCoalescer[] = [];
+  private static db?: Firestore;
   private static flushOnHideRegistered = false;
   private static writesPaused = false;
   private static writesHeld = false;
@@ -105,6 +110,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
         console.groupEnd();
       };
     }
+    FirestoreStorage.db ??= firestore;
     FirestoreStorage.coalescers.push(this.coalescer);
     if (!FirestoreStorage.flushOnHideRegistered) {
       FirestoreStorage.flushOnHideRegistered = true;
@@ -124,6 +130,24 @@ export abstract class FirestoreStorage<T extends DataModel> {
    */
   public static flushPending(): void {
     FirestoreStorage.coalescers.forEach(coalescer => coalescer.flush());
+  }
+
+  /**
+   * Like flushPending, then waits until this device's cache has the queued changes, so a reload right
+   * after cannot cut them off. Resolves offline too (it never waits for the server).
+   */
+  public static async flushPendingLocally(): Promise<void> {
+    FirestoreStorage.flushPending();
+    const db = FirestoreStorage.db;
+    if (!db) {
+      return;
+    }
+    // A cache read runs on the SDK's queue after the writes just started, so it finishes only once
+    // they are saved locally. The document does not need to exist.
+    const handoff = getDocFromCache(doc(db, "users", "local-write-handoff")).then(() => undefined, () => undefined);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([handoff, new Promise<void>(resolve => timeout = setTimeout(resolve, FirestoreStorage.LOCAL_HANDOFF_TIMEOUT_MS))]);
+    clearTimeout(timeout);
   }
 
   /**
