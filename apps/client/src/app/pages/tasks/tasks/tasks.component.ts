@@ -17,6 +17,7 @@ import { customTasksExport, ilvlRangeValidator, nextTaskIndex, parseTasksImport 
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
 import { LayoutStateService } from "../../../core/services/layout-state.service";
+import { DRAWER_ANIMATE_DURATION } from "ng-zorro-antd/drawer";
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
 
@@ -200,13 +201,16 @@ export class TasksComponent {
       next: key => {
         this.saving = false;
         // On a phone the sheet closes so the new row can be seen; after an error it stays open to try again
+        const fromSheet = this.sheetOpen();
         this.sheetOpen.set(false);
         this.form.reset({
           frequency: TaskFrequency.DAILY,
           scope: TaskScope.CHARACTER
         });
         this.message.success("Custom task added to the list");
-        this.showNewTask(key);
+        // The closing sheet gives focus back to its open button at the top of the page when its animation
+        // ends, which scrolls the page there: scroll to the new row after that
+        this.showNewTask(key, fromSheet ? DRAWER_ANIMATE_DURATION + 100 : 0);
       },
       error: (e: unknown) => {
         this.saving = false;
@@ -216,7 +220,7 @@ export class TasksComponent {
   }
 
   /** Scrolls the table to the task just added once it is listed, and highlights it for a few seconds. */
-  private showNewTask(key: string): void {
+  private showNewTask(key: string, delay: number): void {
     this.highlightKey = key;
     let tries = 0;
     const scroll = () => {
@@ -227,7 +231,7 @@ export class TasksComponent {
         setTimeout(scroll, 150);
       }
     };
-    setTimeout(scroll);
+    setTimeout(scroll, delay);
     setTimeout(() => {
       if (this.highlightKey === key) {
         this.highlightKey = null;

@@ -12,6 +12,7 @@ import { TasksModule } from '../tasks.module';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { AuthService } from '../../../core/database/services/auth.service';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
+import { DRAWER_ANIMATE_DURATION } from 'ng-zorro-antd/drawer';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
 jest.mock('firebase/app', () => ({}));
@@ -105,6 +106,40 @@ describe('TasksComponent', () => {
     expect(component.sheetOpen()).toBe(true);
     expect(component.form.get('label')?.value).toBe('Island Run');
     expect(message.error).toHaveBeenCalled();
+  });
+
+  describe('scroll to the new row', () => {
+    let row: HTMLTableRowElement;
+    let scrollIntoView: jest.Mock;
+
+    beforeEach(() => {
+      row = document.createElement('tr');
+      row.dataset['taskKey'] = 'new-key';
+      // jsdom has no scrollIntoView
+      scrollIntoView = row.scrollIntoView = jest.fn();
+      document.body.appendChild(row);
+      tasksService.addTask.mockReturnValue(of('new-key'));
+      fillForm();
+    });
+
+    afterEach(() => row.remove());
+
+    it('starts right away after an add from the card', fakeAsync(() => {
+      component.addTask('uid1');
+      tick(0);
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      tick(4000);
+    }));
+
+    it('waits for the sheet to finish closing, so its focus return to the open button does not undo it', fakeAsync(() => {
+      component.openSheet();
+      component.addTask('uid1');
+      tick(DRAWER_ANIMATE_DURATION);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      tick(100);
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      tick(4000);
+    }));
   });
 
   it('closes the sheet when the screen gets wide', () => {
