@@ -14,7 +14,7 @@ updates:
       npm-minor-and-patch:
         update-types: ["minor", "patch"]
     ignore:
-      # Angular and Nx majors need `ng update` / `nx migrate`, not a bare version bump.
+      # Angular and Nx majors need `nx migrate` (see README), not a bare version bump.
       - dependency-name: "@angular/*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@angular-devkit/*"
@@ -35,11 +35,16 @@ updates:
       - dependency-name: "@ant-design/icons-angular"
         update-types: ["version-update:semver-major"]
       # Angular pins these to a minor range (compiler-cli: typescript >=6.0 <6.1),
-      # so they move with `ng update`, never on their own.
+      # so they move with the Angular update (`nx migrate`), never on their own.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-minor", "version-update:semver-major"]
       - dependency-name: "zone.js"
         update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      # Prettier 3 reformats 171 files and nothing runs prettier in CI, so the major
+      # waits for a dedicated reformat PR instead of a bare bump. This avoids a
+      # repo-wide reformat.
+      - dependency-name: "prettier"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
