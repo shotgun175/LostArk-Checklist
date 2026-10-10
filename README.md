@@ -97,6 +97,15 @@ Tick off what you have done; ticks clear by themselves at the daily and weekly r
 - **Log out** starts a fresh, empty anonymous account in that browser. Your registered account's data is untouched. Sign in again to get it back.
 - **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
 
+## Install on your phone
+
+The site can be added to your home screen. It then opens full screen, without the browser's address bar and toolbars, with its own icon.
+
+- **iPhone (Safari or Chrome):** tap the Share button, then **Add to Home Screen**.
+- **Android (Chrome):** open the menu (three dots), then **Add to Home screen** or **Install app**.
+
+**Register before you install on an iPhone.** An app added to an iPhone home screen keeps its own storage, apart from the browser. A guest's data stays in the browser and the installed app starts as a new, empty guest. With an account, just sign in inside the installed app (see **Signing in and syncing** above).
+
 ## Bringing data over from lostark-helper.com
 
 ### The one-click bookmark (computer)

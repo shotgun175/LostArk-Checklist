@@ -13,6 +13,16 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- Installable app (Add to Home Screen): opens full screen without the browser toolbars -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#1f1f1f" />
+    <link rel="apple-touch-icon" href="assets/pwa/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LA Checklist" />
+    <!-- black: an opaque status bar, so the page starts below it -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   </head>
   <body>
     <lostark-helper-root></lostark-helper-root>
