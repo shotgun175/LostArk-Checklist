@@ -230,7 +230,7 @@ npx -y firebase-tools deploy --only hosting,firestore:rules --project loa-checkl
 node tools/verify-firestore-rules.mjs
 ```
 
-The build lands in `dist/apps/client/browser`, which `firebase.json` serves. The last command checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (build and unit tests); deploys are always manual.
+The build lands in `dist/apps/client/browser`, which `firebase.json` serves. The last command checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (lint, build and unit tests); deploys are always manual.
 
 ## Firebase plan
 
