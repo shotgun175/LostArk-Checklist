@@ -1,7 +1,7 @@
 @if (settings$ | async; as settings) {
   @if (roster$ | async; as roster) {
     @if (display$ | async; as display) {
-      <nz-page-header class="planner-header" nzTitle="Gold Planner" nzSubtitle="Plan how much gold income you're generating with weeklies">
+      <nz-page-header class="planner-header page-banner" nzTitle="Gold Planner" nzSubtitle="Plan how much gold income you're generating with weeklies">
         <nz-page-header-extra>
           <button nz-button nzType="primary"
             (click)="toggleExplanations(settings.$key, display.tracking)"
