@@ -1,7 +1,7 @@
 import { InjectionToken, NgZone, Provider } from "@angular/core";
 import { FirebaseApp, FirebaseOptions, initializeApp } from "firebase/app";
 import { Auth, connectAuthEmulator, getAuth, useDeviceLanguage } from "firebase/auth";
-import { connectFirestoreEmulator, Firestore, getFirestore } from "firebase/firestore";
+import { connectFirestoreEmulator, Firestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { AppCheckEnvironment, initAppCheck } from "./app-check";
 
 export interface FirebaseEnvironment extends AppCheckEnvironment {
@@ -45,7 +45,12 @@ export function provideFirebase(environment: FirebaseEnvironment): Provider[] {
       provide: FIRESTORE,
       deps: [FIREBASE_APP, NgZone],
       useFactory: (app: FirebaseApp, zone: NgZone): Firestore => zone.runOutsideAngular(() => {
-        const firestore = getFirestore(app);
+        // Data is kept in IndexedDB, shared by all open tabs, so the checklist opens and saves
+        // offline; queued changes are sent when the device is back online. Without IndexedDB the
+        // SDK falls back to a memory cache by itself.
+        const firestore = initializeFirestore(app, {
+          localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        });
         if (environment.useEmulators) {
           connectFirestoreEmulator(firestore, "localhost", 8085);
         }
