@@ -64,3 +64,7 @@ docs/upstream-sync/
 .nx/polygraph
 .nx/self-healing
 .nx/migrate-runs
+
+# Docs
+# Local working documents (plans, notes, audits); never committed.
+docs/
