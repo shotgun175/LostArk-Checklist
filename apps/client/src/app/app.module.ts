@@ -22,6 +22,7 @@ import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzTooltipModule } from "ng-zorro-antd/tooltip";
 import { provideNzDateFnsAdapter } from 'ng-zorro-antd/core/time';
 import { CdkScrollableModule } from "@angular/cdk/scrolling";
+import { provideServiceWorker } from "@angular/service-worker";
 
 
 registerLocaleData(en);
@@ -49,7 +50,12 @@ registerLocaleData(en);
     // After Log out, Sign in or an account deletion, the previous account's data is deleted from
     // this browser before anything reads Firestore.
     provideAppInitializer(() => localDataClearRequested() ? clearRequestedLocalData(inject(FIRESTORE)) : undefined),
-    provideHttpClient(withInterceptorsFromDi()), provideNzDateFnsAdapter()
+    provideHttpClient(withInterceptorsFromDi()), provideNzDateFnsAdapter(),
+    // Registers once the app is stable, or after 30 s at the latest, so it does not compete with the first load.
+    provideServiceWorker("ngsw-worker.js", {
+      enabled: environment.serviceWorker,
+      registrationStrategy: "registerWhenStable:30000"
+    })
   ],
   bootstrap: [AppComponent]
 })
