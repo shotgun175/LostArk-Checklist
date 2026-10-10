@@ -142,8 +142,10 @@
           </ng-template>
         }
         @if (offline()) {
-          <nz-alert class="app-banner offline-banner" nzType="info" nzShowIcon nzIconType="disconnect"
+          <!-- The outline icon is registered statically, so it shows offline; nz-alert would ask for the fill theme, which this icon does not have -->
+          <nz-alert class="app-banner offline-banner" nzType="info" nzShowIcon [nzIcon]="offlineIcon"
                     [nzMessage]="offlineBannerText"></nz-alert>
+          <ng-template #offlineIcon><span nz-icon nzType="disconnect" nzTheme="outline"></span></ng-template>
         }
         @if ((anonymous$ | async) && !guestBannerDismissed()) {
           <nz-alert class="app-banner guest-banner" nzType="warning" nzShowIcon nzCloseable
