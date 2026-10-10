@@ -11,7 +11,6 @@ export interface AppCheckEnvironment {
 
 declare global {
   // Read by the App Check SDK when it starts.
-  // eslint-disable-next-line no-var
   var FIREBASE_APPCHECK_DEBUG_TOKEN: boolean | string | undefined;
 }
 

@@ -215,9 +215,9 @@ export class GoldPlannerComponent {
             // Determine state of Taking Gold and Taking Chest tick boxes
             // They can be indeterminate for main raid line if gate lines have different values
             let takingGold = false
-            let indeterminateTakingGold = false
+            let indeterminateTakingGold: boolean
             let takingChest = false
-            let indeterminateTakingChest = false
+            let indeterminateTakingChest: boolean
 
             if (line.gate) {
               takingGold = this.goldTakingFlag(tracking, character, line.gate);
