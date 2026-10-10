@@ -162,9 +162,37 @@ export class TasksComponent {
     this.setSheetOpen(false);
   }
 
+  /**
+   * ng-zorro's drawer is not marked as a dialog, and when closed it only moves off the screen. Open, the
+   * sheet (header and close button included) is a modal dialog a screen reader announces and keeps to;
+   * closed, it is hidden from the screen reader.
+   */
+  labelSheet(open: boolean): void {
+    const sheet = document.querySelector(".ant-drawer-content-wrapper.add-task-sheet");
+    if (!sheet) {
+      return;
+    }
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-label", "Add a custom task");
+    if (open) {
+      sheet.setAttribute("aria-modal", "true");
+      sheet.removeAttribute("aria-hidden");
+    } else {
+      sheet.removeAttribute("aria-modal");
+      // Hiding an element that has the focus is refused (Chrome): wait until the drawer gives focus back
+      const hide = () => !this.sheetOpen() && sheet.setAttribute("aria-hidden", "true");
+      if (sheet.contains(document.activeElement)) {
+        setTimeout(hide, DRAWER_ANIMATE_DURATION + 100);
+      } else {
+        hide();
+      }
+    }
+  }
+
   /** Every open and close of the sheet goes here, so the keyboard is followed exactly while it is open. */
   private setSheetOpen(open: boolean): void {
     this.sheetOpen.set(open);
+    this.labelSheet(open);
     if (open) {
       this.followKeyboard();
     } else {

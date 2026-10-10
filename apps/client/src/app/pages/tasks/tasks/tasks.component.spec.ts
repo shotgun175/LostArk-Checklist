@@ -314,6 +314,37 @@ describe('TasksComponent page', () => {
     expect(forms().length).toBe(0);
   }));
 
+  it('tells a screen reader the button opens a dialog, and that the sheet is one', fakeAsync(() => {
+    const fixture = setup(true);
+    tick(0);
+    const sheet = document.querySelector('.ant-drawer-content-wrapper.add-task-sheet');
+    // Closed, the sheet is only moved off the screen: hidden from the screen reader, and not modal
+    expect(sheet?.getAttribute('aria-hidden')).toBe('true');
+    expect(sheet?.hasAttribute('aria-modal')).toBe(false);
+    const button = openButton(fixture.nativeElement);
+    expect(button?.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(button?.getAttribute('aria-expanded')).toBe('false');
+    button?.click();
+    fixture.detectChanges();
+    tick(400);
+    expect(button?.getAttribute('aria-expanded')).toBe('true');
+    expect(sheet?.getAttribute('role')).toBe('dialog');
+    expect(sheet?.hasAttribute('aria-hidden')).toBe(false);
+    expect(sheet?.getAttribute('aria-modal')).toBe('true');
+    expect(sheet?.getAttribute('aria-label')).toBe('Add a custom task');
+    // The title and close button are inside the dialog
+    expect(sheet?.querySelector('.ant-drawer-title')).not.toBeNull();
+    expect(sheet?.querySelector('.ant-drawer-close')).not.toBeNull();
+    // Closed from its close button, which keeps the focus until the drawer's closing animation ends
+    sheet?.querySelector<HTMLButtonElement>('.ant-drawer-close')?.focus();
+    sheet?.querySelector<HTMLButtonElement>('.ant-drawer-close')?.click();
+    fixture.detectChanges();
+    expect(sheet?.hasAttribute('aria-hidden')).toBe(false);
+    tick(400);
+    expect(sheet?.getAttribute('aria-hidden')).toBe('true');
+    expect(sheet?.hasAttribute('aria-modal')).toBe(false);
+  }));
+
   it('closes the sheet on a tap outside it', fakeAsync(() => {
     const fixture = setup(true);
     openButton(fixture.nativeElement)?.click();

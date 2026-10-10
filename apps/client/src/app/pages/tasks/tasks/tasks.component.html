@@ -22,11 +22,12 @@
   <!-- Phones: the add form opens in a bottom sheet from here, instead of a card below the long list -->
   @if (isPhone()) {
     @if (uid$ | async; as uid) {
-      <button nz-button nzType="primary" nzBlock class="add-task-open" (click)="openSheet()">
+      <button nz-button nzType="primary" nzBlock class="add-task-open" (click)="openSheet()"
+        aria-haspopup="dialog" [attr.aria-expanded]="sheetOpen()">
         <span nz-icon nzType="plus" nzTheme="outline"></span>Add a custom task
       </button>
       <nz-drawer [nzVisible]="sheetOpen()" nzPlacement="bottom" nzTitle="Add a custom task"
-        nzHeight="auto" nzWrapClassName="add-task-sheet" (nzOnClose)="closeSheet()">
+        nzHeight="auto" nzWrapClassName="add-task-sheet" (nzOnClose)="closeSheet()" (nzOnViewInit)="labelSheet(false)">
         <div class="sheet-form" *nzDrawerContent>
           <ng-container *ngTemplateOutlet="addForm; context: { $implicit: uid }"></ng-container>
         </div>
