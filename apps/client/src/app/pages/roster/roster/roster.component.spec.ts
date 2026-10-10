@@ -141,6 +141,37 @@ describe('RosterComponent', () => {
     });
   });
 
+  describe('a cached roster (offline, or before the server answers)', () => {
+    const cached = (characters: Character[]): Roster => ({ ...roster(characters), fromCache: true });
+
+    it('refuses every change that saves the whole character list, with a message', () => {
+      const r = cached([character(1, 'Arwen'), character(2, 'Brakka')]);
+      component.form.setValue({ name: 'Newbie', ilvl: 1600, lazy: false, class: 4 });
+      component.addCharacter(r);
+      component.saveCharacter({ ...r.characters[0], lazy: true }, r);
+      component.drop(r, { previousIndex: 0, currentIndex: 1 } as never);
+      component.removeCharacter(r.characters[1], r);
+      expect(r.characters.map(c => c.name)).toEqual(['Arwen', 'Brakka']);
+      expect(rosterService.setOne).not.toHaveBeenCalled();
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
+      expect(settingsPatch).not.toHaveBeenCalled();
+      expect(message.error).toHaveBeenCalledTimes(4);
+      expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+    });
+
+    it('shows the saved name and item level again instead of keeping an unsaved edit', () => {
+      const r = cached([character(1, 'Arwen')]);
+      const nameModel = { control: { setValue: jest.fn() } };
+      const ilvlModel = { control: { setValue: jest.fn() } };
+      component.saveCharacterName(r.characters[0], r, 'Brakka', nameModel);
+      component.saveIlvl(r.characters[0], r, 1710, ilvlModel);
+      expect(nameModel.control.setValue).toHaveBeenCalledWith('Arwen', { emitViewToModelChange: false });
+      expect(ilvlModel.control.setValue).toHaveBeenCalledWith(1700, { emitViewToModelChange: false });
+      expect(r.characters[0]).toEqual(character(1, 'Arwen'));
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
+    });
+  });
+
   describe('saving a character', () => {
     it('does not write when two characters share the id', () => {
       const r = roster([character(4, 'Arwen'), character(4, 'Brakka')]);

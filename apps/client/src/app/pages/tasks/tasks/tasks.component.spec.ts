@@ -22,7 +22,7 @@ const task = (label: string, index: number, custom = true): LostarkTask =>
 
 describe('TasksComponent', () => {
   let tasks$: BehaviorSubject<LostarkTask[]>;
-  let tasksService: { tasks$: BehaviorSubject<LostarkTask[]>, addTask: jest.Mock, importTasks: jest.Mock, updateTask: jest.Mock, setTrackAll: jest.Mock, updateIndexes: jest.Mock };
+  let tasksService: { tasks$: BehaviorSubject<LostarkTask[]>, addTask: jest.Mock, importTasks: jest.Mock, updateTaskField: jest.Mock, setTrackAll: jest.Mock, updateIndexes: jest.Mock };
   let message: { success: jest.Mock, error: jest.Mock, info: jest.Mock };
   let clipboard: { copy: jest.Mock };
   let modalClose: Subject<string | undefined>;
@@ -30,7 +30,7 @@ describe('TasksComponent', () => {
 
   beforeEach(() => {
     tasks$ = new BehaviorSubject<LostarkTask[]>([task('Guild Chores', 0), task('Bifrost Run', 52), task('Built in', 7, false)]);
-    tasksService = { tasks$, addTask: jest.fn(), importTasks: jest.fn(() => of(void 0)), updateTask: jest.fn(), setTrackAll: jest.fn(), updateIndexes: jest.fn() };
+    tasksService = { tasks$, addTask: jest.fn(), importTasks: jest.fn(() => of(void 0)), updateTaskField: jest.fn(), setTrackAll: jest.fn(), updateIndexes: jest.fn() };
     message = { success: jest.fn(), error: jest.fn(), info: jest.fn() };
     clipboard = { copy: jest.fn() };
     modalClose = new Subject<string | undefined>();
@@ -120,9 +120,9 @@ describe('TasksComponent', () => {
     component.saveTaskField(row, 'minIlvl', null, model);
     expect(model.control.setValue).toHaveBeenNthCalledWith(1, 'Guild Chores', { emitViewToModelChange: false });
     expect(model.control.setValue).toHaveBeenNthCalledWith(2, 1600, { emitViewToModelChange: false });
-    expect(tasksService.updateTask).not.toHaveBeenCalled();
+    expect(tasksService.updateTaskField).not.toHaveBeenCalled();
     component.saveTaskField(row, 'label', ' Guild Duties ', model);
-    expect(tasksService.updateTask).toHaveBeenCalledWith(expect.objectContaining({ label: 'Guild Duties' }));
+    expect(tasksService.updateTaskField).toHaveBeenCalledWith(expect.objectContaining({ label: 'Guild Duties' }), 'label');
   });
 
   it('moves a row with the keyboard through the drop handler and stops at the ends', () => {

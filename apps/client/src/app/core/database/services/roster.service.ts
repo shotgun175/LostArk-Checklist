@@ -58,6 +58,13 @@ export function normalizeRosterCharacters(roster: Roster, assignIds = true): boo
   return shouldSave;
 }
 
+/**
+ * Shown when a roster change is refused. A change saves the whole character list, so it is only
+ * made from the server's copy: saved from an older cached copy (offline, or while the app starts),
+ * it would undo roster changes made on another device.
+ */
+export const ROSTER_NOT_LOADED_MESSAGE = "Your roster is still loading from the server. Connect to the internet to change it.";
+
 @Injectable({
   providedIn: "root"
 })

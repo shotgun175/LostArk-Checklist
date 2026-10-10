@@ -6,7 +6,7 @@ import { Clipboard } from "@angular/cdk/clipboard";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { NzModalService } from "ng-zorro-antd/modal";
 import { CdkDragDrop, moveItemInArray } from "@angular/cdk/drag-drop";
-import { RosterService } from "../../../core/database/services/roster.service";
+import { ROSTER_NOT_LOADED_MESSAGE, RosterService } from "../../../core/database/services/roster.service";
 import { Roster } from "../../../model/roster";
 import { arrayRemove } from "firebase/firestore";
 import { AuthService } from "../../../core/database/services/auth.service";
@@ -79,6 +79,9 @@ export class RosterComponent {
   }
 
   public addCharacter(roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     const form = this.form.getRawValue();
     const name = cleanCharacterName(form.name);
     const nameError = characterNameError(name);
@@ -110,6 +113,9 @@ export class RosterComponent {
   }
 
   public removeCharacter(character: Character, roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     this.rosterService.updateOne(roster.$key, {
       characters: arrayRemove(character)
     });
@@ -134,6 +140,10 @@ export class RosterComponent {
     if (nameError) {
       showSavedValue(nameModel, character.name);
       this.message.error(nameError);
+      return;
+    }
+    if (this.refuseCachedRoster(roster)) {
+      showSavedValue(nameModel, character.name);
       return;
     }
     // Keys saved under the old name (from older data) move to the character id before the name changes.
@@ -171,11 +181,18 @@ export class RosterComponent {
       showSavedValue(ilvlModel, character.ilvl);
       return;
     }
+    if (this.refuseCachedRoster(roster)) {
+      showSavedValue(ilvlModel, character.ilvl);
+      return;
+    }
     character.ilvl = value;
     this.saveCharacter(character, roster);
   }
 
   public saveCharacter(character: Character, roster: Roster): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     // Only a unique id may be matched: an id used twice would overwrite the other character
     if (!character.id || roster.characters.filter(char => char.id === character.id).length !== 1) {
       this.message.error("This character could not be saved. Reload the page and try again.");
@@ -225,7 +242,7 @@ export class RosterComponent {
   saveNote(character: Character, roster: Roster): void {
     const note = this.noteDraft.trim();
     this.closeNote(character);
-    if (note === (character.note ?? "")) {
+    if (note === (character.note ?? "") || this.refuseCachedRoster(roster)) {
       return;
     }
     character.note = note;
@@ -282,6 +299,17 @@ export class RosterComponent {
     this.hasLocalstorageRoster = false;
   }
 
+  /**
+   * True, with a message, while the roster shown is a cached copy: a change saves the whole
+   * character list, which must not be built from a copy that may be older than the server's.
+   */
+  private refuseCachedRoster(roster: Roster): boolean {
+    if (roster.fromCache) {
+      this.message.error(ROSTER_NOT_LOADED_MESSAGE);
+    }
+    return !!roster.fromCache;
+  }
+
   isWeeklyGoldTickDisabled(roster: Roster, character: Character): boolean {
     return isWeeklyGoldTickDisabled(roster.characters, character);
   }
@@ -295,6 +323,9 @@ export class RosterComponent {
   }
 
   drop(roster: Roster, event: CdkDragDrop<Character[], Character>): void {
+    if (this.refuseCachedRoster(roster)) {
+      return;
+    }
     moveItemInArray(roster.characters, event.previousIndex, event.currentIndex);
     roster.characters = roster.characters.map((c, i) => {
       return {

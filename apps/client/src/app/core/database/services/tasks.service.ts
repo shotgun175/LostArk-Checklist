@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@angular/core";
-import { doc, Firestore, where } from "firebase/firestore";
+import { deleteField, doc, Firestore, UpdateData, where } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { QueryState } from "../../firebase/rx";
 import { FirestoreStorage } from "../firestore-storage";
@@ -322,8 +322,14 @@ export class TasksService extends FirestoreStorage<LostarkTask> {
     this.deleteOne(task.$key);
   }
 
-  public updateTask(task: LostarkTask): Observable<void> {
-    return this.setOne(task.$key, task);
+  /**
+   * Saves one field of a task, not the whole task: the task shown can be an older cached copy, and
+   * writing all of it would undo changes made to its other fields on another device. An undefined
+   * value removes the field.
+   */
+  public updateTaskField<K extends keyof LostarkTask>(task: LostarkTask, field: K): Observable<void> {
+    const value = task[field];
+    return this.updateOne(task.$key, { [field]: value === undefined ? deleteField() : value } as UpdateData<LostarkTask>);
   }
 
   public setTrackAll(tasks: LostarkTask[], track: boolean): Observable<void> {

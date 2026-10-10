@@ -24,6 +24,7 @@ jest.mock("firebase/firestore", () => {
     collection: jest.fn((_firestore: unknown, name: string) => ref(name)),
     doc: jest.fn((parent: { path: string }, name?: string, key?: string) => ref(name === undefined ? `${parent.path}/id-${next++}` : `${name}/${key}`)),
     where: jest.fn(),
+    deleteField: jest.fn(() => "deleteField"),
     writeBatch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn(() => Promise.resolve()) }))
   };
 });
@@ -162,6 +163,27 @@ describe("TasksService with a cached task list", () => {
     jest.advanceTimersByTime(5000);
     expect(seen).toEqual([]);
     expect(writeBatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("TasksService.updateTaskField", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("writes only the changed field, so a cached copy cannot undo the task's other fields", () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of(), isAnonymous$: of() } }
+      ]
+    });
+    const service = TestBed.inject(TasksService);
+    const updateOne = jest.spyOn(service, "updateOne").mockReturnValue(of(void 0));
+    const task = { ...userCopy("Guild Chores"), enabled: true, iconPath: undefined };
+    service.updateTaskField(task, "enabled");
+    expect(updateOne).toHaveBeenLastCalledWith("key-Guild Chores", { enabled: true });
+    // A cleared choice removes the field: Firestore refuses undefined.
+    service.updateTaskField(task, "iconPath");
+    expect(updateOne).toHaveBeenLastCalledWith("key-Guild Chores", { iconPath: "deleteField" });
   });
 });
 
