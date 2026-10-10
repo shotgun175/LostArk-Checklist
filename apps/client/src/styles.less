@@ -83,6 +83,35 @@
   }
 }
 
+// Page banners (assets/banners): painted art behind the title of Checklist, Gold Planner and Tasks
+// Manager. The fade to the page color (#333) at both edges keeps the title and the buttons readable;
+// the left fade covers at least 540 px, the width of the longest subtitle, on narrower screens, and the
+// later stops move right with it so they never collapse into a hard edge.
+// Phones (under 768 px, as isPhone) have no banner: the space belongs to the table.
+@media (min-width: 768px) {
+  .page-banner {
+    min-height: 136px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    background:
+      linear-gradient(90deg, rgba(51, 51, 51, .97) 0%, rgba(51, 51, 51, .9) max(30%, 540px), rgba(51, 51, 51, .35) max(46%, 640px),
+        rgba(51, 51, 51, .35) max(58%, 690px), rgba(51, 51, 51, .92) max(76%, 790px), rgba(51, 51, 51, .97) 100%),
+      var(--page-banner) center / cover no-repeat;
+  }
+
+  .checklist-header {
+    --page-banner: url('/assets/banners/banner-checklist.webp');
+  }
+
+  .planner-header {
+    --page-banner: url('/assets/banners/banner-gold-planner.webp');
+  }
+
+  .tasks-header {
+    --page-banner: url('/assets/banners/banner-tasks-manager.webp');
+  }
+}
+
 // Tasks Manager on a phone: the add form's bottom sheet (nzWrapClassName="add-task-sheet"). It is in an
 // overlay outside the page, so these rules are global. As tall as the form, up to 90% of the screen;
 // the form scrolls inside it when it is taller. With the keyboard open the sheet sits on top of the

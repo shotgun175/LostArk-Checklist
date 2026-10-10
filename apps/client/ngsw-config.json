@@ -28,6 +28,7 @@
           "/assets/icons/**",
           "/assets/pwa/**",
           "/assets/nav/**",
+          "/assets/banners/**",
           "/assets/logo-compass.png",
           "!/assets/export-from-lostark-helper.js"
         ]
