@@ -1,5 +1,5 @@
 import { Subject } from "rxjs";
-import { FieldPath, setDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { FieldPath, getDocFromCache, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { DocState, docSnapshot$ } from "../firebase/rx";
 import { DataModel } from "./data-model";
 import { FirestoreStorage } from "./firestore-storage";
@@ -23,6 +23,7 @@ jest.mock("firebase/firestore", () => {
     updateDoc: jest.fn(() => Promise.resolve()),
     setDoc: jest.fn(() => Promise.resolve()),
     deleteDoc: jest.fn(() => Promise.resolve()),
+    getDocFromCache: jest.fn(() => Promise.resolve({})),
     query: jest.fn(),
     runTransaction: jest.fn(),
     writeBatch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn(() => Promise.resolve()) }))
@@ -438,5 +439,53 @@ describe("FirestoreStorage writes that do not wait for the server", () => {
     await settle();
     expect(error).toHaveBeenCalledWith("Could not save completion/u1:", expect.any(Error));
     error.mockRestore();
+  });
+});
+
+describe("FirestoreStorage.flushPendingLocally", () => {
+  let storage: TestStorage;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    storage = new TestStorage();
+  });
+
+  afterEach(() => jest.useRealTimers());
+
+  /** Whether the promise has settled after the pending microtasks ran. */
+  async function isDone(promise: Promise<void>): Promise<boolean> {
+    let done = false;
+    promise.then(() => done = true);
+    await settle();
+    return done;
+  }
+
+  it("sends the queued changes first, then waits for a cache read queued behind them", async () => {
+    let finishRead: () => void = () => undefined;
+    jest.mocked(getDocFromCache).mockImplementationOnce(() => new Promise(resolve => finishRead = () => resolve({} as never)));
+    storage.patchFields("u1", [{ path: ["data", "1:t1"], value: { amount: 1 } }]);
+    storage.patchFields("u1", [{ path: ["data", "1:t1"], value: { amount: 2 } }]);
+    const flushed = FirestoreStorage.flushPendingLocally();
+    expect(updateDoc).toHaveBeenCalledWith(atDoc("completion/u1"), new FieldPath("data", "1:t1"), { amount: 2 });
+    const writes = jest.mocked(updateDoc).mock.invocationCallOrder;
+    expect(writes[writes.length - 1]).toBeLessThan(jest.mocked(getDocFromCache).mock.invocationCallOrder[0]);
+    expect(await isDone(flushed)).toBe(false);
+    finishRead();
+    expect(await isDone(flushed)).toBe(true);
+  });
+
+  it("resolves when the cache read fails (the document is not cached)", async () => {
+    jest.mocked(getDocFromCache).mockRejectedValueOnce(new Error("unavailable"));
+    expect(await isDone(FirestoreStorage.flushPendingLocally())).toBe(true);
+  });
+
+  it("gives up waiting after a short timeout, so a reload is never blocked", async () => {
+    jest.mocked(getDocFromCache).mockImplementationOnce(() => new Promise(() => undefined));
+    const flushed = FirestoreStorage.flushPendingLocally();
+    jest.advanceTimersByTime(FirestoreStorage.LOCAL_HANDOFF_TIMEOUT_MS - 1);
+    expect(await isDone(flushed)).toBe(false);
+    jest.advanceTimersByTime(1);
+    expect(await isDone(flushed)).toBe(true);
   });
 });

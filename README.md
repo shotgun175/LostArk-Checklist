@@ -107,7 +107,8 @@ The site keeps a copy of your data in the browser (Firestore's IndexedDB cache, 
 - The daily rest bonus update and other automatic fixes to your data wait until the device is online, so they never write an old copy over newer data.
 - A page whose data was never loaded on this device stays empty until the device is online.
 - **Log out**, **Sign in**, **Register**, **Delete my account and data**, **Import from Lostark-helper**, **Restore backup** and **Download backup** need the server. Offline they show "You're offline. Connect to the internet to ...". Log out, Sign in and account deletion also wait until every change made on the device has reached the server; if that takes more than 10 seconds they are refused, so nothing is lost.
-- Opening the site with no connection at all is not supported yet: the page itself still loads from the network.
+- After one visit online, the site also opens with no connection at all: a service worker keeps the app itself on the device. A banner says when you are offline. Each icon or image loads offline once it has been shown online.
+- A brand new visitor who opens the site offline gets an empty page until the device is online, because a guest account can only be created on the server.
 
 ## Install on your phone
 
@@ -115,6 +116,8 @@ The site can be added to your home screen. It then opens full screen, without th
 
 - **iPhone (Safari or Chrome):** tap the Share button, then **Add to Home Screen**.
 - **Android (Chrome):** open the menu (three dots), then **Add to Home screen** or **Install app**.
+
+After the first visit the installed app (and the site in the browser) opens and works offline; see **Offline** above. When a new version of the site is out, it downloads in the background and a banner says **A new version is available.** Click **Reload** to switch to it; ticks made before that are sent first. Without a click, the new version loads the next time the page is reloaded or opened in a new tab.
 
 **Register before you install on an iPhone.** An app added to an iPhone home screen keeps its own storage, apart from the browser. A guest's data stays in the browser and the installed app starts as a new, empty guest. With an account, just sign in inside the installed app (see **Signing in and syncing** above).
 
@@ -167,6 +170,27 @@ Unit tests, exactly as CI runs them:
 npx nx test client
 ```
 
+### Service worker
+
+The service worker (`@angular/service-worker`, configured in `apps/client/ngsw-config.json`) is only in production and emulator builds. `nx serve` never runs it, in any configuration, so day to day development is not affected by it. It keeps the app itself (`index.html`, scripts, styles, the manifest) for offline use, loads images and the ng-zorro icons into its cache the first time they are shown, and serves `/assets/export-from-lostark-helper.js` from the network with the last copy as an offline fallback. Firebase and Google requests never go through its cache.
+
+To test it against the local emulators (they must be running, see below):
+
+```bash
+npx nx build client --configuration=emulator     # includes ngsw-worker.js and ngsw.json
+npx -y serve -s dist/apps/client/browser -l 4300 # static server with SPA fallback, http://localhost:4300
+```
+
+Open http://localhost:4300, wait about 30 seconds (the worker registers once the app has settled), then use DevTools, **Application**, **Service workers** and the **Offline** checkbox (or the Network tab) and reload. http://localhost:4300/ngsw/state shows the worker's state. To see the new version banner, rebuild while the page is open, then switch tabs or reload once.
+
+To remove a stale worker from your browser: DevTools, **Application**, **Service workers**, **Unregister**, then **Storage**, **Clear site data**. Or run this in the page's console and reload:
+
+```js
+navigator.serviceWorker.getRegistrations().then(registrations => registrations.forEach(registration => registration.unregister()));
+```
+
+A worker belongs to one origin, so one on port 4300 never affects `nx serve` on port 4200.
+
 ### Local emulators
 
 Point `JAVA_HOME` at your Java install and put its `bin` folder on `PATH`, then start Auth and Firestore (Git Bash, macOS or Linux shell; the path is an example):
@@ -210,14 +234,42 @@ npx -y firebase-tools deploy --only hosting,firestore:rules --project loa-checkl
 node tools/verify-firestore-rules.mjs
 ```
 
-The build lands in `dist/apps/client/browser`, which `firebase.json` serves. The last command checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (build and unit tests); deploys are always manual.
+The build lands in `dist/apps/client/browser`, which `firebase.json` serves. `node tools/verify-firestore-rules.mjs` checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (build and unit tests); deploys are always manual.
+
+After a deploy, check that the service worker files and the page itself are never cached (each should print `cache-control: no-cache`), and that a hashed script still is (`public,max-age=31536000,immutable`):
+
+```bash
+for path in / /index.html /settings /ngsw.json /ngsw-worker.js /safety-worker.js /manifest.webmanifest /assets/export-from-lostark-helper.js; do
+  printf '%s: ' "$path"; curl -sI "https://loa-checklist.web.app$path" | grep -i '^cache-control'
+done
+curl -sI "https://loa-checklist.web.app/$(ls dist/apps/client/browser | grep -m1 '^main-.*\.js$')" | grep -i '^cache-control'
+```
+
+Only paths without a dot fall back to `index.html`; a missing file gets a real 404, which is how the service worker notices that a file of an old version is gone. Check both (expect `200` then `404`):
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://loa-checklist.web.app/settings
+curl -s -o /dev/null -w '%{http_code}\n' https://loa-checklist.web.app/chunk-XXXXXXXX.js
+```
+
+Open tabs pick up the new version through the **A new version is available.** banner.
+
+**Kill switch.** If a release breaks the service worker, deploy the safety worker in its place. It unregisters itself and deletes the worker's caches on every device the next time the site is opened, and the site then loads from the network as before:
+
+```bash
+npx nx build client
+cp dist/apps/client/browser/safety-worker.js dist/apps/client/browser/ngsw-worker.js
+npx -y firebase-tools deploy --only hosting --project loa-checklist
+```
+
+Deleting `ngsw.json` from the build and deploying works too: the worker gets a 404 for it, deletes its caches and unregisters itself. To bring the worker back, deploy a normal build again.
 
 ## Firebase plan
 
 The project stays on the free Spark plan. On Spark, a product that goes over its quota stops working until the quota resets; it never bills. The limits that matter here:
 
 - **Firestore**: 1 GiB stored, 50,000 document reads, 20,000 writes and 20,000 deletes a day, 10 GiB a month of downloads.
-- **Hosting**: 10 GB stored, 360 MB of downloads a day.
+- **Hosting**: 10 GB stored, 360 MB of downloads a day. With the service worker, each visitor downloads the whole app (about 2.7 MB, under 1 MB compressed) once per release, even pages they do not open.
 - **Authentication**: email and password plus guest (anonymous) sign-in, free up to 50,000 monthly active users.
 - **App Check**: reCAPTCHA Enterprise includes 10,000 free assessments a month. The 7 day App Check token lifetime keeps usage far below that.
 
