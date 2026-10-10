@@ -11,6 +11,8 @@ export interface FirebaseEnvironment extends AppCheckEnvironment {
 export const FIREBASE_APP = new InjectionToken<FirebaseApp>("FIREBASE_APP");
 export const FIREBASE_AUTH = new InjectionToken<Auth>("FIREBASE_AUTH");
 export const FIRESTORE = new InjectionToken<Firestore>("FIRESTORE");
+/** Base URL of the Firestore server (the emulator when useEmulators is on), for the connection check. */
+export const FIRESTORE_HOST_URL = new InjectionToken<string>("FIRESTORE_HOST_URL");
 
 /**
  * The Firebase app, Auth and Firestore for the app module. Emulator ports match firebase.json.
@@ -19,6 +21,7 @@ export const FIRESTORE = new InjectionToken<Firestore>("FIRESTORE");
  */
 export function provideFirebase(environment: FirebaseEnvironment): Provider[] {
   return [
+    { provide: FIRESTORE_HOST_URL, useValue: environment.useEmulators ? "http://localhost:8085" : "https://firestore.googleapis.com" },
     {
       provide: FIREBASE_APP,
       deps: [NgZone],

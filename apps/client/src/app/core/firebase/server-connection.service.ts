@@ -1,6 +1,5 @@
 import { inject, Injectable } from "@angular/core";
-import { doc, getDocFromServer } from "firebase/firestore";
-import { FIREBASE_AUTH, FIRESTORE } from "./firebase.providers";
+import { FIRESTORE_HOST_URL } from "./firebase.providers";
 import { ConnectionRequiredError, offlineMessage } from "./connection-required";
 
 /** How long the server check waits for an answer before it counts the device as offline. */
@@ -10,22 +9,21 @@ export const SERVER_CHECK_TIMEOUT_MS = 5000;
   providedIn: "root"
 })
 export class ServerConnectionService {
-  private readonly firestore = inject(FIRESTORE);
-  private readonly auth = inject(FIREBASE_AUTH);
+  private readonly hostUrl = inject(FIRESTORE_HOST_URL);
 
   /**
-   * Whether the Firestore server answers now. navigator.onLine is not reliable (it is true on a
-   * network with no internet), so this reads the user's own users document from the server, which
-   * offline fails at once with "unavailable". Any other answer, even a refusal, means it answered.
+   * Whether the Firestore server answers now. navigator.onLine false means offline for sure, but
+   * true is not proof (a network with no internet). A Firestore read from the server is no proof
+   * either: getDocFromServer answers from an open listener without the network. So this makes a
+   * real request to the Firestore host; no-cors, because only reaching it matters, not the reply.
    */
   public async isReachable(timeoutMs = SERVER_CHECK_TIMEOUT_MS): Promise<boolean> {
-    const ref = doc(this.firestore, "users", this.auth.currentUser?.uid ?? "connection-check");
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return false;
+    }
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timedOut = new Promise<boolean>(resolve => timer = setTimeout(() => resolve(false), timeoutMs));
-    const answered = getDocFromServer(ref).then(
-      () => true,
-      (error: { code?: string }) => error?.code !== "unavailable"
-    );
+    const answered = fetch(`${this.hostUrl}/`, { mode: "no-cors", cache: "no-store" }).then(() => true, () => false);
     try {
       return await Promise.race([answered, timedOut]);
     } finally {
