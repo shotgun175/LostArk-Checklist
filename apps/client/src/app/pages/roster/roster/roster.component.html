@@ -142,7 +142,7 @@
       </nz-form-item>
       <nz-form-item class="ilvl-field">
         <nz-form-label nzFor="add-character-ilvl">Item level</nz-form-label>
-        <nz-form-control nzErrorTip="Please input an item level from 0 to 2000">
+        <nz-form-control [nzErrorTip]="'Please input an item level from 0 to ' + maxIlvl">
           <nz-input-wrapper>
             <span nz-icon nzInputPrefix nzType="info"></span>
             <input nz-input id="add-character-ilvl" formControlName="ilvl" placeholder="For example 1640" type="number" min="0" [max]="maxIlvl" />
