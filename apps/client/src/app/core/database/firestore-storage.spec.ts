@@ -257,17 +257,41 @@ describe("FirestoreStorage.holdWrites", () => {
     jest.useRealTimers();
   });
 
-  it("keeps queued field changes for flushPending, but starts no new write", () => {
+  it("queues a field change made during the hold for flushPending, and skips whole-document writes", () => {
     storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
     storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
     FirestoreStorage.holdWrites();
     storage.patchFields("u1", [{ path: ["data", "b"], value: 3 }]);
     storage.setOne("u2", { data: {} }).subscribe();
     expect(FirestoreStorage.writesArePaused()).toBe(true);
+    expect(FirestoreStorage.hasPending()).toBe(true);
+    // Not even once its window would have closed: only flushPending sends the queue.
+    jest.advanceTimersByTime(5000);
+    expect(updateDoc).toHaveBeenCalledTimes(1);
     FirestoreStorage.flushPending();
     expect(updateDoc).toHaveBeenCalledTimes(2);
-    expect(updateDoc).toHaveBeenLastCalledWith(atDoc("completion/u1"), new FieldPath("data", "a"), 2);
+    expect(updateDoc).toHaveBeenLastCalledWith(atDoc("completion/u1"), new FieldPath("data", "a"), 2, new FieldPath("data", "b"), 3);
+    expect(FirestoreStorage.hasPending()).toBe(false);
     expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it("shows a field change made during the hold at once", () => {
+    const states = new Subject<DocState<TestDoc>>();
+    jest.mocked(docSnapshot$).mockReturnValue(states);
+    const shown: TestDoc[] = [];
+    storage.getOne("u1", true).subscribe(d => shown.push(JSON.parse(JSON.stringify(d))));
+    states.next(snap({ $key: "u1", data: {} }));
+    FirestoreStorage.holdWrites();
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    expect(shown[shown.length - 1].data).toEqual({ a: 1 });
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  it("sends the changes held back when writing resumes (the account change was refused)", () => {
+    FirestoreStorage.holdWrites();
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    FirestoreStorage.resumeWrites();
+    expect(updateDoc).toHaveBeenCalledWith(atDoc("completion/u1"), new FieldPath("data", "a"), 1);
   });
 
   it("still creates a document that a flushed change finds missing", async () => {

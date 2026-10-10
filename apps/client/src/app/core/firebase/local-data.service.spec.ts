@@ -31,6 +31,7 @@ jest.mock("../database/firestore-storage", () => ({
   FirestoreStorage: {
     flushPending: jest.fn(() => calls.push("flushPending")),
     holdWrites: jest.fn(() => calls.push("holdWrites")),
+    hasPending: jest.fn(() => false),
     pauseWrites: jest.fn(() => calls.push("pauseWrites")),
     resumeWrites: jest.fn(() => calls.push("resumeWrites"))
   }
@@ -84,12 +85,18 @@ describe("LocalDataService", () => {
       const channel = fakeChannel();
       const done = service.syncBeforeAccountChange("sign in");
       await jest.advanceTimersByTimeAsync(OTHER_TABS_FLUSH_MS - 1);
-      expect(calls).toEqual(["requireServer", "holdWrites", "flushPending", "broadcast"]);
+      expect(calls).toEqual(["requireServer", "holdWrites", "broadcast"]);
       await jest.advanceTimersByTimeAsync(1);
       await done;
       channel.remove();
       expect(calls[calls.length - 1]).toBe("waitForPendingWrites");
       expect(channel.posted).toEqual([{ name: DATA_REPLACED_CHANNEL, data: { flush: true, tabId: TAB_ID } }]);
+    });
+
+    it("sends and waits again for changes made during the wait, so none is left when it resolves", async () => {
+      jest.mocked(FirestoreStorage.hasPending).mockReturnValueOnce(true);
+      await service.syncBeforeAccountChange("log out");
+      expect(calls).toEqual(["requireServer", "holdWrites", "flushPending", "waitForPendingWrites", "flushPending", "waitForPendingWrites"]);
     });
 
     it("refuses offline without touching the queue", async () => {

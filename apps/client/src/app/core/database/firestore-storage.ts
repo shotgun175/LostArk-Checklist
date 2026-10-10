@@ -138,18 +138,26 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   /**
-   * Stops new writes from the data services like pauseWrites, but keeps queued field changes, so
-   * flushPending still sends them. Used while Log out, Sign in or account deletion waits for this
-   * device's changes to reach the server: a change made during that wait could not be waited for.
-   * resumeWrites ends it.
+   * Used while Log out, Sign in or account deletion waits for this device's changes to reach the
+   * server. Field changes still show at once but are only queued, and flushPending sends them, so
+   * the wait can include them; whole-document writes are skipped as with pauseWrites. resumeWrites
+   * ends it and sends what was queued.
    */
   public static holdWrites(): void {
     FirestoreStorage.writesHeld = true;
+    // A window closing during the hold would write outside the wait.
+    FirestoreStorage.coalescers.forEach(coalescer => coalescer.closeWindows());
   }
 
   public static resumeWrites(): void {
     FirestoreStorage.writesPaused = false;
     FirestoreStorage.writesHeld = false;
+    FirestoreStorage.flushPending();
+  }
+
+  /** Whether any field change is waiting to be written. */
+  public static hasPending(): boolean {
+    return FirestoreStorage.coalescers.some(coalescer => coalescer.hasQueued());
   }
 
   /** True while writes are paused or held (account change, import), so services can skip prompts that would write. */
@@ -276,10 +284,14 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * together when that second is over.
    */
   public patchFields(key: string, writes: FieldWrite[]): void {
-    if (FirestoreStorage.writesArePaused()) {
+    if (FirestoreStorage.writesPaused) {
       return;
     }
     (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
+    if (FirestoreStorage.writesHeld) {
+      this.coalescer.queue(key, writes);
+      return;
+    }
     this.coalescer.enqueue(key, writes);
   }
 

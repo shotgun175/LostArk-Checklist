@@ -151,11 +151,11 @@ export class LocalDataService {
 
   /**
    * Sends every change made on this device and waits until the server has it, so none is lost or
-   * sent as the wrong user. The other open tabs are asked to send their queued changes too. From
-   * here on no new change is written (holdWrites): one made during the wait could not be waited
-   * for. The caller changes the account next, or calls cancelClear when that fails. Rejects with
-   * a ConnectionRequiredError offline, or when the changes do not reach the server in time; writing
-   * then resumes.
+   * sent as the wrong user. The other open tabs are asked to send their queued changes too. Field
+   * changes made during the wait are held back (holdWrites) and sent and waited for in another
+   * round, so when this resolves nothing is unsent and the caller can change the account right
+   * away, or call cancelClear when that fails. Rejects with a ConnectionRequiredError offline, or
+   * when the changes do not reach the server in time; writing then resumes.
    *
    * Args:
    *   action: what needs it, for the message, for example "log out".
@@ -164,18 +164,21 @@ export class LocalDataService {
     await this.connection.requireServer(action);
     FirestoreStorage.holdWrites();
     try {
-      FirestoreStorage.flushPending();
+      const deadline = Date.now() + PENDING_WRITES_TIMEOUT_MS;
       if (this.broadcast({ flush: true, tabId: TAB_ID })) {
         // Their changes go into the write queue the tabs share, which waitForPendingWrites covers.
         await resolveAfter(OTHER_TABS_FLUSH_MS);
       }
-      const synced = await Promise.race([
-        waitForPendingWrites(this.firestore).then(() => true),
-        resolveAfter(PENDING_WRITES_TIMEOUT_MS).then(() => false)
-      ]);
-      if (!synced) {
-        throw new ConnectionRequiredError(`Your latest changes have not reached the server yet. Stay online and try to ${action} again in a moment.`);
-      }
+      do {
+        FirestoreStorage.flushPending();
+        const synced = await Promise.race([
+          waitForPendingWrites(this.firestore).then(() => true),
+          resolveAfter(Math.max(0, deadline - Date.now())).then(() => false)
+        ]);
+        if (!synced) {
+          throw new ConnectionRequiredError(`Your latest changes have not reached the server yet. Stay online and try to ${action} again in a moment.`);
+        }
+      } while (FirestoreStorage.hasPending());
     } catch (error) {
       FirestoreStorage.resumeWrites();
       throw error;

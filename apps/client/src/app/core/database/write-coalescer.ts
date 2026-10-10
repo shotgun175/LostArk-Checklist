@@ -86,6 +86,22 @@ export class WriteCoalescer {
     this.queued.set(key, writes.reduce(mergeFieldWrite, this.queued.get(key) ?? []));
   }
 
+  /** Adds changes to a document's queue without writing them or opening a window: flush sends them. */
+  public queue(key: string, writes: readonly FieldWrite[]): void {
+    this.queued.set(key, writes.reduce(mergeFieldWrite, this.queued.get(key) ?? []));
+  }
+
+  /** Ends every open window but keeps the queued changes: they are then sent only by flush. */
+  public closeWindows(): void {
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers.clear();
+  }
+
+  /** Whether any document has changes waiting. */
+  public hasQueued(): boolean {
+    return this.queued.size > 0;
+  }
+
   /** The changes of one document that are waiting for its window to close. */
   public pending(key: string): FieldWrite[] {
     return this.queued.get(key) ?? [];
