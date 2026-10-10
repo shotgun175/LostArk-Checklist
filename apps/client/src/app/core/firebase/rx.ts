@@ -57,18 +57,48 @@ export function idTokenState$(auth: Auth): Observable<User | null> {
   return fromListener<User | null>((next, error) => onIdTokenChanged(auth, next, error));
 }
 
-/** Live document data, including metadata changes; undefined while the document does not exist. */
-export function docData$<T>(ref: DocumentReference<T>, options: DataOptions = {}): Observable<T | undefined> {
-  return fromListener<T | undefined>((next, error) => onSnapshot(ref, { includeMetadataChanges: true }, {
-    next: snapshot => next(snapshotData(snapshot, options)),
+/** One document snapshot: the data (undefined while the document does not exist) and where it came from. */
+export interface DocState<T> {
+  data: T | undefined;
+  exists: boolean;
+  /** True when the snapshot came from the local cache, not from the server. */
+  fromCache: boolean;
+  /** True while the data includes local writes the server has not confirmed yet. */
+  hasPendingWrites: boolean;
+}
+
+/** One query snapshot: the documents in query order and where they came from. */
+export interface QueryState<T> {
+  docs: T[];
+  fromCache: boolean;
+  hasPendingWrites: boolean;
+}
+
+/**
+ * Live document snapshots, including metadata changes. With a local cache the first snapshot can
+ * come from the cache, and offline a document that was never cached is reported as missing from
+ * the cache: only a server snapshot (fromCache false) proves that a document does not exist.
+ */
+export function docSnapshot$<T>(ref: DocumentReference<T>, options: DataOptions = {}): Observable<DocState<T>> {
+  return fromListener<DocState<T>>((next, error) => onSnapshot(ref, { includeMetadataChanges: true }, {
+    next: snapshot => next({
+      data: snapshotData(snapshot, options),
+      exists: snapshot.exists(),
+      fromCache: snapshot.metadata.fromCache,
+      hasPendingWrites: snapshot.metadata.hasPendingWrites
+    }),
     error
   }));
 }
 
-/** Live query results in query order, including metadata changes. */
-export function collectionData$<T>(q: Query<T>, options: DataOptions = {}): Observable<T[]> {
-  return fromListener<T[]>((next, error) => onSnapshot(q, { includeMetadataChanges: true }, {
-    next: snapshot => next(snapshot.docs.map(docSnapshot => snapshotData(docSnapshot, options) as T)),
+/** Live query snapshots in query order, including metadata changes. */
+export function collectionSnapshot$<T>(q: Query<T>, options: DataOptions = {}): Observable<QueryState<T>> {
+  return fromListener<QueryState<T>>((next, error) => onSnapshot(q, { includeMetadataChanges: true }, {
+    next: snapshot => next({
+      docs: snapshot.docs.map(docSnapshot => snapshotData(docSnapshot, options) as T),
+      fromCache: snapshot.metadata.fromCache,
+      hasPendingWrites: snapshot.metadata.hasPendingWrites
+    }),
     error
   }));
 }

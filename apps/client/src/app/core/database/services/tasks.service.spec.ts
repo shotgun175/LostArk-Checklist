@@ -1,5 +1,10 @@
-import { from, toArray, firstValueFrom } from "rxjs";
-import { renameUserTask, skipDeletedTaskList, upgradeUserTask, withDailyAmount } from "./tasks.service";
+import { from, toArray, firstValueFrom, of, Subject } from "rxjs";
+import { TestBed } from "@angular/core/testing";
+import { writeBatch } from "firebase/firestore";
+import { renameUserTask, skipDeletedTaskList, skipEmptyCachedTaskList, TasksService, upgradeUserTask, withDailyAmount } from "./tasks.service";
+import { AuthService } from "./auth.service";
+import { FIRESTORE } from "../../firebase/firebase.providers";
+import { QueryState } from "../../firebase/rx";
 import { isTaskDone } from "../../is-task-done";
 import { Character } from "../../../model/character/character";
 import { Completion } from "../../../model/completion";
@@ -8,10 +13,21 @@ import { isRaidTask } from "../../task-tracking";
 import { TaskScope } from "../../../model/task-scope";
 import { LostarkTask, TASKS_VERSION } from "../../../model/lostark-task";
 
-// No real Firebase in unit tests (same as energy.service.spec.ts); only the pure upgrade step is tested here.
+// No real Firebase in unit tests (same as energy.service.spec.ts). TasksService itself gets its task
+// list from a Subject and writes through a recorded batch.
 jest.mock("firebase/app", () => ({}));
 jest.mock("firebase/auth", () => ({}));
-jest.mock("firebase/firestore", () => ({}));
+jest.mock("firebase/firestore", () => {
+  const ref = (path: string) => ({ path, id: path.split("/").pop(), withConverter() { return this; } });
+  let next = 0;
+  return {
+    collection: jest.fn((_firestore: unknown, name: string) => ref(name)),
+    doc: jest.fn((parent: { path: string }, name?: string, key?: string) => ref(name === undefined ? `${parent.path}/id-${next++}` : `${name}/${key}`)),
+    where: jest.fn(),
+    deleteField: jest.fn(() => "deleteField"),
+    writeBatch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn(() => Promise.resolve()) }))
+  };
+});
 
 const defaultTasks = tasks.map((t, i) => ({ ...t, index: i }));
 const userCopy = (label: string, frequency = defaultTasks[0].frequency): LostarkTask => ({
@@ -79,16 +95,95 @@ describe("renameUserTask", () => {
   });
 });
 
+const list = (n: number): LostarkTask[] => Array.from({ length: n }, (_, i) => userCopy(`T${i}`));
+const state = (docs: LostarkTask[], fromCache = false): QueryState<LostarkTask> => ({ docs, fromCache, hasPendingWrites: false });
+
 describe("skipDeletedTaskList", () => {
-  const list = (n: number): LostarkTask[] => Array.from({ length: n }, (_, i) => userCopy(`T${i}`));
-  const run = (lists: LostarkTask[][]) => firstValueFrom(from(lists).pipe(skipDeletedTaskList(), toArray()));
+  const run = (lists: LostarkTask[][]) => firstValueFrom(from(lists.map(docs => state(docs))).pipe(skipDeletedTaskList(), toArray()));
 
   it("passes the first empty list of a new user, so the default tasks are created", async () => {
-    expect((await run([[], list(2)])).map(l => l.length)).toEqual([0, 2]);
+    expect((await run([[], list(2)])).map(l => l.docs.length)).toEqual([0, 2]);
   });
 
   it("drops an empty list after tasks were seen, so the defaults are not created for a deleted account", async () => {
-    expect((await run([list(2), list(1), [], list(3)])).map(l => l.length)).toEqual([2, 1, 3]);
+    expect((await run([list(2), list(1), [], list(3)])).map(l => l.docs.length)).toEqual([2, 1, 3]);
+  });
+});
+
+describe("skipEmptyCachedTaskList", () => {
+  it("drops an empty list from the cache (offline, never cached) but keeps a server one and a cached one with tasks", async () => {
+    const lists = [state([], true), state(list(1), true), state([])];
+    const passed = await firstValueFrom(from(lists).pipe(skipEmptyCachedTaskList(), toArray()));
+    expect(passed).toEqual([lists[1], lists[2]]);
+  });
+});
+
+describe("TasksService with a cached task list", () => {
+  let lists: Subject<QueryState<LostarkTask>>;
+  let service: TasksService;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.mocked(writeBatch).mockClear();
+    lists = new Subject<QueryState<LostarkTask>>();
+    jest.spyOn(TasksService.prototype, "getUserTasks").mockReturnValue(lists);
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of("uid"), isAnonymous$: of(false) } }
+      ]
+    });
+    service = TestBed.inject(TasksService);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  it("shows a cached list but creates, upgrades and deletes nothing until the server's list arrives", () => {
+    const seen: { fromCache: boolean, count: number }[] = [];
+    service.taskList$.subscribe(taskList => seen.push({ fromCache: taskList.fromCache, count: taskList.tasks.length }));
+    // An old copy (needs an upgrade) and a duplicate: both would be written from a server list.
+    lists.next(state([userCopy(defaultTasks[0].label), userCopy(defaultTasks[0].label)], true));
+    jest.advanceTimersByTime(5000);
+    expect(seen).toEqual([{ fromCache: true, count: 2 }]);
+    expect(writeBatch).not.toHaveBeenCalled();
+    lists.next(state([userCopy(defaultTasks[0].label), userCopy(defaultTasks[0].label)]));
+    jest.advanceTimersByTime(5000);
+    expect(seen[seen.length - 1].fromCache).toBe(false);
+    // Default tasks created, old copies upgraded, the duplicate deleted.
+    expect(writeBatch).toHaveBeenCalledTimes(3);
+  });
+
+  it("emits nothing for an empty cached list, so no default tasks are made for it", () => {
+    const seen: unknown[] = [];
+    service.taskList$.subscribe(taskList => seen.push(taskList));
+    lists.next(state([], true));
+    jest.advanceTimersByTime(5000);
+    expect(seen).toEqual([]);
+    expect(writeBatch).not.toHaveBeenCalled();
+  });
+});
+
+describe("TasksService.updateTaskField", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("writes only the changed field, so a cached copy cannot undo the task's other fields", () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: FIRESTORE, useValue: {} },
+        { provide: AuthService, useValue: { uid$: of(), isAnonymous$: of() } }
+      ]
+    });
+    const service = TestBed.inject(TasksService);
+    const updateOne = jest.spyOn(service, "updateOne").mockReturnValue(of(void 0));
+    const task = { ...userCopy("Guild Chores"), enabled: true, iconPath: undefined };
+    service.updateTaskField(task, "enabled");
+    expect(updateOne).toHaveBeenLastCalledWith("key-Guild Chores", { enabled: true });
+    // A cleared choice removes the field: Firestore refuses undefined.
+    service.updateTaskField(task, "iconPath");
+    expect(updateOne).toHaveBeenLastCalledWith("key-Guild Chores", { iconPath: "deleteField" });
   });
 });
 

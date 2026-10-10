@@ -63,7 +63,7 @@
               <td>
                 <div class="task-icon-wrapper">
                   @if (task.custom) {
-                    <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task)"
+                    <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task, 'iconPath')"
                       nzAllowClear nzShowSearch nzPlaceHolder="No icon"
                       [nzCustomTemplate]="chosenIcon"
                       class="icon-select">
@@ -91,7 +91,7 @@
                 </div>
               </td>
               <td>
-                <nz-select [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
+                <nz-select [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task, 'frequency')" [nzDisabled]="!task.custom">
                   <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
                   <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
                   <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
@@ -100,7 +100,7 @@
                 </nz-select>
               </td>
               <td>
-                <nz-select [(ngModel)]="task.scope" (ngModelChange)="updateTask(task)" [nzDisabled]="!task.custom">
+                <nz-select [(ngModel)]="task.scope" (ngModelChange)="updateTask(task, 'scope')" [nzDisabled]="!task.custom">
                   <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
                   <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
                 </nz-select>
@@ -118,7 +118,7 @@
                 <nz-input-number nzChangeOnWheel="false" [nzMin]="0" [nzMax]="9999" [ngModel]="task.maxIlvl" #maxIlvlModel="ngModel" [ngModelOptions]="{updateOn: 'blur'}"
                   (ngModelChange)="saveTaskField(task, 'maxIlvl', $event, maxIlvlModel)"></nz-input-number>
               </td>
-              <td><label nz-checkbox aria-label="Tracked" [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task)"></label></td>
+              <td><label nz-checkbox aria-label="Tracked" [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task, 'enabled')"></label></td>
               <td>
                 <!-- All 7 days is the same as every day -->
                 <nz-select [nzDisabled]="task.canEditDaysFilter === false"
@@ -128,7 +128,7 @@
                   nzAllowClear
                   class="td-select-box"
                   [(ngModel)]="task.daysFilter"
-                  (ngModelChange)="updateTask(task)">
+                  (ngModelChange)="updateTask(task, 'daysFilter')">
                   @for (day of days; track day.value) {
                     <nz-option [nzValue]="day.value" [nzLabel]="day.short" nzCustomContent>{{ day.label }}</nz-option>
                   }

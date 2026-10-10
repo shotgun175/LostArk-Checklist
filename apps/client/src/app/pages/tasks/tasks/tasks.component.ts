@@ -248,8 +248,9 @@ export class TasksComponent {
     this.tasksService.setTrackAll(tasks, track);
   }
 
-  updateTask(task: LostarkTask): void {
-    this.tasksService.updateTask(task);
+  /** Saves the one field of the task that was just changed. */
+  updateTask(task: LostarkTask, field: keyof LostarkTask): void {
+    this.tasksService.updateTaskField(task, field);
   }
 
   /**
@@ -275,7 +276,7 @@ export class TasksComponent {
       }
       task[field] = value;
     }
-    this.updateTask(task);
+    this.updateTask(task, field);
   }
 
   removeTask(task: LostarkTask): void {

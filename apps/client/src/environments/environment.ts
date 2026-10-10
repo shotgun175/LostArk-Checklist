@@ -20,6 +20,8 @@ export const environment = {
     authDomain: 'loa-checklist.firebaseapp.com',
     messagingSenderId: '840196169331',
   },
+  // Offline app shell and the new version banner (@angular/service-worker). nx serve never runs it.
+  serviceWorker: false,
   production: false
 };
 

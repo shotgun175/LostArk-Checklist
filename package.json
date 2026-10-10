@@ -1,6 +1,6 @@
 {
   "name": "lostark-helper",
-  "version": "0.0.55",
+  "version": "0.0.58",
   "license": "MIT",
   "scripts": {
     "ng": "nx",
@@ -19,6 +19,7 @@
     "@angular/platform-browser": "22.2.2",
     "@angular/platform-browser-dynamic": "22.2.2",
     "@angular/router": "22.2.2",
+    "@angular/service-worker": "22.2.2",
     "@ant-design/icons-angular": "22.1.1",
     "date-fns": "^2.28.0",
     "firebase": "^12.19.0",

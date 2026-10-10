@@ -1,6 +1,6 @@
 import { Auth, User } from "firebase/auth";
 import { DocumentReference, Query } from "firebase/firestore";
-import { authState$, collectionData$, docData$, idTokenState$ } from "./rx";
+import { authState$, collectionSnapshot$, docSnapshot$, idTokenState$ } from "./rx";
 
 const mockOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
@@ -33,9 +33,11 @@ interface Row {
   name: string;
 }
 
-function docSnapshot(id: string, data: Record<string, unknown> | undefined) {
-  return { id, exists: () => data !== undefined, data: () => data };
+function docSnapshot(id: string, data: Record<string, unknown> | undefined, fromCache = false, hasPendingWrites = false) {
+  return { id, exists: () => data !== undefined, data: () => data, metadata: { fromCache, hasPendingWrites } };
 }
+
+const fromServer = { fromCache: false, hasPendingWrites: false };
 
 function lastSnapshotObserver(): SnapshotObserver {
   return mockOnSnapshot.mock.calls[mockOnSnapshot.mock.calls.length - 1][2];
@@ -45,7 +47,7 @@ const ref = { id: "uid-1" } as unknown as DocumentReference<Row>;
 const rowsQuery = {} as unknown as Query<Row>;
 const auth = {} as unknown as Auth;
 
-describe("docData$", () => {
+describe("docSnapshot$", () => {
   let unsubscribe: jest.Mock;
 
   beforeEach(() => {
@@ -53,24 +55,32 @@ describe("docData$", () => {
     mockOnSnapshot.mockReset().mockReturnValue(unsubscribe);
   });
 
-  it("listens with metadata changes and emits the converted data", () => {
+  it("listens with metadata changes and emits the converted data with where it came from", () => {
     const values: unknown[] = [];
-    docData$(ref).subscribe(value => values.push(value));
+    docSnapshot$(ref).subscribe(value => values.push(value));
     expect(mockOnSnapshot).toHaveBeenCalledWith(ref, { includeMetadataChanges: true }, expect.anything());
+    lastSnapshotObserver().next(docSnapshot("uid-1", { name: "Arwen", $key: "uid-1" }, true, true));
     lastSnapshotObserver().next(docSnapshot("uid-1", { name: "Arwen", $key: "uid-1" }));
-    expect(values).toEqual([{ name: "Arwen", $key: "uid-1" }]);
+    expect(values).toEqual([
+      { data: { name: "Arwen", $key: "uid-1" }, exists: true, fromCache: true, hasPendingWrites: true },
+      { data: { name: "Arwen", $key: "uid-1" }, exists: true, ...fromServer }
+    ]);
   });
 
-  it("emits undefined for a document that does not exist", () => {
+  it("emits undefined data for a document that does not exist, and says whether the cache or the server said so", () => {
     const values: unknown[] = [];
-    docData$(ref).subscribe(value => values.push(value));
+    docSnapshot$(ref).subscribe(value => values.push(value));
+    lastSnapshotObserver().next(docSnapshot("uid-1", undefined, true));
     lastSnapshotObserver().next(docSnapshot("uid-1", undefined));
-    expect(values).toEqual([undefined]);
+    expect(values).toEqual([
+      { data: undefined, exists: false, fromCache: true, hasPendingWrites: false },
+      { data: undefined, exists: false, ...fromServer }
+    ]);
   });
 
   it("adds the id under idField for an existing document only", () => {
     const values: unknown[] = [];
-    docData$(ref, { idField: "id" }).subscribe(value => values.push(value));
+    docSnapshot$(ref, { idField: "id" }).subscribe(value => values.push((value as { data: unknown }).data));
     lastSnapshotObserver().next(docSnapshot("uid-1", { name: "Arwen" }));
     lastSnapshotObserver().next(docSnapshot("uid-1", undefined));
     expect(values).toEqual([{ name: "Arwen", id: "uid-1" }, undefined]);
@@ -78,14 +88,14 @@ describe("docData$", () => {
 
   it("passes listener errors to the subscriber", () => {
     const errors: unknown[] = [];
-    docData$(ref).subscribe({ error: err => errors.push(err) });
+    docSnapshot$(ref).subscribe({ error: err => errors.push(err) });
     const denied = new Error("permission-denied");
     lastSnapshotObserver().error(denied);
     expect(errors).toEqual([denied]);
   });
 
   it("stops listening on unsubscribe", () => {
-    const subscription = docData$(ref).subscribe();
+    const subscription = docSnapshot$(ref).subscribe();
     expect(unsubscribe).not.toHaveBeenCalled();
     subscription.unsubscribe();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
@@ -99,14 +109,14 @@ describe("docData$", () => {
     });
     const appZone = zones.current.fork({ name: "app" });
     const emittedIn: string[] = [];
-    appZone.run(() => docData$(ref).subscribe(() => emittedIn.push(zones.current.name)));
+    appZone.run(() => docSnapshot$(ref).subscribe(() => emittedIn.push(zones.current.name)));
     zones.root.run(() => lastSnapshotObserver().next(docSnapshot("uid-1", { name: "Arwen" })));
     expect(registeredIn).toBe(zones.root.name);
     expect(emittedIn).toEqual(["app"]);
   });
 });
 
-describe("collectionData$", () => {
+describe("collectionSnapshot$", () => {
   let unsubscribe: jest.Mock;
 
   beforeEach(() => {
@@ -114,28 +124,28 @@ describe("collectionData$", () => {
     mockOnSnapshot.mockReset().mockReturnValue(unsubscribe);
   });
 
-  it("emits every document's data in query order, with idField when asked", () => {
+  it("emits every document's data in query order, with idField when asked, and where it came from", () => {
     const plain: unknown[] = [];
     const withId: unknown[] = [];
-    collectionData$(rowsQuery).subscribe(value => plain.push(value));
+    collectionSnapshot$(rowsQuery).subscribe(value => plain.push(value));
     expect(mockOnSnapshot).toHaveBeenCalledWith(rowsQuery, { includeMetadataChanges: true }, expect.anything());
-    lastSnapshotObserver().next({ docs: [docSnapshot("a", { name: "Arwen" }), docSnapshot("b", { name: "Brakka" })] });
-    collectionData$(rowsQuery, { idField: "id" }).subscribe(value => withId.push(value));
-    lastSnapshotObserver().next({ docs: [docSnapshot("a", { name: "Arwen" })] });
-    expect(plain).toEqual([[{ name: "Arwen" }, { name: "Brakka" }]]);
-    expect(withId).toEqual([[{ name: "Arwen", id: "a" }]]);
+    lastSnapshotObserver().next({ docs: [docSnapshot("a", { name: "Arwen" }), docSnapshot("b", { name: "Brakka" })], metadata: { fromCache: true, hasPendingWrites: false } });
+    collectionSnapshot$(rowsQuery, { idField: "id" }).subscribe(value => withId.push(value));
+    lastSnapshotObserver().next({ docs: [docSnapshot("a", { name: "Arwen" })], metadata: fromServer });
+    expect(plain).toEqual([{ docs: [{ name: "Arwen" }, { name: "Brakka" }], fromCache: true, hasPendingWrites: false }]);
+    expect(withId).toEqual([{ docs: [{ name: "Arwen", id: "a" }], ...fromServer }]);
   });
 
   it("passes listener errors to the subscriber", () => {
     const errors: unknown[] = [];
-    collectionData$(rowsQuery).subscribe({ error: err => errors.push(err) });
+    collectionSnapshot$(rowsQuery).subscribe({ error: err => errors.push(err) });
     const denied = new Error("permission-denied");
     lastSnapshotObserver().error(denied);
     expect(errors).toEqual([denied]);
   });
 
   it("stops listening on unsubscribe", () => {
-    collectionData$(rowsQuery).subscribe().unsubscribe();
+    collectionSnapshot$(rowsQuery).subscribe().unsubscribe();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 });

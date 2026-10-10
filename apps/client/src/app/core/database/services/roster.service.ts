@@ -1,12 +1,11 @@
 import { Inject, Injectable } from "@angular/core";
-import { map, Observable, of, shareReplay, switchMap } from "rxjs";
+import { map, Observable, shareReplay, switchMap } from "rxjs";
 import { FirestoreStorage } from "../firestore-storage";
 import { Roster } from "../../../model/roster";
 import { LostarkClass } from "../../../model/character/lostark-class";
 import { AuthService } from "./auth.service";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
-import { mapTo } from "rxjs/operators";
 import { applyWeeklyGoldDefaults } from "../../weekly-gold";
 import { fixDuplicateCharacterIds, toClassNumber } from "../../roster-input";
 
@@ -14,15 +13,21 @@ import { fixDuplicateCharacterIds, toClassNumber } from "../../roster-input";
  * Repairs the stored character list in place and returns whether the result should be saved:
  * entries that are not objects are dropped (a bad import must not blank the app), Weekly Gold
  * defaults, ids and tickets are filled in, classes become numbers and an id used twice is replaced.
+ *
+ * Args:
+ *   roster: the roster to repair.
+ *   assignIds: gives characters without an id a new random one. Only for a copy that is saved:
+ *     an id that is never saved changes on the next load, and ticks made under it are lost. A
+ *     character without an id keeps its ticks under its name, which move to the id once it is saved.
  */
-export function normalizeRosterCharacters(roster: Roster): boolean {
+export function normalizeRosterCharacters(roster: Roster, assignIds = true): boolean {
   let shouldSave = false;
   roster.characters = (roster.characters || []).filter(c => typeof c === "object" && c !== null && !Array.isArray(c));
   if (applyWeeklyGoldDefaults(roster.characters)) {
     shouldSave = true;
   }
   roster.characters = roster.characters.map(c => {
-    if (!c.id) {
+    if (!c.id && assignIds) {
       shouldSave = true;
       c.id = Math.floor(Math.random() * 1000000000);
     }
@@ -53,6 +58,13 @@ export function normalizeRosterCharacters(roster: Roster): boolean {
   return shouldSave;
 }
 
+/**
+ * Shown when a roster change is refused. A change saves the whole character list, so it is only
+ * made from the server's copy: saved from an older cached copy (offline, or while the app starts),
+ * it would undo roster changes made on another device.
+ */
+export const ROSTER_NOT_LOADED_MESSAGE = "Your roster is still loading from the server. Connect to the internet to change it.";
+
 @Injectable({
   providedIn: "root"
 })
@@ -82,8 +94,8 @@ export class RosterService extends FirestoreStorage<Roster> {
 
   override getOne(key: string, isCurrentUser = false): Observable<Roster> {
     return super.getOne(key).pipe(
-      switchMap(roster => {
-        let shouldSave = normalizeRosterCharacters(roster);
+      map(roster => {
+        let shouldSave = normalizeRosterCharacters(roster, !roster.fromCache);
         if (!roster.trackedTasks) {
           roster.trackedTasks = {};
         }
@@ -91,12 +103,13 @@ export class RosterService extends FirestoreStorage<Roster> {
           shouldSave = true;
           roster.showAllTasks = false;
         }
-        if (shouldSave && isCurrentUser && roster.characters.length > 0) {
-          return this.setOne(key, roster).pipe(
-            mapTo(roster)
-          );
+        // The repair is shown at once but only saved from the server's copy: saving a cached copy,
+        // which may be older, would undo roster changes made on another device. A cached copy gets
+        // no new ids for the same reason (see normalizeRosterCharacters).
+        if (shouldSave && isCurrentUser && roster.characters.length > 0 && !roster.fromCache) {
+          this.setOneInBackground(key, roster);
         }
-        return of(roster);
+        return roster;
       })
     );
   }

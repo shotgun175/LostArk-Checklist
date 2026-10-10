@@ -96,12 +96,11 @@
         nz-dropdown nzTrigger="click" [nzDropdownMenu]="menu" nzPlacement="bottomRight" nzOverlayClassName="user-menu-overlay"
         aria-haspopup="menu" (nzVisibleChange)="onUserMenuVisibleChange($event, userMenuButton)">
         <span nz-icon nzType="user" nzTheme="outline"></span>
-        @if (user$ | async; as user) {
-          @if (anonymous$ | async) {
-            <span class="user-name">Guest</span>
-          } @else {
-            <span class="user-name" [title]="user.name">{{user.name}}</span>
-          }
+        <!-- Guest comes from the sign-in state, which is on the device even offline; a name needs the users document. -->
+        @if (anonymous$ | async) {
+          <span class="user-name">Guest</span>
+        } @else if (user$ | async; as user) {
+          <span class="user-name" [title]="user.name">{{user.name}}</span>
         }
         <span nz-icon nzType="down" class="caret"></span>
       </button>
@@ -135,8 +134,21 @@
     <!-- cdkScrollable: on a phone the page scrolls here, so dragging a row to the edge scrolls it -->
     <nz-content cdkScrollable>
       <div class="inner-content">
+        @if (updateReady()) {
+          <nz-alert class="app-banner update-banner" nzType="info" nzShowIcon
+                    nzMessage="A new version is available." [nzAction]="updateBannerAction"></nz-alert>
+          <ng-template #updateBannerAction>
+            <button nz-button nzSize="small" nzType="primary" (click)="reloadForUpdate()">Reload</button>
+          </ng-template>
+        }
+        @if (offline()) {
+          <!-- The outline icon is registered statically, so it shows offline; nz-alert would ask for the fill theme, which this icon does not have -->
+          <nz-alert class="app-banner offline-banner" nzType="info" nzShowIcon [nzIcon]="offlineIcon"
+                    [nzMessage]="offlineBannerText"></nz-alert>
+          <ng-template #offlineIcon><span nz-icon nzType="disconnect" nzTheme="outline"></span></ng-template>
+        }
         @if ((anonymous$ | async) && !guestBannerDismissed()) {
-          <nz-alert class="guest-banner" nzType="warning" nzShowIcon nzCloseable
+          <nz-alert class="app-banner guest-banner" nzType="warning" nzShowIcon nzCloseable
                     [nzMessage]="guestBannerText" [nzAction]="guestBannerAction"
                     (nzOnClose)="dismissGuestBanner()"></nz-alert>
           <ng-template #guestBannerAction>

@@ -6,7 +6,8 @@ import { TaskScope } from '../../../model/task-scope';
 import { Completion } from '../../../model/completion';
 import { Energy } from '../../../model/energy';
 import { completionEntryFieldWrites, getCompletionEntry, getCompletionEntryKey, setCompletionEntry } from '../../../core/get-completion-entry-key';
-import { RosterService } from '../../../core/database/services/roster.service';
+import { ROSTER_NOT_LOADED_MESSAGE, RosterService } from '../../../core/database/services/roster.service';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { SettingsService } from '../../../core/database/services/settings.service';
 import { EnergyService } from '../../../core/database/services/energy.service';
 import { TimeService } from '../../../core/time.service';
@@ -324,7 +325,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     private settings: SettingsService, private energyService: EnergyService,
     private timeService: TimeService, private completionService: CompletionService,
     private layoutState: LayoutStateService, private host: ElementRef<HTMLElement>,
-    private zone: NgZone) {
+    private zone: NgZone, private message: NzMessageService) {
     // A choice saved before a section existed has no value for it, so that section starts visible
     this.categoriesDisplay$.next({ ...CATEGORIES_DISPLAY_DEFAULT, ...this.categoriesDisplay$.value });
     this.setTableHeight();
@@ -479,7 +480,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     this.showHiddenCharacters$.next(true);
   }
 
+  /** Saves a ticket count or the show all tasks choice; refused while the roster is a cached copy (see ROSTER_NOT_LOADED_MESSAGE). */
   saveRoster(roster: Roster): void {
+    if (roster.fromCache) {
+      this.message.error(ROSTER_NOT_LOADED_MESSAGE);
+      return;
+    }
     this.rosterService.setOne(roster.$key, roster);
   }
 

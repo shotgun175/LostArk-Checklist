@@ -3,7 +3,7 @@ import { FirestoreStorage } from "../firestore-storage";
 import { Firestore } from "firebase/firestore";
 import { FIRESTORE } from "../../firebase/firebase.providers";
 import { Settings } from "../../../model/settings";
-import { combineLatest, filter, map, mapTo, Observable, of, shareReplay, switchMap } from "rxjs";
+import { combineLatest, filter, map, Observable, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 import { RosterService } from "./roster.service";
 import { characterKeyMigrationWrites } from "../../character-keys";
@@ -15,7 +15,12 @@ export class SettingsService extends FirestoreStorage<Settings> {
   public settings$: Observable<Settings> = this.auth.uid$.pipe(
     switchMap(uid => {
       return this.getOne(uid).pipe(
-        switchMap(settings => {
+        map(settings => {
+          // Defaults and migrations replace the whole document, so they wait for the server's copy:
+          // a cached copy may be older, and writing it back would undo changes made elsewhere.
+          if (settings.fromCache) {
+            return settings;
+          }
           if (settings.notFound || Object.keys(settings).length < 7) {
             const result = {
               ...settings,
@@ -26,37 +31,34 @@ export class SettingsService extends FirestoreStorage<Settings> {
               goldPlannerConfiguration: {},
               forceAbyss: {}
             };
-            return this.setOne(uid, result).pipe(
-              mapTo({
-                ...result,
-                $key: uid
-              })
-            );
+            this.setOneInBackground(uid, result);
+            return {
+              ...result,
+              $key: uid
+            };
           }
 
           // Smooth migration for goldPlannerConfiguration
           if (settings.goldPlannerConfiguration === undefined) {
             settings.goldPlannerConfiguration = {}
-            return this.setOne(uid, settings).pipe(
-              mapTo({
-                ...settings,
-                $key: uid
-              })
-            );
+            this.setOneInBackground(uid, settings);
+            return {
+              ...settings,
+              $key: uid
+            };
           }
 
           // Smooth migration for goldPlannerConfiguration
           if (settings.raidModesForGoldPlanner === undefined) {
             settings.raidModesForGoldPlanner = {}
-            return this.setOne(uid, settings).pipe(
-              mapTo({
-                ...settings,
-                $key: uid
-              })
-            );
+            this.setOneInBackground(uid, settings);
+            return {
+              ...settings,
+              $key: uid
+            };
           }
 
-          return of(settings);
+          return settings;
         })
       );
     }),
@@ -67,9 +69,10 @@ export class SettingsService extends FirestoreStorage<Settings> {
     super(firestore);
     // Per-character settings keys move from the character's name to its id once both documents
     // have loaded for the same user (see character-keys.ts). The local write makes the next
-    // settings emission clean, so this writes once.
+    // settings emission clean, so this writes once. Cached copies may be older than the server's,
+    // and moving a key from one of them could write an old value over a newer one.
     combineLatest([this.settings$, rosterService.roster$]).pipe(
-      filter(([settings, roster]) => settings.$key === roster.$key),
+      filter(([settings, roster]) => settings.$key === roster.$key && !settings.fromCache && !roster.fromCache),
       map(([settings, roster]) => ({ key: settings.$key, writes: characterKeyMigrationWrites(settings as unknown as Record<string, unknown>, roster.characters) })),
       filter(({ writes }) => writes.length > 0)
     ).subscribe(({ key, writes }) => this.patchFields(key, writes));

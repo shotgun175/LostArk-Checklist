@@ -1,3 +1,4 @@
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { ElementRef, NgZone } from '@angular/core';
 import { NEVER, Observable, firstValueFrom, of } from 'rxjs';
 import { ChecklistComponent } from './checklist.component';
@@ -32,12 +33,15 @@ describe('ChecklistComponent', () => {
 
   let energyService: { patchFields: jest.Mock };
   let completionService: { patchFields: jest.Mock };
+  let message: { error: jest.Mock };
+  const rosterSetOne = jest.fn();
 
   function createComponent(tasks$: Observable<LostarkTask[]> = NEVER): ChecklistComponent {
     energyService = { patchFields: jest.fn() };
     completionService = { patchFields: jest.fn() };
+    message = { error: jest.fn() };
     return new ChecklistComponent(
-      { roster$: NEVER } as unknown as RosterService,
+      { roster$: NEVER, setOne: rosterSetOne } as unknown as RosterService,
       { tasks$ } as unknown as TasksService,
       { settings$: NEVER } as unknown as SettingsService,
       energyService as unknown as EnergyService,
@@ -50,12 +54,29 @@ describe('ChecklistComponent', () => {
       completionService as unknown as CompletionService,
       { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
       new ElementRef(document.createElement('div')),
-      { run: (fn: () => void) => fn() } as unknown as NgZone
+      { run: (fn: () => void) => fn() } as unknown as NgZone,
+      message as unknown as NzMessageService
     );
   }
 
   beforeEach(() => {
     localStorage.clear();
+    rosterSetOne.mockClear();
+  });
+
+  describe('saveRoster', () => {
+    const saved = { $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks: true };
+
+    it('saves a ticket count or the show all tasks choice from the server copy', () => {
+      createComponent().saveRoster(saved);
+      expect(rosterSetOne).toHaveBeenCalledWith('uid', saved);
+    });
+
+    it('refuses while the roster is a cached copy, which may be older than the server copy', () => {
+      createComponent().saveRoster({ ...saved, fromCache: true });
+      expect(rosterSetOne).not.toHaveBeenCalled();
+      expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+    });
   });
 
   describe('markAsDone', () => {
@@ -241,7 +262,8 @@ describe('ChecklistComponent', () => {
         { completion$: of({ data: {} }) } as unknown as CompletionService,
         { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
         new ElementRef(document.createElement('div')),
-        { run: (fn: () => void) => fn() } as unknown as NgZone
+        { run: (fn: () => void) => fn() } as unknown as NgZone,
+        { error: jest.fn() } as unknown as NzMessageService
       );
       const display = await firstValueFrom(component.tableDisplay$);
       const row = display.data.weeklyCharacter.data.find(r => r.task.$key === 'kazeros');

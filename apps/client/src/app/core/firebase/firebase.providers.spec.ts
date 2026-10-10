@@ -10,7 +10,9 @@ const mockInitializeApp = jest.fn();
 const mockGetAuth = jest.fn();
 const mockUseDeviceLanguage = jest.fn();
 const mockConnectAuthEmulator = jest.fn();
-const mockGetFirestore = jest.fn();
+const mockInitializeFirestore = jest.fn();
+const mockPersistentLocalCache = jest.fn((settings: unknown) => ({ kind: "persistent", settings }));
+const mockPersistentMultipleTabManager = jest.fn(() => ({ kind: "multi-tab" }));
 const mockConnectFirestoreEmulator = jest.fn();
 
 // Factories only: the real Node build of firebase/auth 10 cannot load on Node 16.
@@ -23,7 +25,9 @@ jest.mock("firebase/auth", () => ({
   connectAuthEmulator: (...args: unknown[]) => mockConnectAuthEmulator(...args)
 }));
 jest.mock("firebase/firestore", () => ({
-  getFirestore: (...args: unknown[]) => mockGetFirestore(...args),
+  initializeFirestore: (...args: unknown[]) => mockInitializeFirestore(...args),
+  persistentLocalCache: (settings: unknown) => mockPersistentLocalCache(settings),
+  persistentMultipleTabManager: () => mockPersistentMultipleTabManager(),
   connectFirestoreEmulator: (...args: unknown[]) => mockConnectFirestoreEmulator(...args)
 }));
 jest.mock("./app-check", () => ({ initAppCheck: jest.fn() }));
@@ -35,14 +39,14 @@ describe("provideFirebase", () => {
   beforeEach(() => {
     mockInitializeApp.mockReset().mockReturnValue(mockApp);
     mockGetAuth.mockReset().mockReturnValue(mockAuth);
-    mockGetFirestore.mockReset().mockReturnValue(mockFirestore);
+    mockInitializeFirestore.mockReset().mockReturnValue(mockFirestore);
     mockUseDeviceLanguage.mockReset();
     mockConnectAuthEmulator.mockReset();
     mockConnectFirestoreEmulator.mockReset();
     jest.mocked(initAppCheck).mockReset();
   });
 
-  it("creates Auth and Firestore from one app, with the device language and no emulators", () => {
+  it("creates Auth and Firestore from one app, with the device language, the persistent multi-tab cache and no emulators", () => {
     TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false, ...appCheck }) });
     expect(TestBed.inject(FIREBASE_AUTH)).toBe(mockAuth);
     expect(TestBed.inject(FIRESTORE)).toBe(mockFirestore);
@@ -51,7 +55,9 @@ describe("provideFirebase", () => {
     expect(mockInitializeApp).toHaveBeenCalledWith(options);
     expect(mockGetAuth).toHaveBeenCalledWith(mockApp);
     expect(mockUseDeviceLanguage).toHaveBeenCalledWith(mockAuth);
-    expect(mockGetFirestore).toHaveBeenCalledWith(mockApp);
+    expect(mockInitializeFirestore).toHaveBeenCalledWith(mockApp, {
+      localCache: { kind: "persistent", settings: { tabManager: { kind: "multi-tab" } } }
+    });
     expect(mockConnectAuthEmulator).not.toHaveBeenCalled();
     expect(mockConnectFirestoreEmulator).not.toHaveBeenCalled();
   });
@@ -62,6 +68,8 @@ describe("provideFirebase", () => {
     TestBed.inject(FIRESTORE);
     expect(mockConnectAuthEmulator).toHaveBeenCalledWith(mockAuth, "http://localhost:9099");
     expect(mockConnectFirestoreEmulator).toHaveBeenCalledWith(mockFirestore, "localhost", 8085);
+    // The cache is chosen when Firestore is created, before the emulator connection.
+    expect(mockInitializeFirestore.mock.invocationCallOrder[0]).toBeLessThan(mockConnectFirestoreEmulator.mock.invocationCallOrder[0]);
   });
 
   it("creates the app, App Check, Auth and Firestore outside the Angular zone, as AngularFire did", () => {
@@ -72,7 +80,7 @@ describe("provideFirebase", () => {
     };
     mockInitializeApp.mockImplementation(record(mockApp));
     mockGetAuth.mockImplementation(record(mockAuth));
-    mockGetFirestore.mockImplementation(record(mockFirestore));
+    mockInitializeFirestore.mockImplementation(record(mockFirestore));
     jest.mocked(initAppCheck).mockImplementation(record(null));
     TestBed.configureTestingModule({ providers: provideFirebase({ firebase: options, useEmulators: false, ...appCheck }) });
     TestBed.inject(NgZone).run(() => {
