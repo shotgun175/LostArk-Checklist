@@ -164,11 +164,43 @@ npx nx build client                              # production build into dist/ap
 npx nx lint client
 ```
 
-Unit tests, exactly as CI runs them:
+CI runs `npm ci`, then lint, build and unit tests, on the Node version pinned in `package.json`:
 
 ```bash
+npx nx lint client
+npx nx build client
 npx nx test client
 ```
+
+Lint warnings do not fail CI, only errors do.
+
+### Updating Angular and Nx
+
+This workspace has no `angular.json` (Nx `project.json` layout), so `ng update` refuses to run here. Use `nx migrate` instead, and move all Angular packages together: they pin each other exactly, so a single-package bump cannot install.
+
+1. Update Angular, replacing `X` with the target version:
+
+   ```bash
+   npx nx migrate @angular/core@X
+   npx nx migrate @angular/cli@X
+   npx nx migrate @angular/cdk@X
+   ```
+
+   Then set `@schematics/angular` to `X` by hand in `package.json`; it is outside Angular's package groups, so `nx migrate` leaves it behind.
+2. Update Nx with `npx nx migrate <version>`, replacing `<version>` with the target Nx version.
+3. If either step wrote a `migrations.json`, run `npx nx migrate --run-migrations`, then delete `migrations.json`.
+4. Regenerate the lockfile from scratch. An in-place `npm install` fails with `ERESOLVE` on Angular's exact peer pins:
+
+   ```bash
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+5. Run lint, build and tests as above.
+
+Edit `package.json` directly rather than with `npm pkg set`: on Windows, `npm pkg set` run through cmd.exe silently drops the `^` from a range.
+
+The `overrides` entry in `package.json` forces Nx's `undici` dependency to 7.29.1, because Nx 23.3.0 pins exactly 7.29.0, which has known security advisories ([nrwl/nx#37331](https://github.com/nrwl/nx/issues/37331)). Remove it in the same change as the next Nx update once `npm view nx@latest dependencies.undici` shows a range that allows 7.29.1 or newer.
 
 ### Service worker
 
@@ -234,7 +266,7 @@ npx -y firebase-tools deploy --only hosting,firestore:rules --project loa-checkl
 node tools/verify-firestore-rules.mjs
 ```
 
-The build lands in `dist/apps/client/browser`, which `firebase.json` serves. `node tools/verify-firestore-rules.mjs` checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (build and unit tests); deploys are always manual.
+The build lands in `dist/apps/client/browser`, which `firebase.json` serves. `node tools/verify-firestore-rules.mjs` checks the deployed database rules: it creates two throwaway guest accounts in the live project, tries allowed and forbidden reads and writes, then deletes everything it created and both accounts. Pushes to master only run CI (lint, build and unit tests); deploys are always manual.
 
 After a deploy, check that the service worker files and the page itself are never cached (each should print `cache-control: no-cache`), and that a hashed script still is (`public,max-age=31536000,immutable`):
 
