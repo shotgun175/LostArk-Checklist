@@ -237,6 +237,11 @@ describe("EnergyService daily rollover", () => {
     expect(completionSaved).not.toHaveBeenCalled();
   });
 
+  it("leaves name keys in place while the roster is a cached copy, whose ids may never be saved", () => {
+    const { data } = runRollover({ "Arwen:chaos": { amount: 100 } }, Date.now(), { roster: true });
+    expect(data).toEqual({ "Arwen:chaos": { amount: 100 } });
+  });
+
   it("moves name keys of server copies with background saves", () => {
     const { energySaved } = runRollover({ "Arwen:chaos": { amount: 100 } }, Date.now());
     expect(energySaved).toHaveBeenCalledWith("uid", expect.objectContaining({ data: { "1:chaos": { amount: 100 } } }));

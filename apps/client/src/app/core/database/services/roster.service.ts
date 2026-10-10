@@ -13,15 +13,21 @@ import { fixDuplicateCharacterIds, toClassNumber } from "../../roster-input";
  * Repairs the stored character list in place and returns whether the result should be saved:
  * entries that are not objects are dropped (a bad import must not blank the app), Weekly Gold
  * defaults, ids and tickets are filled in, classes become numbers and an id used twice is replaced.
+ *
+ * Args:
+ *   roster: the roster to repair.
+ *   assignIds: gives characters without an id a new random one. Only for a copy that is saved:
+ *     an id that is never saved changes on the next load, and ticks made under it are lost. A
+ *     character without an id keeps its ticks under its name, which move to the id once it is saved.
  */
-export function normalizeRosterCharacters(roster: Roster): boolean {
+export function normalizeRosterCharacters(roster: Roster, assignIds = true): boolean {
   let shouldSave = false;
   roster.characters = (roster.characters || []).filter(c => typeof c === "object" && c !== null && !Array.isArray(c));
   if (applyWeeklyGoldDefaults(roster.characters)) {
     shouldSave = true;
   }
   roster.characters = roster.characters.map(c => {
-    if (!c.id) {
+    if (!c.id && assignIds) {
       shouldSave = true;
       c.id = Math.floor(Math.random() * 1000000000);
     }
@@ -82,7 +88,7 @@ export class RosterService extends FirestoreStorage<Roster> {
   override getOne(key: string, isCurrentUser = false): Observable<Roster> {
     return super.getOne(key).pipe(
       map(roster => {
-        let shouldSave = normalizeRosterCharacters(roster);
+        let shouldSave = normalizeRosterCharacters(roster, !roster.fromCache);
         if (!roster.trackedTasks) {
           roster.trackedTasks = {};
         }
@@ -91,7 +97,8 @@ export class RosterService extends FirestoreStorage<Roster> {
           roster.showAllTasks = false;
         }
         // The repair is shown at once but only saved from the server's copy: saving a cached copy,
-        // which may be older, would undo roster changes made on another device.
+        // which may be older, would undo roster changes made on another device. A cached copy gets
+        // no new ids for the same reason (see normalizeRosterCharacters).
         if (shouldSave && isCurrentUser && roster.characters.length > 0 && !roster.fromCache) {
           this.setOneInBackground(key, roster);
         }

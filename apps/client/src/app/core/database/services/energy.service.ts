@@ -45,17 +45,19 @@ export class EnergyService extends FirestoreStorage<Energy> {
       ]).pipe(
         map(([reset, roster, taskList, completion]) => {
           const tasks = taskList.tasks;
+          // The daily reset and the key move replace both whole documents, so they wait until every
+          // input is the server's copy: one computed from an older cached copy would undo ticks and
+          // rest bonus saved on another device. Offline, the reset waits until the device is online.
+          // The key move changes the kept documents in place, so it also waits: moved to the ids of a
+          // cached roster, the entries could end up under ids that the saved roster does not have.
+          if (energy.fromCache || completion.fromCache || roster.fromCache || taskList.fromCache) {
+            return energy;
+          }
           // Entries saved under a character's name (older data) move to its id first, so two characters
           // with the same name (one on NA, one on EU) never share ticks or rest bonus through that name
           const energyMoved = moveNameKeysToIds(energy.data, roster.characters);
           const completionMoved = moveNameKeysToIds(completion.data, roster.characters);
           const newEnergy = Object.keys(energy.data).length === 0;
-          // The daily reset and the key move replace both whole documents, so they wait until every
-          // input is the server's copy: one computed from an older cached copy would undo ticks and
-          // rest bonus saved on another device. Offline, the reset waits until the device is online.
-          if (energy.fromCache || completion.fromCache || roster.fromCache || taskList.fromCache) {
-            return energy;
-          }
           if (energy.updated < reset) {
             roster.characters.forEach(character => {
               tasks

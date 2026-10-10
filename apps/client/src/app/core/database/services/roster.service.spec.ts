@@ -34,6 +34,15 @@ describe("normalizeRosterCharacters", () => {
     expect(r.characters.map(c => c.id)).toEqual([10, 11]);
   });
 
+  it("gives a character without an id a new one only when asked", () => {
+    const withId = roster([{ name: "Arwen", ilvl: 1700, class: 4, tickets: {}, weeklyGold: false }]);
+    expect(normalizeRosterCharacters(withId)).toBe(true);
+    expect(withId.characters[0].id).toEqual(expect.any(Number));
+    const withoutId = roster([{ name: "Arwen", ilvl: 1700, class: 4, tickets: {}, weeklyGold: false }]);
+    expect(normalizeRosterCharacters(withoutId, false)).toBe(false);
+    expect(withoutId.characters[0].id).toBeUndefined();
+  });
+
   it("leaves a clean roster unchanged", () => {
     const r = roster([{ id: 1, name: "Brakka", ilvl: 1700, class: 4, tickets: {}, weeklyGold: false }]);
     expect(normalizeRosterCharacters(r)).toBe(false);
@@ -61,6 +70,12 @@ describe("RosterService repair", () => {
   it("shows the repair of a cached copy but does not save it", () => {
     const { shown, saved } = load(needsRepair(true));
     expect(shown[0].characters[0].class).toBe(4);
+    expect(saved).not.toHaveBeenCalled();
+  });
+
+  it("gives no ids to the characters of a cached copy, so ticks stay under their names until the ids are saved", () => {
+    const { shown, saved } = load({ ...roster([{ name: "Arwen", ilvl: 1700, class: 4, tickets: {}, weeklyGold: false }]), fromCache: true });
+    expect(shown[0].characters[0].id).toBeUndefined();
     expect(saved).not.toHaveBeenCalled();
   });
 
