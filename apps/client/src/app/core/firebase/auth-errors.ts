@@ -1,3 +1,5 @@
+import { ConnectionRequiredError } from "./connection-required";
+
 export const WRONG_CREDENTIALS = "Email or password is incorrect.";
 export const PASSWORD_RESET_SENT = "If an account exists, we sent a reset email.";
 const GENERIC = "Something went wrong. Please try again.";
@@ -31,8 +33,14 @@ export function authErrorCode(error: unknown): string | null {
   return null;
 }
 
-/** A plain message for a Firebase Auth error. Unknown errors get a generic message. */
+/**
+ * A plain message for a Firebase Auth error. An action refused because it needs the server keeps
+ * its own message; unknown errors get a generic message.
+ */
 export function authErrorMessage(error: unknown): string {
+  if (error instanceof ConnectionRequiredError) {
+    return error.message;
+  }
   const code = authErrorCode(error);
   return (code && MESSAGES[code]) || GENERIC;
 }

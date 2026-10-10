@@ -1,4 +1,5 @@
 import { authErrorMessage, PASSWORD_RESET_SENT, passwordResetMessage, WRONG_CREDENTIALS } from "./auth-errors";
+import { ConnectionRequiredError, offlineMessage } from "./connection-required";
 
 const err = (code: string) => ({ code, message: `Firebase: Error (${code}).` });
 
@@ -23,6 +24,10 @@ describe("authErrorMessage", () => {
     ["auth/user-disabled", "This account has been disabled."]
   ])("maps %s", (code, text) => {
     expect(authErrorMessage(err(code))).toBe(text);
+  });
+
+  it("keeps the message of an action refused because it needs the server", () => {
+    expect(authErrorMessage(new ConnectionRequiredError(offlineMessage("log out")))).toBe("You're offline. Connect to the internet to log out.");
   });
 
   it.each([null, undefined, "boom", 42, {}, { code: 7 }, err("auth/something-new")])(

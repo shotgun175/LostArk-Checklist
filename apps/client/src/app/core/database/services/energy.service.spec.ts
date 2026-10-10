@@ -41,9 +41,7 @@ describe("EnergyService", () => {
         {
           provide: TasksService,
           useValue: {
-            tasks$: of([
-              mockTask
-            ])
+            taskList$: of({ tasks: [mockTask], fromCache: false })
           }
         },
         {
@@ -169,30 +167,85 @@ describe("EnergyService daily rollover", () => {
   const guardianTask = { ...tasks.find(task => task.label === "Guardian"), $key: "guardian" };
   const character = { id: 1, name: "Arwen", ilvl: 1700 };
 
-  function rollover(energyData: Record<string, { amount: number }>, energyUpdated: number): Record<string, { amount: number }> {
+  /** Which inputs are cached copies (read before the server answered). */
+  interface Cached {
+    energy?: boolean;
+    completion?: boolean;
+    roster?: boolean;
+    tasks?: boolean;
+  }
+
+  interface Rollover {
+    data: Record<string, { amount: number }>;
+    energySaved: jest.Mock;
+    completionSaved: jest.Mock;
+  }
+
+  function runRollover(energyData: Record<string, { amount: number }>, energyUpdated: number, cached: Cached = {}): Rollover {
+    const completionSaved = jest.fn();
+    const marker = (fromCache?: boolean) => fromCache ? { fromCache: true as const } : {};
     TestBed.configureTestingModule({
       providers: [
         { provide: FIRESTORE, useValue: {} },
         { provide: AuthService, useValue: { uid$: of("uid") } },
         { provide: TimeService, useValue: { lastDailyReset$: of(reset) } },
-        { provide: TasksService, useValue: { tasks$: of([chaosTask, guardianTask]) } },
-        { provide: RosterService, useValue: { roster$: of({ characters: [character] }) } },
+        { provide: TasksService, useValue: { taskList$: of({ tasks: [chaosTask, guardianTask], fromCache: !!cached.tasks }) } },
+        { provide: RosterService, useValue: { roster$: of({ characters: [character], ...marker(cached.roster) }) } },
         {
           provide: CompletionService,
           useValue: {
-            completion$: of({ $key: "uid", data: {} }),
-            setOne: () => of(undefined)
+            completion$: of({ $key: "uid", data: {}, ...marker(cached.completion) }),
+            setOneInBackground: completionSaved
           }
         }
       ]
     });
     const service = TestBed.inject(EnergyService);
-    jest.spyOn(service, "getOne").mockReturnValue(of({ $key: "uid", data: energyData, updated: energyUpdated }));
-    jest.spyOn(service, "setOne").mockReturnValue(of(undefined));
-    let result: Record<string, { amount: number }> = {};
-    service.energy$.subscribe(energy => result = energy.data).unsubscribe();
-    return result;
+    jest.spyOn(service, "getOne").mockReturnValue(of({ $key: "uid", data: energyData, updated: energyUpdated, ...marker(cached.energy) }));
+    const energySaved = jest.spyOn(service, "setOneInBackground").mockImplementation(() => undefined) as unknown as jest.Mock;
+    let data: Record<string, { amount: number }> = {};
+    service.energy$.subscribe(energy => data = energy.data).unsubscribe();
+    return { data, energySaved, completionSaved };
   }
+
+  function rollover(energyData: Record<string, { amount: number }>, energyUpdated: number): Record<string, { amount: number }> {
+    return runRollover(energyData, energyUpdated).data;
+  }
+
+  it("saves both documents in the background after a reset, without waiting for the server", () => {
+    const { energySaved, completionSaved } = runRollover({ "1:chaos": { amount: 100 } }, reset - 3600000);
+    expect(energySaved).toHaveBeenCalledWith("uid", expect.objectContaining({ updated: expect.any(Number) }));
+    expect(completionSaved).toHaveBeenCalledWith("uid", expect.objectContaining({ $key: "uid" }));
+  });
+
+  it.each<[string, Cached]>([
+    ["energy", { energy: true }],
+    ["completion", { completion: true }],
+    ["roster", { roster: true }],
+    ["task list", { tasks: true }]
+  ])("does not run the reset from a cached %s: it waits for the server's copy", (_, cached) => {
+    const { data, energySaved, completionSaved } = runRollover({ "1:chaos": { amount: 100 } }, reset - 3600000, cached);
+    expect(energySaved).not.toHaveBeenCalled();
+    expect(completionSaved).not.toHaveBeenCalled();
+    // The stored bonus is shown as it is.
+    expect(data).toEqual({ "1:chaos": { amount: 100 } });
+  });
+
+  it("does not move name keys of a cached copy", () => {
+    const { energySaved, completionSaved } = runRollover({ "Arwen:chaos": { amount: 100 } }, Date.now(), { completion: true });
+    expect(energySaved).not.toHaveBeenCalled();
+    expect(completionSaved).not.toHaveBeenCalled();
+  });
+
+  it("leaves name keys in place while the roster is a cached copy, whose ids may never be saved", () => {
+    const { data } = runRollover({ "Arwen:chaos": { amount: 100 } }, Date.now(), { roster: true });
+    expect(data).toEqual({ "Arwen:chaos": { amount: 100 } });
+  });
+
+  it("moves name keys of server copies with background saves", () => {
+    const { energySaved } = runRollover({ "Arwen:chaos": { amount: 100 } }, Date.now());
+    expect(energySaved).toHaveBeenCalledWith("uid", expect.objectContaining({ data: { "1:chaos": { amount: 100 } } }));
+  });
 
   it("keeps and grows a stored bonus when the task has no completion entry", () => {
     // Saved 1 hour before the reset (a restored backup or a value typed in Settings), never ticked

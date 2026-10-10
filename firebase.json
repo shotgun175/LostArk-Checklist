@@ -10,6 +10,33 @@
     ],
     "headers": [
       {
+        "source": "/@(index.html|ngsw.json|ngsw-worker.js|safety-worker.js|worker-basic.min.js|manifest.webmanifest)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/assets/export-from-lostark-helper.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "regex": "^/[^.]*$",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "*.(png|webp|jpg)",
         "headers": [
           {
@@ -30,7 +57,7 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "regex": "^/[^.]*$",
         "destination": "/index.html"
       }
     ]

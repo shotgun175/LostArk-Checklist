@@ -21,8 +21,8 @@ describe('RosterComponent', () => {
   let rosterService: { roster$: Subject<Roster>, setOne: jest.Mock, updateOne: jest.Mock };
   let message: { success: jest.Mock, error: jest.Mock, warning: jest.Mock };
   let modalClose: Subject<string | undefined>;
-  let completion: { $key: string, data: Record<string, unknown> };
-  let energy: { $key: string, data: Record<string, unknown> };
+  let completion: { $key: string, data: Record<string, unknown>, fromCache?: true };
+  let energy: { $key: string, data: Record<string, unknown>, fromCache?: true };
   let completionSetOne: jest.Mock;
   let energySetOne: jest.Mock;
   let settingsPatch: jest.Mock;
@@ -36,8 +36,8 @@ describe('RosterComponent', () => {
     modalClose = new Subject<string | undefined>();
     completion = { $key: 'uid1', data: {} };
     energy = { $key: 'uid1', data: {} };
-    completionSetOne = jest.fn(() => of(void 0));
-    energySetOne = jest.fn(() => of(void 0));
+    completionSetOne = jest.fn();
+    energySetOne = jest.fn();
     settingsPatch = jest.fn();
     settingsDoc = { $key: 'uid1', lazytracking: {}, goldPlannerConfiguration: {}, raidModesForGoldPlanner: {}, manualGoldEntries: {} };
     component = new RosterComponent(
@@ -46,8 +46,8 @@ describe('RosterComponent', () => {
       new UntypedFormBuilder(),
       { copy: jest.fn() } as never,
       message as never,
-      { completion$: of(completion), setOne: completionSetOne } as never,
-      { energy$: of(energy), setOne: energySetOne } as never,
+      { completion$: of(completion), setOneInBackground: completionSetOne } as never,
+      { energy$: of(energy), setOneInBackground: energySetOne } as never,
       // A popup's afterClose emits once: each popup gets its own subject
       { create: () => ({ afterClose: modalClose = new Subject<string | undefined>() }) } as never,
       { settings$: of(settingsDoc), patchFields: settingsPatch } as never
@@ -86,6 +86,22 @@ describe('RosterComponent', () => {
       expect(rosterService.updateOne).toHaveBeenCalledWith('uid1', { characters: [expect.objectContaining({ id: 3, name: 'Arwen', class: 16 })] });
       expect(message.success).toHaveBeenCalled();
     });
+
+    it('confirms at once while the write is still waiting for the server (offline)', () => {
+      rosterService.updateOne.mockReturnValue(new Subject<void>());
+      component.importRoster();
+      modalClose.next(JSON.stringify({ characters: [character(3, 'Arwen')] }));
+      expect(message.success).toHaveBeenCalledWith('Roster imported');
+    });
+
+    it('shows an error when the server refuses the write later', () => {
+      const write = new Subject<void>();
+      rosterService.updateOne.mockReturnValue(write);
+      component.importRoster();
+      modalClose.next(JSON.stringify({ characters: [character(3, 'Arwen')] }));
+      write.error(new Error('No document to update'));
+      expect(message.error).toHaveBeenCalledWith('No document to update');
+    });
   });
 
   describe('adding a character', () => {
@@ -122,6 +138,37 @@ describe('RosterComponent', () => {
     it('offers class options as numbers, matching stored classes', () => {
       expect(component.classes.every(c => typeof c.id === 'number')).toBe(true);
       expect(component.classes.find(c => c.id === 4)?.name).toBe('Wardancer');
+    });
+  });
+
+  describe('a cached roster (offline, or before the server answers)', () => {
+    const cached = (characters: Character[]): Roster => ({ ...roster(characters), fromCache: true });
+
+    it('refuses every change that saves the whole character list, with a message', () => {
+      const r = cached([character(1, 'Arwen'), character(2, 'Brakka')]);
+      component.form.setValue({ name: 'Newbie', ilvl: 1600, lazy: false, class: 4 });
+      component.addCharacter(r);
+      component.saveCharacter({ ...r.characters[0], lazy: true }, r);
+      component.drop(r, { previousIndex: 0, currentIndex: 1 } as never);
+      component.removeCharacter(r.characters[1], r);
+      expect(r.characters.map(c => c.name)).toEqual(['Arwen', 'Brakka']);
+      expect(rosterService.setOne).not.toHaveBeenCalled();
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
+      expect(settingsPatch).not.toHaveBeenCalled();
+      expect(message.error).toHaveBeenCalledTimes(4);
+      expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+    });
+
+    it('shows the saved name and item level again instead of keeping an unsaved edit', () => {
+      const r = cached([character(1, 'Arwen')]);
+      const nameModel = { control: { setValue: jest.fn() } };
+      const ilvlModel = { control: { setValue: jest.fn() } };
+      component.saveCharacterName(r.characters[0], r, 'Brakka', nameModel);
+      component.saveIlvl(r.characters[0], r, 1710, ilvlModel);
+      expect(nameModel.control.setValue).toHaveBeenCalledWith('Arwen', { emitViewToModelChange: false });
+      expect(ilvlModel.control.setValue).toHaveBeenCalledWith(1700, { emitViewToModelChange: false });
+      expect(r.characters[0]).toEqual(character(1, 'Arwen'));
+      expect(rosterService.updateOne).not.toHaveBeenCalled();
     });
   });
 
@@ -173,6 +220,23 @@ describe('RosterComponent', () => {
       expect(lazy).toEqual({ '1:t1': false, '2:t1': false });
       const saved: Character[] = rosterService.updateOne.mock.calls[0][1].characters;
       expect(saved.map(c => [c.id, c.name])).toEqual([[1, 'Elkie'], [2, 'Arwen']]);
+      expect(completionSetOne).toHaveBeenCalledWith('uid1', completion);
+      expect(energySetOne).toHaveBeenCalledWith('uid1', energy);
+    });
+
+    it('does not move old name keys from cached copies (offline), but still saves the new name', () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      completion.data = { 'Arwen:t1': { amount: 1 } };
+      completion.fromCache = true;
+      energy.data = { 'Arwen:t1': { amount: 40 } };
+      settingsDoc['lazytracking'] = { 'Arwen:t1': false };
+      const r = roster([character(1, 'Arwen')]);
+      component.saveCharacterName(r.characters[0], r, 'Elkie', { control: { setValue: jest.fn() } });
+      expect(completionSetOne).not.toHaveBeenCalled();
+      expect(energySetOne).not.toHaveBeenCalled();
+      expect(settingsPatch).not.toHaveBeenCalled();
+      expect(rosterService.updateOne.mock.calls[0][1].characters[0].name).toBe('Elkie');
+      warn.mockRestore();
     });
 
     it('moves only that name\'s old completion and rest bonus keys, and removes the old rest bonus key', () => {
