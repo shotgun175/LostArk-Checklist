@@ -32,7 +32,8 @@ jest.mock("../firebase/local-data.service", () => ({ LocalDataService: class {} 
 
 const localData = {
   syncBeforeAccountChange: jest.fn(() => { calls.push("sync"); return Promise.resolve(); }),
-  clearOnNextLoad: jest.fn(() => calls.push("clearOnNextLoad")),
+  requestClear: jest.fn(() => calls.push("requestClear")),
+  announceCleared: jest.fn(() => calls.push("announceCleared")),
   cancelClear: jest.fn(() => calls.push("cancelClear"))
 };
 
@@ -67,7 +68,8 @@ describe("AccountDeletionService", () => {
     const { service, deleted } = setup({ uid: "me", isAnonymous: false, email: "a@example.com" });
     await expect(service.deleteAccountAndData("pw")).resolves.toBe("account-deleted");
     expect(reauthenticateWithCredential).toHaveBeenCalledWith(expect.anything(), { email: "a@example.com", password: "pw" });
-    expect(calls).toEqual(["sync", "reauthenticate", "getTasks", "pause", "commit", "clearOnNextLoad", "deleteUser"]);
+    // The other tabs reload only once the account is gone, so none starts with it and writes its documents again.
+    expect(calls).toEqual(["sync", "reauthenticate", "getTasks", "pause", "commit", "requestClear", "deleteUser", "announceCleared"]);
     expect(deleted).toEqual(EVERY_DOC);
     expect(signOut).not.toHaveBeenCalled();
   });
@@ -75,7 +77,7 @@ describe("AccountDeletionService", () => {
   it("deletes a guest's documents and signs the guest out, with no password", async () => {
     const { service, deleted } = setup({ uid: "me", isAnonymous: true });
     await expect(service.deleteAccountAndData("")).resolves.toBe("guest-data-deleted");
-    expect(calls).toEqual(["sync", "getTasks", "pause", "commit", "clearOnNextLoad", "signOut"]);
+    expect(calls).toEqual(["sync", "getTasks", "pause", "commit", "requestClear", "signOut", "announceCleared"]);
     expect(deleted).toEqual(EVERY_DOC);
     expect(deleteUser).not.toHaveBeenCalled();
   });
@@ -87,6 +89,8 @@ describe("AccountDeletionService", () => {
     expect(getDocsFromServer).not.toHaveBeenCalled();
     expect(FirestoreStorage.pauseWrites).not.toHaveBeenCalled();
     expect(deleted).toEqual([]);
+    // The sync held writes; they resume, or later ticks would be ignored until a reload.
+    expect(calls).toEqual(["sync", "cancelClear"]);
   });
 
   it("resumes writes and keeps this device's data when the deletion fails part way", async () => {
@@ -94,6 +98,7 @@ describe("AccountDeletionService", () => {
     const { service } = setup({ uid: "me", isAnonymous: false, email: "a@example.com" });
     await expect(service.deleteAccountAndData("pw")).rejects.toThrow("offline");
     expect(calls[calls.length - 1]).toBe("cancelClear");
+    expect(localData.announceCleared).not.toHaveBeenCalled();
   });
 
   it("refuses offline (or with unsent changes) before anything is deleted", async () => {

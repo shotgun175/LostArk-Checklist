@@ -34,7 +34,7 @@ async function settle(): Promise<void> {
 }
 
 describe("AuthService", () => {
-  let localData: Record<"syncBeforeAccountChange" | "clearOnNextLoad" | "cancelClear" | "reloadPage", jest.Mock>;
+  let localData: Record<"syncBeforeAccountChange" | "requestClear" | "announceCleared" | "cancelClear" | "reloadPage", jest.Mock>;
   let connection: { requireServer: jest.Mock };
   let message: { error: jest.Mock };
   let service: AuthService;
@@ -48,7 +48,8 @@ describe("AuthService", () => {
     localStorage.clear();
     localData = {
       syncBeforeAccountChange: jest.fn(() => { calls.push("sync"); return Promise.resolve(); }),
-      clearOnNextLoad: jest.fn(() => calls.push("clearOnNextLoad")),
+      requestClear: jest.fn(() => calls.push("requestClear")),
+      announceCleared: jest.fn(() => calls.push("announceCleared")),
       cancelClear: jest.fn(() => calls.push("cancelClear")),
       reloadPage: jest.fn(() => calls.push("reload"))
     };
@@ -58,40 +59,40 @@ describe("AuthService", () => {
   });
 
   describe("Log out", () => {
-    it("sends every change, asks for the clear, signs out, then reloads, in that order", async () => {
+    it("sends every change, asks for the clear, signs out, tells the other tabs, then reloads, in that order", async () => {
       await service.disconnect();
       expect(localData.syncBeforeAccountChange).toHaveBeenCalledWith("log out");
-      expect(calls).toEqual(["sync", "clearOnNextLoad", "signOut", "reload"]);
+      expect(calls).toEqual(["sync", "requestClear", "signOut", "announceCleared", "reload"]);
     });
 
     it("is refused offline or with unsent changes: nothing is signed out or cleared", async () => {
       localData.syncBeforeAccountChange.mockRejectedValueOnce(new ConnectionRequiredError("You're offline. Connect to the internet to log out."));
       await expect(service.disconnect()).rejects.toThrow("You're offline. Connect to the internet to log out.");
       expect(signOut).not.toHaveBeenCalled();
-      expect(localData.clearOnNextLoad).not.toHaveBeenCalled();
+      expect(localData.requestClear).not.toHaveBeenCalled();
       expect(localData.reloadPage).not.toHaveBeenCalled();
     });
 
     it("drops the clear request when signing out fails", async () => {
       jest.mocked(signOut).mockRejectedValueOnce(new Error("boom"));
       await expect(service.disconnect()).rejects.toThrow("boom");
-      expect(calls).toEqual(["sync", "clearOnNextLoad", "cancelClear"]);
+      expect(calls).toEqual(["sync", "requestClear", "cancelClear"]);
     });
   });
 
   describe("Sign in", () => {
-    it("sends every change and stops writing before signing in, then asks for the clear and reloads", async () => {
+    it("sends every change and stops writing before signing in, then tells the other tabs and reloads", async () => {
       service.login("a@example.com", "secret-1").subscribe();
       await settle();
       expect(localData.syncBeforeAccountChange).toHaveBeenCalledWith("sign in");
-      expect(calls).toEqual(["sync", "pauseWrites", "signIn", "clearOnNextLoad", "reload"]);
+      expect(calls).toEqual(["sync", "requestClear", "signIn", "announceCleared", "reload"]);
     });
 
     it("keeps the guest and writes again when the password is wrong", async () => {
       jest.mocked(signInWithEmailAndPassword).mockRejectedValueOnce({ code: "auth/invalid-credential" });
       service.login("a@example.com", "wrong-1").subscribe();
       await settle();
-      expect(calls).toEqual(["sync", "pauseWrites", "resumeWrites"]);
+      expect(calls).toEqual(["sync", "requestClear", "cancelClear"]);
       expect(message.error).toHaveBeenCalledWith("Email or password is incorrect.");
     });
 

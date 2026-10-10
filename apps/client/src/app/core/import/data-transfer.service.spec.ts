@@ -219,6 +219,17 @@ describe("DataTransferService", () => {
       expect(FirestoreStorage.writesArePaused()).toBe(true);
     });
 
+    it("send their queued field changes, without reloading, when another tab is about to change the account", () => {
+      FirestoreStorage.resumeWrites();
+      const flush = jest.spyOn(FirestoreStorage, "flushPending").mockImplementation(() => undefined);
+      const tab = otherTab("me");
+      new FakeChannel(DATA_REPLACED_CHANNEL).postMessage({ flush: true, tabId: TAB_ID });
+      expect(flush).toHaveBeenCalledTimes(1);
+      expect(tab.reload).not.toHaveBeenCalled();
+      expect(FirestoreStorage.writesArePaused()).toBe(false);
+      flush.mockRestore();
+    });
+
     it("the tab that clears does not reload itself through the channel", () => {
       const reload = jest.fn();
       service.reloadPage = reload;

@@ -31,28 +31,36 @@ export class AccountDeletionService {
       throw new Error("Not signed in.");
     }
     // Changes still queued here reach the server first, so none of them can bring a document back.
+    // From here on nothing new is written until the reload, or until cancelClear after a failure.
     await this.localData.syncBeforeAccountChange("delete your account");
-    if (!user.isAnonymous) {
-      await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", password));
-    }
-    const tasks = await getDocsFromServer(query(collection(this.firestore, "tasks"), where("authorId", "==", user.uid)));
-    FirestoreStorage.pauseWrites();
     try {
+      if (!user.isAnonymous) {
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", password));
+      }
+      const tasks = await getDocsFromServer(query(collection(this.firestore, "tasks"), where("authorId", "==", user.uid)));
+      FirestoreStorage.pauseWrites();
       for (const targets of planAccountDeletion(user.uid, tasks.docs.map(task => task.id))) {
         const batch = writeBatch(this.firestore);
         targets.forEach(target => batch.delete(doc(this.firestore, target.collection, target.id)));
         await batch.commit();
       }
       // Before the account goes, so no new guest starts until the reload has cleared this device.
-      this.localData.clearOnNextLoad();
+      this.localData.requestClear();
+      let result: AccountDeletionResult;
       if (user.isAnonymous) {
         await signOut(this.auth);
-        return "guest-data-deleted";
+        result = "guest-data-deleted";
+      } else {
+        await deleteUser(user);
+        result = "account-deleted";
       }
-      await deleteUser(user);
-      return "account-deleted";
+      // Only now the other tabs reload: started before, they would still have the deleted account
+      // and could write its documents again.
+      this.localData.announceCleared();
+      return result;
     } catch (error) {
-      // Writing resumes and the clear request is dropped: the account and its data stay.
+      // A wrong password, or a failure before the account went: writing resumes, the clear request
+      // is dropped and the account stays (with whatever data was already deleted).
       this.localData.cancelClear();
       throw error;
     }

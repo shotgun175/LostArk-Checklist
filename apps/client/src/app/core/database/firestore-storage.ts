@@ -76,6 +76,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   private static readonly coalescers: WriteCoalescer[] = [];
   private static flushOnHideRegistered = false;
   private static writesPaused = false;
+  private static writesHeld = false;
   private readonly coalescer = new WriteCoalescer((key, writes) => this.commitFieldWrites(key, writes));
   protected setSources: Record<string, Subject<T>> = {};
 
@@ -136,13 +137,24 @@ export abstract class FirestoreStorage<T extends DataModel> {
     FirestoreStorage.coalescers.forEach(coalescer => coalescer.discard());
   }
 
-  public static resumeWrites(): void {
-    FirestoreStorage.writesPaused = false;
+  /**
+   * Stops new writes from the data services like pauseWrites, but keeps queued field changes, so
+   * flushPending still sends them. Used while Log out, Sign in or account deletion waits for this
+   * device's changes to reach the server: a change made during that wait could not be waited for.
+   * resumeWrites ends it.
+   */
+  public static holdWrites(): void {
+    FirestoreStorage.writesHeld = true;
   }
 
-  /** True while writes are paused (account deletion, import), so services can skip prompts that would write. */
+  public static resumeWrites(): void {
+    FirestoreStorage.writesPaused = false;
+    FirestoreStorage.writesHeld = false;
+  }
+
+  /** True while writes are paused or held (account change, import), so services can skip prompts that would write. */
   public static writesArePaused(): boolean {
-    return FirestoreStorage.writesPaused;
+    return FirestoreStorage.writesPaused || FirestoreStorage.writesHeld;
   }
 
   public recordOperation(operation: "read" | "write" | "delete", debugData?: unknown): void {
@@ -264,7 +276,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * together when that second is over.
    */
   public patchFields(key: string, writes: FieldWrite[]): void {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return;
     }
     (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
@@ -306,7 +318,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * only settles when the server confirms it, which offline can take until the next visit.
    */
   public addOne(row: Omit<T, "$key">): Observable<string> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return EMPTY;
     }
     const ref = doc(this.collection);
@@ -322,7 +334,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public deleteOne(key: string): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.recordOperation("delete", key);
@@ -330,7 +342,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public setOne(key: string, row: Omit<T, "$key" | "notFound">): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.coalescer.discard(key);
@@ -352,7 +364,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   public updateOne(key: string, row: UpdateData<T>): Observable<void> {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
     this.recordOperation("write", key);
@@ -370,7 +382,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
   }
 
   protected batch(): WriteBatch {
-    if (FirestoreStorage.writesPaused) {
+    if (FirestoreStorage.writesArePaused()) {
       const paused = { set: () => paused, update: () => paused, delete: () => paused, commit: () => Promise.resolve() };
       return paused as unknown as WriteBatch;
     }

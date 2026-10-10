@@ -6,7 +6,6 @@ import { FIREBASE_AUTH } from "../../firebase/firebase.providers";
 import { authState$, idTokenState$ } from "../../firebase/rx";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { authErrorMessage, passwordResetMessage } from "../../firebase/auth-errors";
-import { FirestoreStorage } from "../firestore-storage";
 import { LocalDataService, localDataClearRequested } from "../../firebase/local-data.service";
 import { ServerConnectionService } from "../../firebase/server-connection.service";
 
@@ -89,14 +88,14 @@ export class AuthService {
     // Every change must reach the server while the user who made it is still signed in.
     await this.localData.syncBeforeAccountChange("sign in");
     // Nothing more is written for this account; a failed sign-in keeps it, and writing resumes.
-    FirestoreStorage.pauseWrites();
+    this.localData.requestClear();
     try {
       await signInWithEmailAndPassword(this.auth, email, password);
     } catch (error) {
-      FirestoreStorage.resumeWrites();
+      this.localData.cancelClear();
       throw error;
     }
-    this.localData.clearOnNextLoad();
+    this.localData.announceCleared();
     this.localData.reloadPage();
   }
 
@@ -107,13 +106,14 @@ export class AuthService {
    */
   public async disconnect(): Promise<void> {
     await this.localData.syncBeforeAccountChange("log out");
-    this.localData.clearOnNextLoad();
+    this.localData.requestClear();
     try {
       await signOut(this.auth);
     } catch (error) {
       this.localData.cancelClear();
       throw error;
     }
+    this.localData.announceCleared();
     this.localData.reloadPage();
   }
 

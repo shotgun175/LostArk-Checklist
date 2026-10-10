@@ -243,6 +243,44 @@ describe("FirestoreStorage.pauseWrites", () => {
   });
 });
 
+describe("FirestoreStorage.holdWrites", () => {
+  let storage: TestStorage;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    storage = new TestStorage();
+  });
+
+  afterEach(() => {
+    FirestoreStorage.resumeWrites();
+    jest.useRealTimers();
+  });
+
+  it("keeps queued field changes for flushPending, but starts no new write", () => {
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+    FirestoreStorage.holdWrites();
+    storage.patchFields("u1", [{ path: ["data", "b"], value: 3 }]);
+    storage.setOne("u2", { data: {} }).subscribe();
+    expect(FirestoreStorage.writesArePaused()).toBe(true);
+    FirestoreStorage.flushPending();
+    expect(updateDoc).toHaveBeenCalledTimes(2);
+    expect(updateDoc).toHaveBeenLastCalledWith(atDoc("completion/u1"), new FieldPath("data", "a"), 2);
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it("still creates a document that a flushed change finds missing", async () => {
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+    jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
+    storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+    FirestoreStorage.holdWrites();
+    FirestoreStorage.flushPending();
+    await settle();
+    expect(setDoc).toHaveBeenCalledWith(atDoc("completion/u1"), { data: { a: 2 } }, { merge: true });
+  });
+});
+
 describe("FirestoreStorage with a local cache", () => {
   let storage: TestStorage;
   let snapshots: Subject<DocState<TestDoc>>;

@@ -28,6 +28,8 @@ export class DataTransferService {
    * over the imported data. Field changes still waiting here are dropped: the import replaced them.
    * Log out, Sign in and account deletion in another tab reload every tab (cleared): the data saved
    * in this browser is deleted on the next load, and this tab would otherwise show the old account.
+   * Before such a change, that tab asks this one to send its queued field changes (flush) while the
+   * account that made them is still signed in.
    */
   public reloadWhenReplacedInAnotherTab(): void {
     if (typeof BroadcastChannel === "undefined") {
@@ -36,8 +38,12 @@ export class DataTransferService {
     let currentUid: string | null = null;
     this.auth.uid$.subscribe(uid => currentUid = uid);
     const channel = new BroadcastChannel(DATA_REPLACED_CHANNEL);
-    channel.onmessage = (event: MessageEvent<{ uid?: string, tabId?: string, cleared?: boolean }>) => {
+    channel.onmessage = (event: MessageEvent<{ uid?: string, tabId?: string, cleared?: boolean, flush?: boolean }>) => {
       if (event.data?.tabId === this.tabId) {
+        return;
+      }
+      if (event.data?.flush) {
+        FirestoreStorage.flushPending();
         return;
       }
       if (event.data?.cleared || (currentUid !== null && event.data?.uid === currentUid)) {
