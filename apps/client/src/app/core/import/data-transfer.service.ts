@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@angular/core";
-import { collection, doc, Firestore, getDoc, getDocs, query, where, writeBatch } from "firebase/firestore";
+import { collection, doc, Firestore, getDoc, getDocs, getDocsFromServer, query, where, writeBatch } from "firebase/firestore";
 import { FIRESTORE } from "../firebase/firebase.providers";
 import { firstValueFrom } from "rxjs";
 import { AuthService } from "../database/services/auth.service";
@@ -7,26 +7,27 @@ import { CompletionService } from "../database/services/completion.service";
 import { FirestoreStorage } from "../database/firestore-storage";
 import { EXPORT_FORMAT, LostarkExport } from "./lostark-export";
 import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
-
-/** BroadcastChannel that tells the other open tabs of this browser that an account's data was replaced. */
-export const DATA_REPLACED_CHANNEL = "loa-checklist:data-replaced";
+import { DATA_REPLACED_CHANNEL, TAB_ID } from "../firebase/local-data.service";
+import { ServerConnectionService } from "../firebase/server-connection.service";
 
 @Injectable({
   providedIn: "root"
 })
 export class DataTransferService {
 
-  /** Tells this tab's own messages apart: a BroadcastChannel also reaches other listeners in the same tab. */
-  private readonly tabId = `${Date.now()}-${Math.random()}`;
+  /** This tab's id in channel messages (a field so tests can play another tab). */
+  protected tabId = TAB_ID;
 
   constructor(@Inject(FIRESTORE) private firestore: Firestore, private auth: AuthService,
-              private completionService: CompletionService) {
+              private completionService: CompletionService, private connection: ServerConnectionService) {
   }
 
   /**
    * Reloads this tab when another tab of the same account finishes an import or restore. Until the
    * reload it writes nothing, so its old data (first snapshots, the old task list) cannot be written
    * over the imported data. Field changes still waiting here are dropped: the import replaced them.
+   * Log out, Sign in and account deletion in another tab reload every tab (cleared): the data saved
+   * in this browser is deleted on the next load, and this tab would otherwise show the old account.
    */
   public reloadWhenReplacedInAnotherTab(): void {
     if (typeof BroadcastChannel === "undefined") {
@@ -35,8 +36,11 @@ export class DataTransferService {
     let currentUid: string | null = null;
     this.auth.uid$.subscribe(uid => currentUid = uid);
     const channel = new BroadcastChannel(DATA_REPLACED_CHANNEL);
-    channel.onmessage = (event: MessageEvent<{ uid?: string, tabId?: string }>) => {
-      if (currentUid !== null && event.data?.uid === currentUid && event.data.tabId !== this.tabId) {
+    channel.onmessage = (event: MessageEvent<{ uid?: string, tabId?: string, cleared?: boolean }>) => {
+      if (event.data?.tabId === this.tabId) {
+        return;
+      }
+      if (event.data?.cleared || (currentUid !== null && event.data?.uid === currentUid)) {
         FirestoreStorage.pauseWrites();
         this.reloadPage();
       }
@@ -63,10 +67,13 @@ export class DataTransferService {
    * completion streams keep their first snapshot in memory, and service writes stay paused. A Lostark-helper file
    * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic, and never
    * changes the display name. Other open tabs of the same account reload once the batch is written.
+   * It needs the server: offline it rejects with a ConnectionRequiredError and changes nothing, and
+   * the task list to replace is read from the server, so no old task is missed.
    */
   public async importExport(data: LostarkExport, fromLostarkHelper = false): Promise<void> {
+    await this.connection.requireServer("import or restore data");
     const uid = await firstValueFrom(this.auth.uid$);
-    const existingTasks = await getDocs(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
+    const existingTasks = await getDocsFromServer(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
     const file: LostarkExport = fromLostarkHelper ? { ...data, user: null } : data;
     const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), file,
       () => doc(collection(this.firestore, "tasks")).id, fromLostarkHelper);
@@ -103,7 +110,12 @@ export class DataTransferService {
     this.announceDataReplaced(uid);
   }
 
+  /**
+   * The current user's data as an export file. It needs the server (offline it rejects with a
+   * ConnectionRequiredError): read from this device's cache, the task list could be incomplete.
+   */
   public async buildBackup(): Promise<LostarkExport> {
+    await this.connection.requireServer("download a backup");
     const uid = await firstValueFrom(this.auth.uid$);
     const [roster, settings, completion, energy, user] = await Promise.all(
       ["roster", "settings", "completion", "energy", "users"].map(name => getDoc(doc(this.firestore, name, uid)))

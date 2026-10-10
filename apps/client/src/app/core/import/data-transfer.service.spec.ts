@@ -5,6 +5,9 @@ import { CompletionService } from "../database/services/completion.service";
 import { FirestoreStorage } from "../database/firestore-storage";
 import { DataTransferService } from "./data-transfer.service";
 import { LostarkExport } from "./lostark-export";
+import { ServerConnectionService } from "../firebase/server-connection.service";
+import { ConnectionRequiredError } from "../firebase/connection-required";
+import { DATA_REPLACED_CHANNEL, TAB_ID } from "../firebase/local-data.service";
 
 const commit = jest.fn();
 const getDocMock = jest.fn();
@@ -19,6 +22,7 @@ jest.mock("firebase/firestore", () => ({
   doc: jest.fn((_parent: unknown, name?: string, id?: string) => ({ id: id ?? "fresh", path: `${name ?? "tasks"}/${id ?? "fresh"}` })),
   getDoc: (...args: unknown[]) => getDocMock(...args),
   getDocs: jest.fn(async () => ({ docs: [] })),
+  getDocsFromServer: jest.fn(async () => ({ docs: [] })),
   query: jest.fn(),
   where: jest.fn(),
   writeBatch: jest.fn(() => ({ set: batchSet, delete: jest.fn(), commit }))
@@ -40,6 +44,7 @@ function file(): LostarkExport {
 describe("DataTransferService", () => {
   const previous = { $key: "me", data: { old: { amount: 1, updated: 1 } } };
   let setLocal: jest.Mock;
+  let connection: { requireServer: jest.Mock };
   let service: DataTransferService;
 
   beforeEach(() => {
@@ -49,7 +54,32 @@ describe("DataTransferService", () => {
     setLocal = jest.fn();
     const completionService = { completion$: of(previous), setLocal } as unknown as CompletionService;
     const auth = { uid$: of("me") } as unknown as AuthService;
-    service = new DataTransferService({} as Firestore, auth, completionService);
+    connection = { requireServer: jest.fn(() => Promise.resolve()) };
+    service = new DataTransferService({} as Firestore, auth, completionService, connection as unknown as ServerConnectionService);
+  });
+
+  it("refuses an import or restore offline before anything changes", async () => {
+    connection.requireServer.mockRejectedValueOnce(new ConnectionRequiredError("You're offline. Connect to the internet to import or restore data."));
+    await expect(service.importExport(file())).rejects.toThrow("You're offline. Connect to the internet to import or restore data.");
+    expect(connection.requireServer).toHaveBeenCalledWith("import or restore data");
+    expect(setLocal).not.toHaveBeenCalled();
+    expect(FirestoreStorage.writesArePaused()).toBe(false);
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("reads the task list to replace from the server, so no old task is missed", async () => {
+    const { getDocs, getDocsFromServer } = jest.requireMock("firebase/firestore");
+    jest.mocked(getDocs).mockClear();
+    commit.mockResolvedValue(undefined);
+    await service.importExport(file());
+    expect(getDocsFromServer).toHaveBeenCalledTimes(1);
+    expect(getDocs).not.toHaveBeenCalled();
+  });
+
+  it("refuses a backup offline", async () => {
+    connection.requireServer.mockRejectedValueOnce(new ConnectionRequiredError("You're offline. Connect to the internet to download a backup."));
+    await expect(service.buildBackup()).rejects.toThrow("You're offline. Connect to the internet to download a backup.");
+    expect(getDocMock).not.toHaveBeenCalled();
   });
 
   afterEach(() => FirestoreStorage.resumeWrites());
@@ -151,7 +181,9 @@ describe("DataTransferService", () => {
 
     function otherTab(uid: string): { reload: jest.Mock } {
       const completionService = { completion$: of(previous), setLocal: jest.fn() } as unknown as CompletionService;
-      const other = new DataTransferService({} as Firestore, { uid$: of(uid) } as unknown as AuthService, completionService);
+      const other = new DataTransferService({} as Firestore, { uid$: of(uid) } as unknown as AuthService, completionService,
+        connection as unknown as ServerConnectionService);
+      (other as unknown as { tabId: string }).tabId = "other-tab";
       const reload = jest.fn();
       other.reloadPage = reload;
       other.reloadWhenReplacedInAnotherTab();
@@ -178,6 +210,21 @@ describe("DataTransferService", () => {
       commit.mockRejectedValue(new Error("permission-denied"));
       await expect(service.importExport(file())).rejects.toThrow("permission-denied");
       expect(tab.reload).not.toHaveBeenCalled();
+    });
+
+    it("all reload, for any account, when Log out, Sign in or an account deletion clears this browser's data", () => {
+      const tab = otherTab("someone-else");
+      new FakeChannel(DATA_REPLACED_CHANNEL).postMessage({ cleared: true, tabId: TAB_ID });
+      expect(tab.reload).toHaveBeenCalledTimes(1);
+      expect(FirestoreStorage.writesArePaused()).toBe(true);
+    });
+
+    it("the tab that clears does not reload itself through the channel", () => {
+      const reload = jest.fn();
+      service.reloadPage = reload;
+      service.reloadWhenReplacedInAnotherTab();
+      new FakeChannel(DATA_REPLACED_CHANNEL).postMessage({ cleared: true, tabId: TAB_ID });
+      expect(reload).not.toHaveBeenCalled();
     });
 
     it("the importing tab does not reload itself through the channel", async () => {
