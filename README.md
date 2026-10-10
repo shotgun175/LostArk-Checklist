@@ -226,7 +226,7 @@ A worker belongs to one origin, so one on port 4300 never affects `nx serve` on 
 
 ### Sidebar icons
 
-The five page links in the sidebar use painted emblems in `apps/client/src/assets/nav/` (`nav-<page>.webp`, 64 by 64 px with rounded corners, shown at 20 px so they stay sharp on phone screens). They are original art made for this project in the style of the compass logo, not game assets. To replace one, add the new image under a **new file name** and point the `<img>` in `apps/client/src/app/app.component.html` at it: hosting caches `.png`, `.webp` and `.jpg` files for a year (`firebase.json`), so a changed file under the same name would not reach returning visitors. The service worker caches the folder through `/assets/nav/**` in `ngsw-config.json`.
+The five page links and the two group headings (Helpers, Configuration) in the sidebar use painted emblems in `apps/client/src/assets/nav/` (`nav-<page>.webp` and `nav-<heading>.webp`, 64 by 64 px with rounded corners, shown at 20 px so they stay sharp on phone screens). They are original art made for this project in the style of the compass logo, not game assets. To replace one, add the new image under a **new file name** and point the `<img>` in `apps/client/src/app/app.component.html` at it: hosting caches `.png`, `.webp` and `.jpg` files for a year (`firebase.json`), so a changed file under the same name would not reach returning visitors. The service worker caches the folder through `/assets/nav/**` in `ngsw-config.json`.
 
 ### Local emulators
 

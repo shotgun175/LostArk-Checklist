@@ -13,7 +13,15 @@
     <div class="sidebar-container">
       <div class="main-navbar">
         <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="isCollapsed && !isPhone()" (nzClick)="closeSiderOnPhone()">
-          <li nz-submenu nzTitle="Helpers" nzIcon="appstore" nzOpen>
+          <ng-template #helpersTitle>
+            <img class="ant-menu-item-icon nav-icon" src="./assets/nav/nav-helpers.webp" width="20" height="20" alt="">
+            <span class="ant-menu-title-content">Helpers</span>
+          </ng-template>
+          <ng-template #configurationTitle>
+            <img class="ant-menu-item-icon nav-icon" src="./assets/nav/nav-configuration.webp" width="20" height="20" alt="">
+            <span class="ant-menu-title-content">Configuration</span>
+          </ng-template>
+          <li nz-submenu [nzTitle]="helpersTitle" nzOpen>
             <ul>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/checklist" [nzPaddingLeft]="32">
@@ -29,7 +37,7 @@
               </li>
             </ul>
           </li>
-          <li nz-submenu nzTitle="Configuration" nzIcon="setting" nzOpen>
+          <li nz-submenu [nzTitle]="configurationTitle" nzOpen>
             <ul>
               <li>
                 <a nz-menu-item nzMatchRouter routerLink="/roster" [nzPaddingLeft]="32">
