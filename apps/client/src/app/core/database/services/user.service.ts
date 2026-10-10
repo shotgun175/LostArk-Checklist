@@ -20,6 +20,12 @@ export class UserService extends FirestoreStorage<LAHUser> {
   /** Users documents already cleaned on this page, so a replayed copy is not cleaned twice. */
   private readonly cleanedUsers = new Set<string>();
 
+  /**
+   * Users already asked for a display name on this page. The document is emitted again each time
+   * the device goes offline and back online, and a dismissed popup must not open again every time.
+   */
+  private readonly promptedUsers = new Set<string>();
+
   public user$ = combineLatest([
     this.auth.uid$,
     this.auth.isAnonymous$
@@ -37,7 +43,9 @@ export class UserService extends FirestoreStorage<LAHUser> {
           // While an account is deleted its users document disappears before the auth account
           // does; asking for a display name then would open a popup that cannot be closed. A cached
           // copy may be older than the server's, which can already have the name.
-          if (!anonymous && !user.name && !registeredInPlace && !user.fromCache && !FirestoreStorage.writesArePaused()) {
+          if (!anonymous && !user.name && !registeredInPlace && !user.fromCache && !FirestoreStorage.writesArePaused()
+            && !this.promptedUsers.has(uid)) {
+            this.promptedUsers.add(uid);
             this.updateUserName(user, false).subscribe({
               error: (error: unknown) => console.error("Could not save the display name:", error)
             });

@@ -73,6 +73,16 @@ describe("UserService.user$", () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
+  it("asks only once per page, though going offline and back online emits the document again", () => {
+    // Each popup is dismissed at once (Escape), so the open-popup guard does not hide a second one.
+    create.mockImplementation(() => ({ afterClose: of(undefined) }));
+    service.user$.subscribe();
+    userDoc.next(snap({ $key: "u1" }));
+    userDoc.next(snap({ $key: "u1" }, true));
+    userDoc.next(snap({ $key: "u1" }));
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it("does not ask for a name when the cache only says the document is missing", () => {
     service.user$.subscribe();
     userDoc.next(snap(undefined, true));
