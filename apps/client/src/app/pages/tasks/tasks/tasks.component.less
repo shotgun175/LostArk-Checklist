@@ -127,6 +127,30 @@ nz-card {
   color: #a61d24;
 }
 
+// Phones: the button that opens the add form's bottom sheet, under the page header
+.add-task-open {
+  margin-bottom: 10px;
+}
+
+// The add form in the bottom sheet: one field per line, the full width of the sheet
+.sheet-form .add-form {
+  nz-form-item,
+  .name-field,
+  .icon-field,
+  .select-field,
+  .number-field,
+  .add-button {
+    width: 100%;
+  }
+
+  // 16px text, so iOS does not zoom the page in when a field gets the keyboard (the select's own
+  // search box included)
+  ::ng-deep input,
+  ::ng-deep .ant-select-selector {
+    font-size: 16px;
+  }
+}
+
 :host ::ng-deep tbody.cdk-drop-list-dragging,
 :host ::ng-deep tbody.cdk-drop-list-dragging * {
   cursor: grabbing;

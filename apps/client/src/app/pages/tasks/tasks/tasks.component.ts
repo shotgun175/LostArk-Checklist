@@ -1,4 +1,5 @@
-import { Component, HostListener, ChangeDetectionStrategy } from "@angular/core";
+import { Component, HostListener, ChangeDetectionStrategy, DestroyRef, signal } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { createTask, LostarkTask } from "../../../model/lostark-task";
 import { TaskFrequency } from "../../../model/task-frequency";
 import { TaskScope } from "../../../model/task-scope";
@@ -15,6 +16,7 @@ import { distinctUntilChanged, map, merge, Subject, tap } from "rxjs";
 import { customTasksExport, ilvlRangeValidator, nextTaskIndex, parseTasksImport } from "../task-input";
 import { importErrorMessage } from "../../../core/import-errors";
 import { SavedValueModel, showSavedValue } from "../../../core/show-saved-value";
+import { LayoutStateService } from "../../../core/services/layout-state.service";
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
 
@@ -125,14 +127,37 @@ export class TasksComponent {
   /** Pin the grip and Name columns while the table scrolls sideways; on a narrow screen they would fill it. */
   public pinColumns = true;
 
+  /** Below the md breakpoint the add form opens in a bottom sheet from a button at the top, instead of a card below the long list. */
+  public readonly isPhone = signal(this.layoutState.isPhone);
+
+  /** True while the add form's bottom sheet is open (phones only). */
+  public readonly sheetOpen = signal(false);
+
   constructor(private tasksService: TasksService,
               private fb: UntypedFormBuilder,
               private message: NzMessageService,
               private clipboard: Clipboard,
               private modal: NzModalService,
-              private authService: AuthService) {
+              private authService: AuthService,
+              private layoutState: LayoutStateService,
+              destroyRef: DestroyRef) {
     this.setTableHeight();
     this.setPinColumns();
+    this.layoutState.isPhone$.pipe(takeUntilDestroyed(destroyRef)).subscribe(phone => {
+      this.isPhone.set(phone);
+      // A sheet left open when the screen gets wide closes: the form moves back to its card
+      if (!phone) {
+        this.sheetOpen.set(false);
+      }
+    });
+  }
+
+  openSheet(): void {
+    this.sheetOpen.set(true);
+  }
+
+  closeSheet(): void {
+    this.sheetOpen.set(false);
   }
 
   /** One handler: Angular binds only the last of several listeners for the same event. */
@@ -174,6 +199,8 @@ export class TasksComponent {
     this.tasksService.addTask(task).subscribe({
       next: key => {
         this.saving = false;
+        // On a phone the sheet closes so the new row can be seen; after an error it stays open to try again
+        this.sheetOpen.set(false);
         this.form.reset({
           frequency: TaskFrequency.DAILY,
           scope: TaskScope.CHARACTER

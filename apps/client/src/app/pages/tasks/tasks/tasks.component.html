@@ -19,6 +19,20 @@
       }
     </nz-page-header-extra>
   </nz-page-header>
+  <!-- Phones: the add form opens in a bottom sheet from here, instead of a card below the long list -->
+  @if (isPhone()) {
+    @if (uid$ | async; as uid) {
+      <button nz-button nzType="primary" nzBlock class="add-task-open" (click)="openSheet()">
+        <span nz-icon nzType="plus" nzTheme="outline"></span>Add a custom task
+      </button>
+      <nz-drawer [nzVisible]="sheetOpen()" nzPlacement="bottom" nzTitle="Add a custom task"
+        nzHeight="auto" nzWrapClassName="add-task-sheet" (nzOnClose)="closeSheet()">
+        <div class="sheet-form" *nzDrawerContent>
+          <ng-container *ngTemplateOutlet="addForm; context: { $implicit: uid }"></ng-container>
+        </div>
+      </nz-drawer>
+    }
+  }
   <nz-card nzTitle="Tasks">
     <nz-table #tasksTable class="page-scroll" [nzData]="tasks"
       [nzScroll]="{x: '1530px', y: tableHeight + 'px'}" [nzPageSize]="999" nzHideOnSinglePage
@@ -148,90 +162,12 @@
     </nz-card>
 }
 
-@if (uid$ | async; as uid) {
-  <nz-card nzTitle="Add a custom task">
-    <form nz-form nzLayout="vertical" class="add-form" [formGroup]="form" (ngSubmit)="addTask(uid)">
-      <nz-form-item class="name-field">
-        <nz-form-label nzFor="add-task-label">Name</nz-form-label>
-        <nz-form-control nzErrorTip="Please input a task name">
-          <nz-input-wrapper>
-            <span nz-icon nzInputPrefix nzType="edit"></span>
-            <input type="text" nz-input id="add-task-label" formControlName="label" placeholder="Task name" />
-          </nz-input-wrapper>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="icon-field">
-        <nz-form-label nzFor="add-task-icon">Icon</nz-form-label>
-        <nz-form-control>
-          <nz-select nzId="add-task-icon" formControlName="iconPath"
-            nzAllowClear nzShowSearch nzPlaceHolder="No icon"
-            [nzCustomTemplate]="chosenIcon"
-            class="icon-select">
-            @for (icon of icons; track icon.path) {
-              <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
-                <span class="icon-option">
-                  <img src="./assets/icons/{{icon.path}}" alt="" class="task-icon">
-                  {{ icon.label }}
-                </span>
-              </nz-option>
-            }
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="select-field">
-        <nz-form-label nzFor="add-task-frequency">Frequency</nz-form-label>
-        <nz-form-control nzErrorTip="Please choose a task frequency">
-          <nz-select nzId="add-task-frequency" formControlName="frequency">
-            <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.BIWEEKLY_OFFSET" nzLabel="Biweekly offset"></nz-option>
-            <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="select-field">
-        <nz-form-label nzFor="add-task-scope">Scope</nz-form-label>
-        <nz-form-control nzErrorTip="Please choose a task scope">
-          <nz-select nzId="add-task-scope" formControlName="scope">
-            <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
-            <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="number-field">
-        <nz-form-label nzFor="add-task-min-ilvl">Min ilvl</nz-form-label>
-        <nz-form-control nzErrorTip="Please input a minimum ilvl">
-          <nz-input-wrapper>
-            <span nz-icon nzInputPrefix nzType="info"></span>
-            <input type="number" nz-input id="add-task-min-ilvl" formControlName="minIlvl" placeholder="For example 0" />
-          </nz-input-wrapper>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="number-field">
-        <nz-form-label nzFor="add-task-max-ilvl">Max ilvl</nz-form-label>
-        <nz-form-control nzErrorTip="Please input a maximum ilvl">
-          <nz-input-wrapper>
-            <span nz-icon nzInputPrefix nzType="info"></span>
-            <input type="number" nz-input id="add-task-max-ilvl" formControlName="maxIlvl" placeholder="For example 9999" />
-          </nz-input-wrapper>
-        </nz-form-control>
-      </nz-form-item>
-      <nz-form-item class="number-field">
-        <nz-form-label nzFor="add-task-amount">Repetitions</nz-form-label>
-        <nz-form-control nzErrorTip="Please input at least 1 repetition">
-          <nz-input-wrapper>
-            <span nz-icon nzInputPrefix nzType="number"></span>
-            <input type="number" nz-input id="add-task-amount" formControlName="amount" placeholder="For example 1" min="1" />
-          </nz-input-wrapper>
-        </nz-form-control>
-      </nz-form-item>
-      <button nz-button class="add-button" [nzType]="'primary'" [disabled]="form.invalid" [nzLoading]="saving">Add</button>
-      @if (form.errors?.['ilvlRange']) {
-        <div class="form-error">Min ilvl cannot be above Max ilvl.</div>
-      }
-    </form>
-  </nz-card>
+@if (!isPhone()) {
+  @if (uid$ | async; as uid) {
+    <nz-card nzTitle="Add a custom task">
+      <ng-container *ngTemplateOutlet="addForm; context: { $implicit: uid }"></ng-container>
+    </nz-card>
+  }
 }
 
 <!-- The chosen icon in a closed icon select: the picture and its name -->
@@ -240,4 +176,89 @@
     <img src="./assets/icons/{{selected.nzValue}}" alt="" class="task-icon preview">
     {{ selected.nzLabel }}
   </span>
+</ng-template>
+
+<!-- The add form, in the card below the list (PC) or in the bottom sheet (phones) -->
+<ng-template #addForm let-uid>
+  <form nz-form nzLayout="vertical" class="add-form" [formGroup]="form" (ngSubmit)="addTask(uid)">
+    <nz-form-item class="name-field">
+      <nz-form-label nzFor="add-task-label">Name</nz-form-label>
+      <nz-form-control nzErrorTip="Please input a task name">
+        <nz-input-wrapper>
+          <span nz-icon nzInputPrefix nzType="edit"></span>
+          <input type="text" nz-input id="add-task-label" formControlName="label" placeholder="Task name" />
+        </nz-input-wrapper>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="icon-field">
+      <nz-form-label nzFor="add-task-icon">Icon</nz-form-label>
+      <nz-form-control>
+        <nz-select nzId="add-task-icon" formControlName="iconPath"
+          nzAllowClear nzShowSearch nzPlaceHolder="No icon"
+          [nzCustomTemplate]="chosenIcon"
+          class="icon-select">
+          @for (icon of icons; track icon.path) {
+            <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
+              <span class="icon-option">
+                <img src="./assets/icons/{{icon.path}}" alt="" class="task-icon">
+                {{ icon.label }}
+              </span>
+            </nz-option>
+          }
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="select-field">
+      <nz-form-label nzFor="add-task-frequency">Frequency</nz-form-label>
+      <nz-form-control nzErrorTip="Please choose a task frequency">
+        <nz-select nzId="add-task-frequency" formControlName="frequency">
+          <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
+          <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
+          <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
+          <nz-option [nzValue]="TaskFrequency.BIWEEKLY_OFFSET" nzLabel="Biweekly offset"></nz-option>
+          <nz-option [nzValue]="TaskFrequency.ONE_TIME" nzLabel="One time"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="select-field">
+      <nz-form-label nzFor="add-task-scope">Scope</nz-form-label>
+      <nz-form-control nzErrorTip="Please choose a task scope">
+        <nz-select nzId="add-task-scope" formControlName="scope">
+          <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
+          <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
+        </nz-select>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="number-field">
+      <nz-form-label nzFor="add-task-min-ilvl">Min ilvl</nz-form-label>
+      <nz-form-control nzErrorTip="Please input a minimum ilvl">
+        <nz-input-wrapper>
+          <span nz-icon nzInputPrefix nzType="info"></span>
+          <input type="number" nz-input id="add-task-min-ilvl" formControlName="minIlvl" placeholder="For example 0" />
+        </nz-input-wrapper>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="number-field">
+      <nz-form-label nzFor="add-task-max-ilvl">Max ilvl</nz-form-label>
+      <nz-form-control nzErrorTip="Please input a maximum ilvl">
+        <nz-input-wrapper>
+          <span nz-icon nzInputPrefix nzType="info"></span>
+          <input type="number" nz-input id="add-task-max-ilvl" formControlName="maxIlvl" placeholder="For example 9999" />
+        </nz-input-wrapper>
+      </nz-form-control>
+    </nz-form-item>
+    <nz-form-item class="number-field">
+      <nz-form-label nzFor="add-task-amount">Repetitions</nz-form-label>
+      <nz-form-control nzErrorTip="Please input at least 1 repetition">
+        <nz-input-wrapper>
+          <span nz-icon nzInputPrefix nzType="number"></span>
+          <input type="number" nz-input id="add-task-amount" formControlName="amount" placeholder="For example 1" min="1" />
+        </nz-input-wrapper>
+      </nz-form-control>
+    </nz-form-item>
+    <button nz-button class="add-button" [nzType]="'primary'" [disabled]="form.invalid" [nzLoading]="saving">Add</button>
+    @if (form.errors?.['ilvlRange']) {
+      <div class="form-error">Min ilvl cannot be above Max ilvl.</div>
+    }
+  </form>
 </ng-template>

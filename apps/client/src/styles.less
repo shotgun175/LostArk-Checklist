@@ -83,6 +83,29 @@
   }
 }
 
+// Tasks Manager on a phone: the add form's bottom sheet (nzWrapClassName="add-task-sheet"). It is in an
+// overlay outside the page, so these rules are global. As tall as the form, up to 90% of the screen;
+// the form scrolls inside it when it is taller (a short screen, or the keyboard open). The bottom padding
+// keeps the Add button above the iPhone home bar.
+.add-task-sheet {
+  max-height: 90vh;
+  max-height: 90dvh;
+
+  .ant-drawer-content,
+  .ant-drawer-wrapper-body {
+    max-height: inherit;
+  }
+
+  .ant-drawer-header {
+    padding: 12px 16px;
+  }
+
+  .ant-drawer-body {
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+}
+
 // The footer shows Google's reCAPTCHA notice (with its Privacy Policy and Terms links) on every page instead of the floating badge.
 .grecaptcha-badge {
   visibility: hidden;
