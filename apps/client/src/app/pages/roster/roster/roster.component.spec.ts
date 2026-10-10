@@ -127,11 +127,18 @@ describe('RosterComponent', () => {
       expect(message.error).not.toHaveBeenCalled();
     });
 
-    it('rejects a whitespace name and an item level outside 0 to 2000 in the form', () => {
-      component.form.setValue({ name: '   ', ilvl: 2500, lazy: false, class: 4 });
+    it('rejects a whitespace name and an item level outside 0 to 1805 in the form', () => {
+      component.form.setValue({ name: '   ', ilvl: 1806, lazy: false, class: 4 });
       expect(component.form.get('name')?.valid).toBe(false);
       expect(component.form.get('ilvl')?.valid).toBe(false);
       component.form.patchValue({ name: 'Ok', ilvl: -1 });
+      expect(component.form.get('ilvl')?.valid).toBe(false);
+    });
+
+    it('accepts 1805, the highest item level in the game, and refuses one above it', () => {
+      component.form.setValue({ name: 'Ok', ilvl: 1805, lazy: false, class: 4 });
+      expect(component.form.get('ilvl')?.valid).toBe(true);
+      component.form.patchValue({ ilvl: 1806 });
       expect(component.form.get('ilvl')?.valid).toBe(false);
     });
 

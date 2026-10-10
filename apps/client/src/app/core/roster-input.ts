@@ -4,8 +4,11 @@ import { LostarkClass } from "../model/character/lostark-class";
 /** Lost Ark character names are at most 16 characters long. */
 export const MAX_CHARACTER_NAME_LENGTH = 16;
 
-/** The highest item level the Roster accepts. */
-export const MAX_CHARACTER_ILVL = 2000;
+/**
+ * The highest item level the Roster accepts: the highest item level in the Global game right now.
+ * Raise it when the game raises it (the patch notes sync checks it).
+ */
+export const MAX_CHARACTER_ILVL = 1805;
 
 // Control characters plus zero-width and other invisible format characters (soft hyphen, joiners, direction marks, BOM)
 const INVISIBLE = /[\p{Cc}\p{Cf}]/gu;
