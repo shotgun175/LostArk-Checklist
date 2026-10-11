@@ -87,16 +87,18 @@
 // Gold Planner, Tasks Manager, Roster, Settings). The fade to the page color (#333) at both edges is set in percent, so the clear
 // middle of the art stays in the middle at every width. The title block is capped at about a third of the
 // banner, so on narrower screens a long subtitle wraps while it is still over the dark left side.
+// The banner grows with the screen (9vw, 136 to 220 px) so wide monitors show more of the picture's
+// height, closer to the portrait framing; --banner-focus keeps each picture's subject in view.
 // Phones (under 768 px, as isPhone) have no banner: the space belongs to the table.
 @media (min-width: 768px) {
   .page-banner {
-    min-height: 136px;
+    min-height: clamp(136px, 9vw, 220px);
     margin-bottom: 12px;
     border-radius: 8px;
     background:
       linear-gradient(90deg, rgba(51, 51, 51, .97) 0%, rgba(51, 51, 51, .9) 30%, rgba(51, 51, 51, .35) 46%,
         rgba(51, 51, 51, .35) 58%, rgba(51, 51, 51, .92) 76%, rgba(51, 51, 51, .97) 100%),
-      var(--page-banner) center / cover no-repeat;
+      var(--page-banner) center var(--banner-focus, 50%) / cover no-repeat;
 
     .ant-page-header-heading-left {
       max-width: 34%;
@@ -113,22 +115,27 @@
 
   .checklist-header {
     --page-banner: url('/assets/banners/banner-checklist.webp');
+    --banner-focus: 40%;
   }
 
   .planner-header {
     --page-banner: url('/assets/banners/banner-gold-planner.webp');
+    --banner-focus: 45%;
   }
 
   .tasks-header {
     --page-banner: url('/assets/banners/banner-tasks-manager.webp');
+    --banner-focus: 45%;
   }
 
   .roster-header {
     --page-banner: url('/assets/banners/banner-roster.webp');
+    --banner-focus: 40%;
   }
 
   .settings-header {
     --page-banner: url('/assets/banners/banner-settings.webp');
+    --banner-focus: 45%;
   }
 }
 
