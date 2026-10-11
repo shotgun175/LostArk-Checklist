@@ -11,12 +11,6 @@
 </nz-page-header>
 @if (settings$ | async; as settings) {
   <div>
-    <div nz-row [nzGutter]="[10, 10]">
-      <div nz-col nzMd="24">
-        <label nz-checkbox [(ngModel)]="settings.hiddenOnCompletion" (ngModelChange)="saveSetting(settings, 'hiddenOnCompletion')">Hide on completion</label>
-        <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide task when it has been completed, instead of mark it only visually completed" class="setting-info"></span>
-      </div>
-    </div>
     <div nz-row class="lazy-matrix">
       <nz-card nz-col nzSpan="24" nzTitle="Bring data over" nzSize="small">
         <input #importFile type="file" accept=".json,application/json" hidden

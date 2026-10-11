@@ -65,6 +65,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
   public formatCountdown = formatCountdown;
 
   public rawRoster$ = this.rosterService.roster$;
+  public settings$ = this.settings.settings$;
   public showHiddenCharacters$ = this.layoutState.showHiddenCharacters$;
 
   public categoriesDisplay$ = new LocalStorageBehaviorSubject<CategoriesDisplay>('checklist:displayed', CATEGORIES_DISPLAY_DEFAULT);
@@ -175,9 +176,7 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
         .map(task => {
           const lazyTracking = settings.lazytracking;
           const available = isTaskAvailable(task);
-          const editDisabled = !task.canEditDaysFilter;
-          const visible = available || editDisabled; // We always display tasks that can't be edited with "Not available today" flag
-          const forceDone = (!available && visible); // If task is not available but is visible, we marked it as done
+          const forceDone = !available; // A task not available today shows as done when Show all tasks reveals it
           const completionData = filterVisibleCharacters(roster.characters, showHidden)
             .map(character => {
               // The mode the Gold Planner counts (a saved Hard or Nightmare the item level cannot run counts lower)
@@ -221,13 +220,13 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
             energy: completionData.map(row => row.energy),
             completionData,
             allDone,
-            visible,
             available
           };
         })
-        .filter(({ visible, allDone }) => {
-          if (allDone && settings.hiddenOnCompletion) return false; // If task is done and we hide done tasks, we don't display it
-          return visible || roster.showAllTasks;
+        .filter(({ available, allDone }) => {
+          // Tasks not available today only show with Show all tasks; Hide completed tasks only hides tasks actually done
+          if (!available) return roster.showAllTasks;
+          return !(allDone && settings.hiddenOnCompletion);
         })
         .reduce((acc, row) => {
           const frequencyKey = {
@@ -487,6 +486,11 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.rosterService.setOne(roster.$key, roster);
+  }
+
+  /** Saves the Hide completed tasks choice as a field patch on the settings document. */
+  saveHiddenOnCompletion(settingsKey: string, hidden: boolean): void {
+    this.settings.patchFields(settingsKey, [{ path: ['hiddenOnCompletion'], value: hidden }]);
   }
 
   private getGoldTakingInfoForTask(character: Character, taskName: string, goldTracking): boolean | undefined {

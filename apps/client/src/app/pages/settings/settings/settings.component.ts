@@ -321,10 +321,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  saveSetting(settings: Settings, field: "hiddenOnCompletion"): void {
-    this.settings.patchFields(settings.$key, [{ path: [field], value: settings[field] }]);
-  }
-
   trackByTask(index: number, row: { task: LostarkTask }): string | undefined {
     return row.task.label;
   }
