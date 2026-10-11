@@ -1,7 +1,13 @@
-// Title on the left edge of the cards; on a phone the subtitle goes so the title fits
+// Title on the left edge of the cards; on a phone the subtitle goes so the title fits.
+// From 768 px the header has the page banner behind it, so it keeps its usual padding.
 :host ::ng-deep .settings-header.ant-page-header {
   padding-left: 0;
   padding-right: 0;
+
+  @media (min-width: 768px) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
 
   .ant-page-header-heading-extra {
     min-width: 0;
