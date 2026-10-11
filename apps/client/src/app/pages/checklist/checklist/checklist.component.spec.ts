@@ -8,6 +8,7 @@ import { Energy } from '../../../model/energy';
 import { Character } from '../../../model/character/character';
 import { LostarkTask } from '../../../model/lostark-task';
 import { TaskFrequency } from '../../../model/task-frequency';
+import { TaskScope } from '../../../model/task-scope';
 import { RosterService } from '../../../core/database/services/roster.service';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { SettingsService } from '../../../core/database/services/settings.service';
@@ -235,6 +236,80 @@ describe('ChecklistComponent', () => {
       expect(component.categoriesDisplay$.value.oneTimeRoster).toBe(true);
     });
   });
+  describe('Show all tasks and Hide completed tasks', () => {
+    // Day of the week in Lost Ark time (UTC-10), the same clock isTaskAvailable uses
+    const laDay = (offsetDays: number): number => new Date(Date.now() - 10 * 3600000 + offsetDays * day).getUTCDay();
+    const dayTask = (key: string, days: number[], canEditDaysFilter: boolean): LostarkTask => ({
+      ...unaTask, $key: key, label: key, scope: TaskScope.ROSTER, minIlvl: 0, daysFilter: days, canEditDaysFilter
+    });
+    const rows = [
+      dayTask('today-fixed', [laDay(0)], false),
+      dayTask('off-day-fixed', [laDay(1)], false),
+      dayTask('off-day-custom', [laDay(1)], true),
+      { ...dayTask('finished', [], true), amount: 1 }
+    ];
+    // 'finished' was done after today's reset
+    const completion = { data: { finished: { amount: 1, updated: now } } };
+
+    async function shownTasks(showAllTasks: boolean, hiddenOnCompletion: boolean): Promise<string[]> {
+      const component = new ChecklistComponent(
+        { roster$: of({ $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks }) } as unknown as RosterService,
+        { tasks$: of(rows) } as unknown as TasksService,
+        { settings$: of({ lazytracking: {}, hiddenOnCompletion, goldPlannerConfiguration: {}, raidModesForGoldPlanner: {} }) } as unknown as SettingsService,
+        { energy$: of({ data: {} }) } as unknown as EnergyService,
+        {
+          lastDailyReset$: of(dailyReset),
+          lastWeeklyReset$: of(weeklyReset),
+          lastBiWeeklyReset$: of(biWeeklyReset),
+          lastBiWeeklyOffsetReset$: of(biWeeklyOffsetReset)
+        } as unknown as TimeService,
+        { completion$: of(completion) } as unknown as CompletionService,
+        { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
+        new ElementRef(document.createElement('div')),
+        { run: (fn: () => void) => fn() } as unknown as NgZone,
+        { error: jest.fn() } as unknown as NzMessageService
+      );
+      const display = await firstValueFrom(component.tableDisplay$);
+      return Object.values(display.data).flatMap(group => group.data.map(row => row.task.$key)).sort();
+    }
+
+    it('hides tasks not available today, including built-in ones with a fixed schedule', async () => {
+      expect(await shownTasks(false, false)).toEqual(['finished', 'today-fixed']);
+    });
+
+    it('reveals tasks not available today with Show all tasks', async () => {
+      expect(await shownTasks(true, false)).toEqual(['finished', 'off-day-custom', 'off-day-fixed', 'today-fixed']);
+    });
+
+    it('hides finished tasks with Hide completed tasks', async () => {
+      expect(await shownTasks(false, true)).toEqual(['today-fixed']);
+    });
+
+    it('keeps hiding finished tasks with both ticked, while still revealing tasks not available today', async () => {
+      expect(await shownTasks(true, true)).toEqual(['off-day-custom', 'off-day-fixed', 'today-fixed']);
+    });
+  });
+
+  describe('saveHiddenOnCompletion', () => {
+    it('saves the choice as a field patch on the settings document', () => {
+      const patchFields = jest.fn();
+      const component = new ChecklistComponent(
+        { roster$: NEVER } as unknown as RosterService,
+        { tasks$: NEVER } as unknown as TasksService,
+        { settings$: NEVER, patchFields } as unknown as SettingsService,
+        {} as EnergyService,
+        { lastDailyReset$: NEVER, lastWeeklyReset$: NEVER, lastBiWeeklyReset$: NEVER, lastBiWeeklyOffsetReset$: NEVER } as unknown as TimeService,
+        {} as CompletionService,
+        { showHiddenCharacters$: of(false), sidebarCollapsed$: of(false), sidebarWidth$: of(200) } as unknown as LayoutStateService,
+        new ElementRef(document.createElement('div')),
+        { run: (fn: () => void) => fn() } as unknown as NgZone,
+        { error: jest.fn() } as unknown as NzMessageService
+      );
+      component.saveHiddenOnCompletion('uid', true);
+      expect(patchFields).toHaveBeenCalledWith('uid', [{ path: ['hiddenOnCompletion'], value: true }]);
+    });
+  });
+
   describe('gold badge', () => {
     const kazerosTask: LostarkTask = { ...tasks.find(task => task.label === 'Kazeros'), $key: 'kazeros' };
 
