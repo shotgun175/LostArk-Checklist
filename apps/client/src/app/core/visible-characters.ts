@@ -1,5 +1,5 @@
 /**
- * Characters that get a column: everyone when "Show your hidden characters" is on,
+ * Characters that get a column: everyone when "Show hidden characters" is on,
  * otherwise only characters without the Hide flag. Keeps roster order, so index i
  * of the result is column i.
  */

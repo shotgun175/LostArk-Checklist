@@ -4,15 +4,6 @@
   </ng-template>
   <ng-template #subtitle>
     <div>Track your daily and weekly tasks with automated resets and rest bonus support</div>
-    @if (roster$ | async; as roster) {
-      @if (roster.length > 0) {
-        <div class="hidden-characters">
-          <label nz-checkbox aria-label="Show your hidden characters" [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)"></label>
-          Show your hidden characters
-          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Also show characters marked Hide on the Roster page"></span>
-        </div>
-      }
-    }
   </ng-template>
 
   <nz-page-header-extra>
@@ -95,9 +86,19 @@
 
 @if (rawRoster$ | async; as roster) {
   @if (roster.characters.length > 0) {
-    <label nz-checkbox [(ngModel)]="roster.showAllTasks" class="all-tasks" (ngModelChange)="saveRoster(roster)">
-      Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
-    </label>
+    <div class="view-toggles">
+      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveRoster(roster)">
+        Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
+      </label>
+      @if (settings$ | async; as settings) {
+        <label nz-checkbox [ngModel]="settings.hiddenOnCompletion" (ngModelChange)="saveHiddenOnCompletion(settings.$key, $event)">
+          Hide completed tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide a task once it is done for every character shown"></span>
+        </label>
+      }
+      <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)">
+        Show hidden characters <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show characters marked Hide on the Roster page, here and on the Gold Planner"></span>
+      </label>
+    </div>
   }
 }
 

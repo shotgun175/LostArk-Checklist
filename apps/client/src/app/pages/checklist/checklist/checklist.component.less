@@ -101,10 +101,6 @@
       overflow: visible;
       white-space: normal;
     }
-
-    .hidden-characters {
-      margin-top: 4px;
-    }
   }
 
   .countdowns-container {
@@ -619,8 +615,16 @@ table {
   flex-shrink: 0;
 }
 
-.all-tasks {
+// Show all tasks, Hide completed tasks and Show hidden characters, wrapping onto more lines on narrow screens
+.view-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
   margin-bottom: 10px;
+
+  .ant-checkbox-wrapper {
+    margin-inline-start: 0;
+  }
 }
 
 // Mode text over the gold coin, centered vertically left of the counter button.
