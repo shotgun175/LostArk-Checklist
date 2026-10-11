@@ -83,10 +83,10 @@
   }
 }
 
-// Page banners (assets/banners): painted art behind the title of Checklist, Gold Planner and Tasks
-// Manager. The fade to the page color (#333) at both edges keeps the title and the buttons readable;
-// the left fade covers at least 540 px, the width of the longest subtitle, on narrower screens, and the
-// later stops move right with it so they never collapse into a hard edge.
+// Page banners (assets/banners): painted art behind the title of the five main pages (Checklist,
+// Gold Planner, Tasks Manager, Roster, Settings). The fade to the page color (#333) at both edges is set in percent, so the clear
+// middle of the art stays in the middle at every width. The title block is capped at about a third of the
+// banner, so on narrower screens a long subtitle wraps while it is still over the dark left side.
 // Phones (under 768 px, as isPhone) have no banner: the space belongs to the table.
 @media (min-width: 768px) {
   .page-banner {
@@ -94,9 +94,21 @@
     margin-bottom: 12px;
     border-radius: 8px;
     background:
-      linear-gradient(90deg, rgba(51, 51, 51, .97) 0%, rgba(51, 51, 51, .9) max(30%, 540px), rgba(51, 51, 51, .35) max(46%, 640px),
-        rgba(51, 51, 51, .35) max(58%, 690px), rgba(51, 51, 51, .92) max(76%, 790px), rgba(51, 51, 51, .97) 100%),
+      linear-gradient(90deg, rgba(51, 51, 51, .97) 0%, rgba(51, 51, 51, .9) 30%, rgba(51, 51, 51, .35) 46%,
+        rgba(51, 51, 51, .35) 58%, rgba(51, 51, 51, .92) 76%, rgba(51, 51, 51, .97) 100%),
       var(--page-banner) center / cover no-repeat;
+
+    .ant-page-header-heading-left {
+      max-width: 34%;
+      min-width: 240px;
+      flex-wrap: wrap;
+    }
+
+    .ant-page-header-heading-title,
+    .ant-page-header-heading-sub-title {
+      overflow: visible;
+      white-space: normal;
+    }
   }
 
   .checklist-header {
@@ -109,6 +121,14 @@
 
   .tasks-header {
     --page-banner: url('/assets/banners/banner-tasks-manager.webp');
+  }
+
+  .roster-header {
+    --page-banner: url('/assets/banners/banner-roster.webp');
+  }
+
+  .settings-header {
+    --page-banner: url('/assets/banners/banner-settings.webp');
   }
 }
 
