@@ -1,6 +1,5 @@
-import { Completion } from "../../model/completion";
 import { LostarkTask } from "../../model/lostark-task";
-import { LostarkExport, StoredDoc } from "./lostark-export";
+import { LostarkExport } from "./lostark-export";
 import { isRaidTask } from "../task-tracking";
 
 /** Firestore's maximum number of writes in one batch. */
@@ -12,8 +11,6 @@ export type ImportWrite =
 
 export interface ImportPlan {
   writes: ImportWrite[];
-  /** The completion document the plan writes, with task keys already remapped. */
-  completion: StoredDoc<Completion>;
 }
 
 /**
@@ -90,5 +87,5 @@ export function planImportWrites(uid: string, existingTaskIds: string[], data: L
   if (data.user?.name) {
     docSets.push({ op: "set", collection: "users", id: uid, data: { name: data.user.name } });
   }
-  return { writes: [...deletes, ...taskSets, ...docSets], completion };
+  return { writes: [...deletes, ...taskSets, ...docSets] };
 }
