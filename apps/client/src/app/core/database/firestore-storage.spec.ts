@@ -54,6 +54,13 @@ function snap(data: TestDoc | undefined, fromCache = false): DocState<TestDoc> {
   return { data, exists: data !== undefined, fromCache, hasPendingWrites: false };
 }
 
+/** A promise settled from the test, for a write that is still on its way. */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>(r => resolve = r);
+  return { promise, resolve };
+}
+
 async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
@@ -399,7 +406,7 @@ describe("FirestoreStorage with a local cache", () => {
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { cached: 1, otherDevice: 2, tick1: 1, tick2: 1 } });
     });
 
-    it("an in-place click cannot hide another device undoing it", () => {
+    it("an in-place click cannot hide another device undoing it", async () => {
       const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
       // The click handler edits the shown object, then patches the field (written at once).
@@ -407,6 +414,8 @@ describe("FirestoreStorage with a local cache", () => {
       doc.data["a"] = 2;
       storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      // The server confirms the write.
+      await settle();
       // Another device sets it back. The snapshot equals the one before the click, so it would be
       // skipped as "unchanged" if the copy it is compared with were not the one on screen.
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
@@ -414,16 +423,17 @@ describe("FirestoreStorage with a local cache", () => {
       expect(shown().data).toEqual({ a: 1 });
     });
 
-    it("a field change made without an in-place edit cannot hide another device undoing it either", () => {
+    it("a field change made without an in-place edit cannot hide another device undoing it either", async () => {
       const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
       storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      await settle();
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1 } });
     });
 
-    it("does not bring back a written tick once another device changes that entry", () => {
+    it("does not bring back a written tick once another device changes that entry", async () => {
       const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
       storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
@@ -434,9 +444,60 @@ describe("FirestoreStorage with a local cache", () => {
       jest.advanceTimersByTime(1000);
       expect(updateDoc).toHaveBeenLastCalledWith(atDoc("completion/u1"), new FieldPath("data", "b"), 1);
       snapshots.next(snap({ $key: "u1", data: { a: 1, b: 1, c: 1 } }));
-      // Another device clears b: nothing is pending any more, so its value wins.
+      await settle();
+      // Another device clears b: nothing is pending or in flight any more, so its value wins.
       snapshots.next(snap({ $key: "u1", data: { a: 1, b: 0, c: 1 } }));
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1, b: 0, c: 1 } });
+    });
+
+    it("keeps a written change on screen when a snapshot without it comes before the SDK has it", async () => {
+      const first = deferred();
+      const second = deferred();
+      jest.mocked(updateDoc).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
+      // Click 1 is written at once; click 2 waits for the window and is written when it closes.
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+      jest.advanceTimersByTime(1000);
+      expect(updateDoc).toHaveBeenCalledTimes(2);
+      // A snapshot raised for click 1 only, delivered before the SDK added click 2 to its local view.
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      first.resolve();
+      second.resolve();
+      await settle();
+      // Both writes settled: a later change from another device shows as it is.
+      snapshots.next(snap({ $key: "u1", data: { a: 5 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 5 } });
+    });
+
+    it("keeps the first tick on a new document when the server reports it missing again before the create lands", async () => {
+      const create = deferred();
+      jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
+      jest.mocked(setDoc).mockReturnValueOnce(create.promise);
+      const seen = watch();
+      snapshots.next(snap(undefined));
+      expect(seen).toEqual([{ $key: "u1", notFound: true }]);
+      storage.patchFields("u1", [{ path: ["data", "t"], value: 1 }]);
+      await settle();
+      expect(setDoc).toHaveBeenCalledWith(atDoc("completion/u1"), { data: { t: 1 } }, { merge: true });
+      snapshots.next(snap(undefined));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { t: 1 } });
+      create.resolve();
+      await settle();
+      snapshots.next(snap({ $key: "u1", data: { t: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { t: 1 } });
+    });
+
+    it("a whole-document write stops showing field changes still in flight", () => {
+      jest.mocked(updateDoc).mockReturnValueOnce(deferred().promise);
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+      storage.setOne("u1", { data: { a: 0, reset: 1 } });
+      snapshots.next(snap({ $key: "u1", data: { a: 0, reset: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 0, reset: 1 } });
     });
 
     it("saving the shown object as a whole document keeps its $key on screen", () => {

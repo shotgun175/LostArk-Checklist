@@ -217,8 +217,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * Every snapshot is shown, so changes from other tabs and devices appear without a reload, and the
    * cached copy shows at once on startup. Writes handed to the SDK (setOne, updateOne, written field
    * changes) are in every later local snapshot, online or offline, until the server confirms or
-   * rejects them, so they show at once without help here. Only field changes still waiting in their
-   * one-second window are not, so they are applied on top of each snapshot.
+   * rejects them. Field changes still waiting in their one-second window are not, and a written one
+   * is not either until the SDK has added it, a moment later (or, on a new document, until the
+   * create that follows a not-found); so both are applied on top of each snapshot until their write
+   * settles.
    */
   public getOne(key: string): Observable<T> {
     if (!this.cache[key]) {
@@ -252,7 +254,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
         // before they are written cannot undo them on screen.
         switchMap(obj => fieldWrites$.pipe(
           map(writes => this.withLocalWrites(obj, writes)),
-          startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
+          startWith(this.withLocalWrites(obj, this.coalescer.unsettled(key)))
         )),
         catchError(err => this.endListener(err)),
         shareReplay({ refCount: true, bufferSize: 1 }),
@@ -297,7 +299,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     this.recordOperation("write", key);
     const ref = doc(this.firestore, this.getCollectionName(), key);
     const [field, value, ...more] = writes.flatMap(write => [new FieldPath(...write.path), "delete" in write ? deleteField() : write.value]);
-    updateDoc(ref, field as FieldPath, value, ...more)
+    const written = updateDoc(ref, field as FieldPath, value, ...more)
       .catch((error: { code?: string }) => {
         if (FirestoreStorage.writesPaused) {
           // The document was deleted with the account; creating it again would undo that.
@@ -314,6 +316,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
         throw error;
       })
       .catch(error => console.error(`Could not save ${this.getCollectionName()}/${key}:`, error));
+    this.coalescer.trackInFlight(key, writes, written);
   }
 
   // After Log out or Sign in, Firestore re-checks the previous user's live listeners with the new
@@ -347,6 +350,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
+    this.coalescer.forgetInFlight(key);
     this.recordOperation("delete", key);
     return from(deleteDoc(this.docRef(key)));
   }
@@ -374,6 +378,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     if (FirestoreStorage.writesArePaused()) {
       return of(void 0);
     }
+    this.coalescer.forgetInFlight(key);
     this.recordOperation("write", key);
     return from(updateDoc(this.docRef(key), row));
   }
