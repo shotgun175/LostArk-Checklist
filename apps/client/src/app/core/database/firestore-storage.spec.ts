@@ -500,6 +500,17 @@ describe("FirestoreStorage with a local cache", () => {
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 0, reset: 1 } });
     });
 
+    it("keeps one listener per document until its last subscriber leaves", () => {
+      const first = storage.getOne("u1").subscribe();
+      const second = storage.getOne("u1").subscribe();
+      first.unsubscribe();
+      storage.getOne("u1").subscribe().unsubscribe();
+      expect(docSnapshot$).toHaveBeenCalledTimes(1);
+      second.unsubscribe();
+      storage.getOne("u1").subscribe();
+      expect(docSnapshot$).toHaveBeenCalledTimes(2);
+    });
+
     it("saving the shown object as a whole document keeps its $key on screen", () => {
       watch();
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));

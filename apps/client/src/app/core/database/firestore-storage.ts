@@ -257,8 +257,10 @@ export abstract class FirestoreStorage<T extends DataModel> {
           startWith(this.withLocalWrites(obj, this.coalescer.unsettled(key)))
         )),
         catchError(err => this.endListener(err)),
-        shareReplay({ refCount: true, bufferSize: 1 }),
-        finalize(() => delete this.cache[key])
+        // Before shareReplay, so it runs when the listener itself ends (the last subscriber left, or
+        // the listener was stopped), not each time one of several subscribers leaves.
+        finalize(() => delete this.cache[key]),
+        shareReplay({ refCount: true, bufferSize: 1 })
       );
     }
     return this.cache[key];
