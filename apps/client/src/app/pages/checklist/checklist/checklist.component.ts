@@ -11,7 +11,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { SettingsService } from '../../../core/database/services/settings.service';
 import { EnergyService } from '../../../core/database/services/energy.service';
 import { TimeService } from '../../../core/time.service';
-import { CompletionService } from '../../../core/database/services/completion.service';
+import { CHECKLIST_NOT_LOADED_MESSAGE, CompletionService } from '../../../core/database/services/completion.service';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { isTaskAvailable, isTaskDone } from '../../../core/is-task-done';
 import { isTaskTracked } from '../../../core/task-tracking';
@@ -401,6 +401,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
   }
 
   public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent, shownAmount?: number): void {
+    // A click writes a count worked out from the ticks on screen, so it must not start from a cached
+    // copy that the server's (possibly newer) copy is about to replace.
+    if (this.completionService.waitsForServerCopy(completion)) {
+      this.message.error(CHECKLIST_NOT_LOADED_MESSAGE);
+      return;
+    }
     let reset = Infinity;
     switch (task.frequency) {
       case TaskFrequency.DAILY:

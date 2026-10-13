@@ -33,14 +33,14 @@ describe('ChecklistComponent', () => {
   const arwen = { id: 1, name: 'Arwen', ilvl: 1700 } as Character;
 
   let energyService: { patchFields: jest.Mock };
-  let completionService: { patchFields: jest.Mock };
+  let completionService: { patchFields: jest.Mock; waitsForServerCopy: jest.Mock };
   let message: { error: jest.Mock };
   const rosterSetOne = jest.fn();
   const rosterPatchFields = jest.fn();
 
   function createComponent(tasks$: Observable<LostarkTask[]> = NEVER): ChecklistComponent {
     energyService = { patchFields: jest.fn() };
-    completionService = { patchFields: jest.fn() };
+    completionService = { patchFields: jest.fn(), waitsForServerCopy: jest.fn(() => false) };
     message = { error: jest.fn() };
     return new ChecklistComponent(
       { roster$: NEVER, setOne: rosterSetOne, patchFields: rosterPatchFields } as unknown as RosterService,
@@ -168,6 +168,25 @@ describe('ChecklistComponent', () => {
         { ctrlKey: true } as MouseEvent, 3);
 
       expect(completion.data['1:una'].amount).toBe(3);
+      expect(energy.data['1:una']).toEqual({ amount: 100 });
+      expect(completionService.patchFields).not.toHaveBeenCalled();
+      expect(energyService.patchFields).not.toHaveBeenCalled();
+    });
+
+    it('refuses a click or a reset on a cached copy the server copy is about to replace', () => {
+      const component = createComponent();
+      completionService.waitsForServerCopy.mockReturnValue(true);
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 1, updated: dailyReset - 60000 } }, fromCache: true };
+      const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], false, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+
+      expect(completionService.waitsForServerCopy).toHaveBeenCalledWith(completion);
+      expect(message.error).toHaveBeenCalledTimes(2);
+      expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+      // Nothing on screen changed either, not even the reset of the entry from before the reset.
+      expect(completion.data['1:una']).toEqual({ amount: 1, updated: dailyReset - 60000 });
       expect(energy.data['1:una']).toEqual({ amount: 100 });
       expect(completionService.patchFields).not.toHaveBeenCalled();
       expect(energyService.patchFields).not.toHaveBeenCalled();
