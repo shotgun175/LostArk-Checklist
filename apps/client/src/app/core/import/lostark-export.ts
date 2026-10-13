@@ -40,7 +40,8 @@ const SETTINGS_FIELDS: Record<keyof StoredDoc<Settings>, true> = {
   chestConfiguration: true,
   goldPlannerConfiguration: true,
   raidModesForGoldPlanner: true,
-  forceAbyss: true
+  forceAbyss: true,
+  trackTickets: true
 };
 
 /** Settings keys this fork uses; any other key in an imported file is dropped. */

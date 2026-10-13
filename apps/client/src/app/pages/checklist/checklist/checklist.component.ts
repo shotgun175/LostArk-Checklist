@@ -15,6 +15,7 @@ import { CHECKLIST_NOT_LOADED_MESSAGE, CompletionService } from '../../../core/d
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { isTaskAvailable, isTaskDone } from '../../../core/is-task-done';
 import { isTaskTracked } from '../../../core/task-tracking';
+import { isTicketTrackingOn } from '../../../core/ticket-tracking';
 import { Roster } from '../../../model/roster';
 import { LocalStorageBehaviorSubject } from '../../../core/local-storage-behavior-subject';
 import { Character } from '../../../model/character/character';
@@ -88,7 +89,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     map(tiersAvailability => tickets.filter(t => !t.tier || tiersAvailability[`t${t.tier}`]))
   );
 
-  public ticketsTrackingOpened = localStorage.getItem('checklist:tickets-opened') === 'true';
+  /** Whether the Tickets tracking panel shows at all (the Track tickets switch in Settings). */
+  public showTickets$ = combineLatest([this.settings$, this.rawRoster$]).pipe(
+    map(([settings, roster]) => isTicketTrackingOn(settings, roster.characters))
+  );
+
+  public ticketsTrackingOpened =localStorage.getItem('checklist:tickets-opened') === 'true';
 
   public completion$: Observable<Completion> = this.completionService.completion$;
 

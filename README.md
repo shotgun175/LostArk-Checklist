@@ -9,7 +9,7 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 - **Checklist**: daily and weekly tasks per character, with rest bonus.
 - **Gold Planner**: weekly gold per character and raid.
 - **Roster** and **Tasks Manager**: your characters and the tasks you track. On both pages, drag a row by the grip at the left of it to change the order, or focus the grip (Tab) and press Arrow Up or Arrow Down. The rest of the row works like a normal form, so text in its inputs can be selected.
-- **Settings**: lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
+- **Settings**: ticket tracking, lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
 - On a phone (under 768 px wide) the sidebar is hidden; the menu button at the top left opens it over the page, and a tap on a page or outside it closes it. The menu fits the visible screen above the browser's toolbars; if the screen is short, the page links scroll and the bottom links stay in view. Wide tables (the Checklist grid, Tasks Manager, Settings) scroll sideways inside their own box, so the page itself always fits the phone's width. On a phone or tablet (touch screen) the Checklist and Tasks Manager tables have no up-and-down scroll box of their own: the whole page scrolls, and the table's header row stays at the top of the screen (not on a phone turned sideways, where it would cover too much). On a PC they keep their own scroll box. From 768 px up, the sidebar's collapse button (also reachable with Tab) remembers your choice.
 - **Lost Ark Tools** (at the bottom of the sidebar, just above GitHub, with a small gold mark) opens the [Lost Ark Tools](https://shotgun175.github.io/) hub, which lists this and the other tools, in a new tab. With the sidebar collapsed it shows only its mark, with a tooltip.
 - **Privacy** (footer link): what is stored and why. To report a problem or ask about your data, open an issue on the [GitHub issues page](https://github.com/shotgun175/LostArk-Checklist/issues).
@@ -23,6 +23,8 @@ Three checkboxes above the table choose what it shows:
 - **Show all tasks** also shows tasks that are not available today (for example Chaos Gate or Procyon Boss on their off days, or your own tasks with a day filter). They show greyed out. Saved with your roster.
 - **Hide completed tasks** hides a task once it is done for every character shown. It keeps hiding finished tasks when Show all tasks is ticked. Saved with your settings.
 - **Show hidden characters** also shows the characters marked Hide on the Roster page, on the Checklist and the Gold Planner. Remembered by this browser.
+
+The **Tickets tracking** panel above them (Ebony Cube tickets per character) only shows when **Track tickets** is on in Settings. It is off for new accounts, and on for accounts that already have a ticket count, until you change it. Saved with your settings; your ticket counts are kept while it is off.
 
 ### Which raids are tracked
 
