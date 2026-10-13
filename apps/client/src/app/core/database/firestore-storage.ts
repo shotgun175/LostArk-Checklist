@@ -1,5 +1,5 @@
 import { DataModel } from "./data-model";
-import { catchError, delay, distinctUntilChanged, EMPTY, filter, finalize, first, from, map, merge, Observable, of, share, shareReplay, Subject, takeUntil, tap, throwError } from "rxjs";
+import { catchError, distinctUntilChanged, EMPTY, filter, finalize, from, map, Observable, of, shareReplay, Subject, tap, throwError } from "rxjs";
 import {
   collection,
   deleteDoc,
@@ -30,19 +30,12 @@ import { applyFieldWrites, FieldWrite, WriteCoalescer } from "./write-coalescer"
 
 export abstract class FirestoreStorage<T extends DataModel> {
 
-  /**
-   * How long a current-user document waits for the server's copy before it shows this device's
-   * cached copy instead (offline). The server's copy still replaces it when it arrives.
-   */
-  public static readonly SERVER_COPY_WAIT_MS = 2000;
-
   protected static OPERATIONS: Record<string, Record<"read" | "write" | "delete", number>> = {};
-
-  protected shouldClone = true;
 
   protected converter: FirestoreDataConverter<T> = {
     toFirestore: (modelObject: WithFieldValue<T>): DocumentData => {
-      const workingCopy: Partial<WithFieldValue<T>> = (this.shouldClone ? { ...modelObject } : modelObject) as Partial<WithFieldValue<T>>;
+      // A copy: callers pass the object they show (from getOne), which must keep its $key.
+      const workingCopy: Partial<WithFieldValue<T>> = { ...modelObject } as Partial<WithFieldValue<T>>;
       delete workingCopy.$key;
       delete workingCopy.notFound;
       delete workingCopy.fromCache;
@@ -64,8 +57,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
 
   protected cache: Record<string, Observable<T>> = {};
 
-  protected updateSources: Record<string, Subject<FieldWrite[]>> = {};
-  /** Local field changes for documents read with a live listener (not the current-user path). */
+  /** Field changes made on this page, per document, applied to what getOne shows at once. */
   private fieldWriteSources: Record<string, Subject<FieldWrite[]>> = {};
   /**
    * Documents this page has read as existing. These per-user documents are only ever removed by
@@ -83,7 +75,6 @@ export abstract class FirestoreStorage<T extends DataModel> {
   private static writesPaused = false;
   private static writesHeld = false;
   private readonly coalescer = new WriteCoalescer((key, writes) => this.commitFieldWrites(key, writes));
-  protected setSources: Record<string, Subject<T>> = {};
 
   protected readonly collection = collection(this.firestore, this.getCollectionName()).withConverter(this.converter);
 
@@ -223,12 +214,13 @@ export abstract class FirestoreStorage<T extends DataModel> {
    * only means this device never stored the document, and treating it as missing would write
    * defaults over the real data.
    *
-   * The current-user path (isForCurrentUser) keeps one base copy and only applies this page's own
-   * changes to it, so later echoes of those changes cannot make ticks flicker. The base is the
-   * server's first copy; offline, the cached copy is shown after SERVER_COPY_WAIT_MS and replaced
-   * once by the server's copy when it arrives.
+   * Every snapshot is shown, so changes from other tabs and devices appear without a reload, and the
+   * cached copy shows at once on startup. Writes handed to the SDK (setOne, updateOne, written field
+   * changes) are in every later local snapshot, online or offline, until the server confirms or
+   * rejects them, so they show at once without help here. Only field changes still waiting in their
+   * one-second window are not, so they are applied on top of each snapshot.
    */
-  public getOne(key: string, isForCurrentUser = false): Observable<T> {
+  public getOne(key: string): Observable<T> {
     if (!this.cache[key]) {
       const source$ = docSnapshot$(this.docRef(key)).pipe(
         filter(state => !!state.data || !state.fromCache),
@@ -249,50 +241,32 @@ export abstract class FirestoreStorage<T extends DataModel> {
           return state.fromCache ? { ...state.data, fromCache: true } as T : state.data;
         }),
         // The marker is compared too, so the server's copy is emitted even when it matches the cached one.
+        // The previous copy is the object on screen, which local changes edit in place, so only a
+        // snapshot equal to what is shown is skipped; any other one (another device) is emitted.
         distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
         tap(() => this.recordOperation("read", "wtf"))
       );
-      if (isForCurrentUser) {
-        this.updateSources[key] = new Subject<FieldWrite[]>();
-        this.setSources[key] = new Subject<T>();
-        const snapshots$ = source$.pipe(share());
-        const serverCopy$ = snapshots$.pipe(filter(obj => !obj.fromCache), first());
-        const cachedCopy$ = snapshots$.pipe(
-          filter(obj => !!obj.fromCache),
-          first(),
-          delay(FirestoreStorage.SERVER_COPY_WAIT_MS),
-          takeUntil(serverCopy$)
-        );
-        this.cache[key] = merge(
-          this.setSources[key],
-          merge(serverCopy$, cachedCopy$)
-        ).pipe(
-          switchMap((obj) => {
-            return this.updateSources[key].pipe(
-              map(writes => this.withLocalWrites(obj, writes)),
-              // Changes still waiting in their one-second window are not in a replacing server copy yet.
-              startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
-            );
-          })
-        );
-      } else {
-        const fieldWrites$ = this.fieldWriteSources[key] = this.fieldWriteSources[key] ?? new Subject<FieldWrite[]>();
-        this.cache[key] = source$.pipe(
-          // Pending field changes are applied to every snapshot, so a snapshot that arrives
-          // before they are written cannot undo them on screen.
-          switchMap(obj => fieldWrites$.pipe(
-            map(writes => this.withLocalWrites(obj, writes)),
-            startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
-          )),
-          catchError(err => this.endListener(err)),
-          shareReplay({ refCount: true, bufferSize: 1 }),
-          finalize(() => delete this.cache[key])
-        );
-      }
+      const fieldWrites$ = this.fieldWriteSources[key] = this.fieldWriteSources[key] ?? new Subject<FieldWrite[]>();
+      this.cache[key] = source$.pipe(
+        // Pending field changes are applied to every snapshot, so a snapshot that arrives
+        // before they are written cannot undo them on screen.
+        switchMap(obj => fieldWrites$.pipe(
+          map(writes => this.withLocalWrites(obj, writes)),
+          startWith(this.withLocalWrites(obj, this.coalescer.pending(key)))
+        )),
+        catchError(err => this.endListener(err)),
+        shareReplay({ refCount: true, bufferSize: 1 }),
+        finalize(() => delete this.cache[key])
+      );
     }
     return this.cache[key];
   }
 
+  /**
+   * Applies field changes to the snapshot object in place. It must not copy: the object is also the
+   * copy getOne compares the next snapshot with, and an unchanged copy would make a snapshot that
+   * undoes the change (another device) look unchanged, so it would be skipped.
+   */
   private withLocalWrites(obj: T, writes: readonly FieldWrite[]): T {
     if (writes.length > 0) {
       applyFieldWrites(obj, writes);
@@ -311,7 +285,7 @@ export abstract class FirestoreStorage<T extends DataModel> {
     if (FirestoreStorage.writesPaused) {
       return;
     }
-    (this.updateSources[key] ?? this.fieldWriteSources[key])?.next(writes);
+    this.fieldWriteSources[key]?.next(writes);
     if (FirestoreStorage.writesHeld) {
       this.coalescer.queue(key, writes);
       return;
@@ -383,9 +357,6 @@ export abstract class FirestoreStorage<T extends DataModel> {
     }
     this.coalescer.discard(key);
     this.recordOperation("write", key);
-    if (this.setSources[key]) {
-      this.setSources[key].next({ ...row, $key: key } as T);
-    }
     return from(setDoc(this.docRef(key), row));
   }
 
@@ -404,12 +375,6 @@ export abstract class FirestoreStorage<T extends DataModel> {
       return of(void 0);
     }
     this.recordOperation("write", key);
-    if (this.updateSources[key]) {
-      this.updateSources[key].next(Object.entries(row as Record<string, unknown>)
-        // Skipping array manipulations
-        .filter(([, value]) => typeof value !== "function")
-        .map(([field, value]) => ({ path: field.split("."), value })));
-    }
     return from(updateDoc(this.docRef(key), row));
   }
 

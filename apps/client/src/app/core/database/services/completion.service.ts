@@ -6,15 +6,18 @@ import { FIRESTORE } from "../../firebase/firebase.providers";
 import { map, Observable, shareReplay, switchMap } from "rxjs";
 import { AuthService } from "./auth.service";
 
+/**
+ * The current user's ticks, live: changes from other tabs and devices show without a reload, and
+ * this device's cached copy shows at once on startup. Clicks edit the emitted object in place and
+ * save with patchFields, which keeps them on screen until the server has them (see getOne).
+ */
 @Injectable({
   providedIn: "root"
 })
 export class CompletionService extends FirestoreStorage<Completion> {
-  protected override shouldClone = false;
-
   public completion$: Observable<Completion> = this.auth.uid$.pipe(
     switchMap(uid => {
-      return this.getOne(uid, true).pipe(
+      return this.getOne(uid).pipe(
         map(completion => {
           if (completion.notFound) {
             return {
@@ -31,15 +34,6 @@ export class CompletionService extends FirestoreStorage<Completion> {
 
   constructor(@Inject(FIRESTORE) firestore: Firestore, private auth: AuthService) {
     super(firestore);
-  }
-
-  /**
-   * Replaces the in-memory completion without writing it. completion$ keeps only its first
-   * server snapshot, so a write made outside this service (the data import batch) would
-   * otherwise stay invisible, and stale ticks could be written back over it.
-   */
-  public setLocal(key: string, completion: Completion): void {
-    this.setSources[key]?.next(completion);
   }
 
   protected getCollectionName(): string {

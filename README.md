@@ -105,6 +105,7 @@ Three checkboxes above the table choose what it shows:
 - **Sign in** also reloads the page and removes the previous account's data from that browser (a guest's data stays on the server, see above).
 - **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
 - Log out, Sign in and account deletion reload every open tab of the site in that browser.
+- Open tabs and devices update live: a tick, roster change or setting saved on one shows on the others within a few seconds while they are online, without a reload.
 
 ## Offline
 
