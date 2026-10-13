@@ -49,7 +49,7 @@
 
 @if (rawRoster$ | async; as roster) {
     @if (characters$ | async; as characters) {
-      @if (characters.length > 0) {
+      @if (characters.length > 0 && (showTickets$ | async)) {
         <nz-collapse>
         <nz-collapse-panel nzHeader="Tickets tracking" class="tickets-tracker" [(nzActive)]="ticketsTrackingOpened" (nzActiveChange)="ticketsTrackingOpenedChange($event)">
           <nz-table class="tickets-table" [nzPageSize]="99" nzHideOnSinglePage nzBordered nzOuterBordered nzSize="middle" [nzData]="[{}]" [nzScroll]="{ x: 'max-content' }">
@@ -87,7 +87,7 @@
 @if (rawRoster$ | async; as roster) {
   @if (roster.characters.length > 0) {
     <div class="view-toggles">
-      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveRoster(roster)">
+      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveShowAllTasks(roster, $event)">
         Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
       </label>
       @if (settings$ | async; as settings) {

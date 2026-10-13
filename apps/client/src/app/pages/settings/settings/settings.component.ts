@@ -15,6 +15,7 @@ import { EnergyService } from "../../../core/database/services/energy.service";
 import { TasksService } from "../../../core/database/services/tasks.service";
 import { AuthService } from "../../../core/database/services/auth.service";
 import { Roster } from "../../../model/roster";
+import { isTicketTrackingOn } from "../../../core/ticket-tracking";
 import { Character } from "../../../model/character/character";
 import { NzMessageService } from "ng-zorro-antd/message";
 import { DataTransferService } from "../../../core/import/data-transfer.service";
@@ -337,6 +338,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
   /** "1 character", "2 characters"; the plural is the singular plus "s" unless given. */
   countLabel(count: number, singular: string, plural = `${singular}s`): string {
     return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  /** The Track tickets switch: the saved choice, or the default worked out from the ticket counts. */
+  ticketTrackingOn(settings: Settings, roster: Roster): boolean {
+    return isTicketTrackingOn(settings, roster.characters);
+  }
+
+  setTrackTickets(settingsKey: string, on: boolean): void {
+    this.settings.patchFields(settingsKey, [{ path: ["trackTickets"], value: on }]);
   }
 
   setLazyFlag(settingsKey: string, tracking: Record<string, boolean>, task: LostarkTask, character: Character, flag: boolean): void {

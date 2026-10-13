@@ -17,4 +17,6 @@ export interface Settings extends DataModel {
   goldPlannerConfiguration: Record<string, boolean>;
   raidModesForGoldPlanner: Record<string, string>;
   forceAbyss: Record<string, boolean>;
+  // Shows the Tickets tracking panel on the Checklist. Unset until the Settings switch is used (see ticket-tracking.ts).
+  trackTickets?: boolean;
 }

@@ -54,6 +54,13 @@ function snap(data: TestDoc | undefined, fromCache = false): DocState<TestDoc> {
   return { data, exists: data !== undefined, fromCache, hasPendingWrites: false };
 }
 
+/** A promise settled from the test, for a write that is still on its way. */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>(r => resolve = r);
+  return { promise, resolve };
+}
+
 async function settle(): Promise<void> {
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
@@ -118,11 +125,11 @@ describe("FirestoreStorage field writes", () => {
     expect(updateDoc).toHaveBeenCalledTimes(4);
   });
 
-  it("shows field changes at once on a current-user document, even one that did not exist", () => {
+  it("shows field changes at once, even on a document that did not exist", () => {
     const snapshots = new Subject<DocState<TestDoc>>();
     jest.mocked(docSnapshot$).mockReturnValue(snapshots as never);
     const seen: TestDoc[] = [];
-    storage.getOne("u1", true).subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
+    storage.getOne("u1").subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
     snapshots.next(snap(undefined));
     storage.patchFields("u1", [{ path: ["data", "1:t1"], value: { amount: 1 } }]);
     expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { "1:t1": { amount: 1 } } });
@@ -134,7 +141,9 @@ describe("FirestoreStorage field writes", () => {
     const seen: TestDoc[] = [];
     storage.getOne("u2").subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
     snapshots.next(snap({ $key: "u2", data: { other: 1 } }));
-    // The first change is written at once (Firestore then shows it in its own snapshots); the second waits
+    // The first change is written at once: the SDK keeps a write it was handed in every later local
+    // snapshot until the server confirms or refuses it, so the next snapshot includes it. The second
+    // change waits in its one-second window, which no snapshot knows about yet.
     storage.patchFields("u2", [{ path: ["data", "first"], value: 1 }]);
     storage.patchFields("u2", [{ path: ["data", "mine"], value: 2 }]);
     snapshots.next(snap({ $key: "u2", data: { other: 3, first: 1 } }));
@@ -175,7 +184,7 @@ describe("FirestoreStorage after a document it saw is deleted (account deleted i
   it("does not create it again when a field change finds it gone", async () => {
     const snapshots = new Subject<DocState<TestDoc>>();
     jest.mocked(docSnapshot$).mockReturnValue(snapshots as never);
-    storage.getOne("u1", true).subscribe();
+    storage.getOne("u1").subscribe();
     snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
     jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
     const error = jest.spyOn(console, "error").mockImplementation(() => undefined);
@@ -280,7 +289,7 @@ describe("FirestoreStorage.holdWrites", () => {
     const states = new Subject<DocState<TestDoc>>();
     jest.mocked(docSnapshot$).mockReturnValue(states);
     const shown: TestDoc[] = [];
-    storage.getOne("u1", true).subscribe(d => shown.push(JSON.parse(JSON.stringify(d))));
+    storage.getOne("u1").subscribe(d => shown.push(JSON.parse(JSON.stringify(d))));
     states.next(snap({ $key: "u1", data: {} }));
     FirestoreStorage.holdWrites();
     storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
@@ -346,53 +355,171 @@ describe("FirestoreStorage with a local cache", () => {
     expect(converter.toFirestore({ $key: "u1", data: {}, fromCache: true, notFound: true })).toEqual({ data: {} });
   });
 
-  describe("current-user document (local-first)", () => {
-    it("online, takes the server copy as its base and never shows the cached one", () => {
+  describe("live document (synced between tabs and devices)", () => {
+    /** The object getOne shows now, as the checklist holds it (edited in place by its click handler). */
+    let current: TestDoc | undefined;
+    const shown = (): TestDoc => current as TestDoc;
+
+    /** Collects deep copies, so a later change to the emitted object cannot rewrite what was seen. */
+    function watch(key = "u1"): TestDoc[] {
       const seen: TestDoc[] = [];
-      storage.getOne("u1", true).subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
+      current = undefined;
+      storage.getOne(key).subscribe(doc => {
+        current = doc;
+        seen.push(JSON.parse(JSON.stringify(doc)));
+      });
+      return seen;
+    }
+
+    it("shows the cached copy at once on startup, then the server copy", () => {
+      const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { old: 1 } }, true));
-      jest.advanceTimersByTime(20);
+      expect(seen).toEqual([{ $key: "u1", data: { old: 1 }, fromCache: true }]);
       snapshots.next(snap({ $key: "u1", data: { fromOtherDevice: 1 } }));
-      jest.advanceTimersByTime(FirestoreStorage.SERVER_COPY_WAIT_MS);
-      expect(seen).toEqual([{ $key: "u1", data: { fromOtherDevice: 1 } }]);
+      expect(seen).toEqual([
+        { $key: "u1", data: { old: 1 }, fromCache: true },
+        { $key: "u1", data: { fromOtherDevice: 1 } }
+      ]);
     });
 
-    it("keeps ignoring later echoes once it has the server copy", () => {
-      const seen: TestDoc[] = [];
-      storage.getOne("u1", true).subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
+    it("shows a later snapshot from another device with a different entry", () => {
+      const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
-      snapshots.next(snap({ $key: "u1", data: { a: 2 } }));
-      expect(seen).toEqual([{ $key: "u1", data: { a: 1 } }]);
-      expect(snapshots.observed).toBe(false);
+      snapshots.next(snap({ $key: "u1", data: { a: 1, b: 1 } }));
+      expect(seen).toEqual([
+        { $key: "u1", data: { a: 1 } },
+        { $key: "u1", data: { a: 1, b: 1 } }
+      ]);
+      expect(snapshots.observed).toBe(true);
     });
 
-    it("offline, shows the cached copy after the wait, then replaces it once with the server copy, keeping queued ticks", () => {
-      const seen: TestDoc[] = [];
-      storage.getOne("u1", true).subscribe(doc => seen.push(JSON.parse(JSON.stringify(doc))));
+    it("offline, keeps a queued tick when the server copy arrives, and still shows later changes", () => {
+      const seen = watch();
       snapshots.next(snap({ $key: "u1", data: { cached: 1 } }, true));
-      jest.advanceTimersByTime(FirestoreStorage.SERVER_COPY_WAIT_MS - 1);
-      expect(seen).toEqual([]);
-      jest.advanceTimersByTime(1);
-      expect(seen).toEqual([{ $key: "u1", data: { cached: 1 }, fromCache: true }]);
       // The first tick is written at once; the second waits in its one-second window.
       storage.patchFields("u1", [{ path: ["data", "tick1"], value: 1 }]);
       storage.patchFields("u1", [{ path: ["data", "tick2"], value: 1 }]);
-      // Back online: the server copy already holds the written tick (Firestore shows local writes).
+      // Back online: the server copy already holds the written tick (the SDK shows its local writes).
       snapshots.next(snap({ $key: "u1", data: { cached: 1, otherDevice: 1, tick1: 1 } }));
       expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { cached: 1, otherDevice: 1, tick1: 1, tick2: 1 } });
-      const count = seen.length;
-      snapshots.next(snap({ $key: "u1", data: { echo: 1 } }));
-      expect(seen.length).toBe(count);
+      snapshots.next(snap({ $key: "u1", data: { cached: 1, otherDevice: 2, tick1: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { cached: 1, otherDevice: 2, tick1: 1, tick2: 1 } });
     });
 
-    it("offline with nothing cached, shows nothing (and writes nothing) until the server answers", () => {
-      const seen: TestDoc[] = [];
-      storage.getOne("u1", true).subscribe(doc => seen.push(doc));
-      snapshots.next(snap(undefined, true));
-      jest.advanceTimersByTime(FirestoreStorage.SERVER_COPY_WAIT_MS * 5);
-      expect(seen).toEqual([]);
+    it("an in-place click cannot hide another device undoing it", async () => {
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      // The click handler edits the shown object, then patches the field (written at once).
+      const doc = shown();
+      doc.data["a"] = 2;
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      // The server confirms the write.
+      await settle();
+      // Another device sets it back. The snapshot equals the one before the click, so it would be
+      // skipped as "unchanged" if the copy it is compared with were not the one on screen.
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1 } });
+      expect(shown().data).toEqual({ a: 1 });
+    });
+
+    it("a field change made without an in-place edit cannot hide another device undoing it either", async () => {
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      await settle();
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1 } });
+    });
+
+    it("does not bring back a written tick once another device changes that entry", async () => {
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+      storage.patchFields("u1", [{ path: ["data", "b"], value: 1 }]);
+      // A snapshot from another device while b waits in its window: b stays on screen.
+      snapshots.next(snap({ $key: "u1", data: { a: 1, c: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1, c: 1, b: 1 } });
+      jest.advanceTimersByTime(1000);
+      expect(updateDoc).toHaveBeenLastCalledWith(atDoc("completion/u1"), new FieldPath("data", "b"), 1);
+      snapshots.next(snap({ $key: "u1", data: { a: 1, b: 1, c: 1 } }));
+      await settle();
+      // Another device clears b: nothing is pending or in flight any more, so its value wins.
+      snapshots.next(snap({ $key: "u1", data: { a: 1, b: 0, c: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 1, b: 0, c: 1 } });
+    });
+
+    it("keeps a written change on screen when a snapshot without it comes before the SDK has it", async () => {
+      const first = deferred();
+      const second = deferred();
+      jest.mocked(updateDoc).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
+      // Click 1 is written at once; click 2 waits for the window and is written when it closes.
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 2 }]);
+      jest.advanceTimersByTime(1000);
+      expect(updateDoc).toHaveBeenCalledTimes(2);
+      // A snapshot raised for click 1 only, delivered before the SDK added click 2 to its local view.
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 2 } });
+      first.resolve();
+      second.resolve();
+      await settle();
+      // Both writes settled: a later change from another device shows as it is.
+      snapshots.next(snap({ $key: "u1", data: { a: 5 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 5 } });
+    });
+
+    it("keeps the first tick on a new document when the server reports it missing again before the create lands", async () => {
+      const create = deferred();
+      jest.mocked(updateDoc).mockReturnValueOnce(Promise.reject({ code: "not-found" }));
+      jest.mocked(setDoc).mockReturnValueOnce(create.promise);
+      const seen = watch();
       snapshots.next(snap(undefined));
       expect(seen).toEqual([{ $key: "u1", notFound: true }]);
+      storage.patchFields("u1", [{ path: ["data", "t"], value: 1 }]);
+      await settle();
+      expect(setDoc).toHaveBeenCalledWith(atDoc("completion/u1"), { data: { t: 1 } }, { merge: true });
+      snapshots.next(snap(undefined));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { t: 1 } });
+      create.resolve();
+      await settle();
+      snapshots.next(snap({ $key: "u1", data: { t: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { t: 1 } });
+    });
+
+    it("a whole-document write stops showing field changes still in flight", () => {
+      jest.mocked(updateDoc).mockReturnValueOnce(deferred().promise);
+      const seen = watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 0 } }));
+      storage.patchFields("u1", [{ path: ["data", "a"], value: 1 }]);
+      storage.setOne("u1", { data: { a: 0, reset: 1 } });
+      snapshots.next(snap({ $key: "u1", data: { a: 0, reset: 1 } }));
+      expect(seen[seen.length - 1]).toEqual({ $key: "u1", data: { a: 0, reset: 1 } });
+    });
+
+    it("keeps one listener per document until its last subscriber leaves", () => {
+      const first = storage.getOne("u1").subscribe();
+      const second = storage.getOne("u1").subscribe();
+      first.unsubscribe();
+      storage.getOne("u1").subscribe().unsubscribe();
+      expect(docSnapshot$).toHaveBeenCalledTimes(1);
+      second.unsubscribe();
+      storage.getOne("u1").subscribe();
+      expect(docSnapshot$).toHaveBeenCalledTimes(2);
+    });
+
+    it("saving the shown object as a whole document keeps its $key on screen", () => {
+      watch();
+      snapshots.next(snap({ $key: "u1", data: { a: 1 } }));
+      const doc = shown();
+      const converter = (storage as unknown as { converter: { toFirestore(doc: TestDoc): unknown } }).converter;
+      expect(converter.toFirestore(doc)).toEqual({ data: { a: 1 } });
+      storage.setOne(doc.$key, doc);
+      expect(doc.$key).toBe("u1");
+      expect(setDoc).toHaveBeenCalledWith(atDoc("completion/u1"), doc);
     });
   });
 });
@@ -487,5 +614,17 @@ describe("FirestoreStorage.flushPendingLocally", () => {
     expect(await isDone(flushed)).toBe(false);
     jest.advanceTimersByTime(1);
     expect(await isDone(flushed)).toBe(true);
+  });
+
+  it("localSnapshotsDelivered waits for a cache read, then gives the listeners' timers a moment", async () => {
+    let finishRead: () => void = () => undefined;
+    jest.mocked(getDocFromCache).mockImplementationOnce(() => new Promise(resolve => finishRead = () => resolve({} as never)));
+    const delivered = FirestoreStorage.localSnapshotsDelivered();
+    jest.advanceTimersByTime(FirestoreStorage.SNAPSHOT_DELIVERY_MS);
+    expect(await isDone(delivered)).toBe(false);
+    finishRead();
+    expect(await isDone(delivered)).toBe(false);
+    jest.advanceTimersByTime(FirestoreStorage.SNAPSHOT_DELIVERY_MS);
+    expect(await isDone(delivered)).toBe(true);
   });
 });

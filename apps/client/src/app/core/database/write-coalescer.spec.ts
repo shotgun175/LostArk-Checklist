@@ -137,4 +137,44 @@ describe("WriteCoalescer", () => {
     jest.advanceTimersByTime(1000);
     expect(flushed.length).toBe(4);
   });
+
+  describe("in-flight changes", () => {
+    function settleLater(): { promise: Promise<void>; resolve: () => void; reject: () => void } {
+      let resolve: () => void = () => undefined;
+      let reject: () => void = () => undefined;
+      const promise = new Promise<void>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise, resolve, reject };
+    }
+
+    it("are listed before the waiting ones until their write settles, either way", async () => {
+      const first = settleLater();
+      const second = settleLater();
+      coalescer.trackInFlight("doc", [{ path: ["a"], value: 1 }], first.promise);
+      coalescer.trackInFlight("doc", [{ path: ["a"], value: 2 }], second.promise);
+      coalescer.queue("doc", [{ path: ["a"], value: 3 }]);
+      expect(coalescer.unsettled("doc")).toEqual([{ path: ["a"], value: 1 }, { path: ["a"], value: 2 }, { path: ["a"], value: 3 }]);
+      expect(coalescer.pending("doc")).toEqual([{ path: ["a"], value: 3 }]);
+      first.resolve();
+      second.reject();
+      await second.promise.catch(() => undefined);
+      await Promise.resolve();
+      expect(coalescer.unsettled("doc")).toEqual([{ path: ["a"], value: 3 }]);
+    });
+
+    it("are dropped by discard and forgetInFlight", () => {
+      coalescer.trackInFlight("one", [{ path: ["a"], value: 1 }], settleLater().promise);
+      coalescer.trackInFlight("two", [{ path: ["a"], value: 1 }], settleLater().promise);
+      coalescer.trackInFlight("three", [{ path: ["a"], value: 1 }], settleLater().promise);
+      coalescer.forgetInFlight("one");
+      coalescer.discard("two");
+      expect(coalescer.unsettled("one")).toEqual([]);
+      expect(coalescer.unsettled("two")).toEqual([]);
+      expect(coalescer.unsettled("three")).toEqual([{ path: ["a"], value: 1 }]);
+      coalescer.discard();
+      expect(coalescer.unsettled("three")).toEqual([]);
+    });
+  });
 });

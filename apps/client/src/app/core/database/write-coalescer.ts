@@ -72,6 +72,8 @@ export function mergeFieldWrite(pending: readonly FieldWrite[], next: FieldWrite
 export class WriteCoalescer {
   private readonly queued = new Map<string, FieldWrite[]>();
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Changes handed to `write` whose write has not settled yet, per document, oldest first. */
+  private readonly inFlight = new Map<string, (readonly FieldWrite[])[]>();
 
   constructor(private readonly write: (key: string, writes: FieldWrite[]) => void,
               private readonly delayMs = 1000) {
@@ -107,6 +109,37 @@ export class WriteCoalescer {
     return this.queued.get(key) ?? [];
   }
 
+  /**
+   * Keeps changes that `write` handed on as in flight until `settled` settles (confirmed, refused or
+   * given up). The SDK adds a write to its local snapshots a moment after it is handed over, so a
+   * snapshot delivered in between does not have it yet.
+   */
+  public trackInFlight(key: string, writes: readonly FieldWrite[], settled: Promise<unknown>): void {
+    this.inFlight.set(key, [...(this.inFlight.get(key) ?? []), writes]);
+    const forget = (): void => {
+      const left = (this.inFlight.get(key) ?? []).filter(batch => batch !== writes);
+      if (left.length > 0) {
+        this.inFlight.set(key, left);
+      } else {
+        this.inFlight.delete(key);
+      }
+    };
+    settled.then(forget, forget);
+  }
+
+  /** Stops showing a document's in-flight changes, for a write that replaces what they changed. */
+  public forgetInFlight(key: string): void {
+    this.inFlight.delete(key);
+  }
+
+  /**
+   * Every change of one document that a snapshot may not show yet: the in-flight ones, oldest first,
+   * then those waiting for the window. Applied in this order, the newest value of a field wins.
+   */
+  public unsettled(key: string): FieldWrite[] {
+    return [...(this.inFlight.get(key) ?? []).flat(), ...this.pending(key)];
+  }
+
   /** Writes the pending changes of one document, or of all documents, now and ends their windows. */
   public flush(key?: string): void {
     this.keys(key).forEach(k => {
@@ -118,9 +151,14 @@ export class WriteCoalescer {
     });
   }
 
-  /** Drops the pending changes of one document, or of all documents, without writing them. */
+  /** Drops the pending changes of one document, or of all documents, without writing them, and stops showing their in-flight ones. */
   public discard(key?: string): void {
     this.keys(key).forEach(k => this.clear(k));
+    if (key === undefined) {
+      this.inFlight.clear();
+    } else {
+      this.inFlight.delete(key);
+    }
   }
 
   private openWindow(key: string): void {

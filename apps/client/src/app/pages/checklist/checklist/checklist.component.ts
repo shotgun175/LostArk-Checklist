@@ -11,10 +11,11 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { SettingsService } from '../../../core/database/services/settings.service';
 import { EnergyService } from '../../../core/database/services/energy.service';
 import { TimeService } from '../../../core/time.service';
-import { CompletionService } from '../../../core/database/services/completion.service';
+import { CHECKLIST_NOT_LOADED_MESSAGE, CompletionService } from '../../../core/database/services/completion.service';
 import { TasksService } from '../../../core/database/services/tasks.service';
 import { isTaskAvailable, isTaskDone } from '../../../core/is-task-done';
 import { isTaskTracked } from '../../../core/task-tracking';
+import { isTicketTrackingOn } from '../../../core/ticket-tracking';
 import { Roster } from '../../../model/roster';
 import { LocalStorageBehaviorSubject } from '../../../core/local-storage-behavior-subject';
 import { Character } from '../../../model/character/character';
@@ -88,7 +89,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     map(tiersAvailability => tickets.filter(t => !t.tier || tiersAvailability[`t${t.tier}`]))
   );
 
-  public ticketsTrackingOpened = localStorage.getItem('checklist:tickets-opened') === 'true';
+  /** Whether the Tickets tracking panel shows at all (the Track tickets switch in Settings). */
+  public showTickets$ = combineLatest([this.settings$, this.rawRoster$]).pipe(
+    map(([settings, roster]) => isTicketTrackingOn(settings, roster.characters))
+  );
+
+  public ticketsTrackingOpened =localStorage.getItem('checklist:tickets-opened') === 'true';
 
   public completion$: Observable<Completion> = this.completionService.completion$;
 
@@ -401,6 +407,12 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
   }
 
   public markAsDone(completion: Completion, energy: Energy, character: Character, task: LostarkTask, roster: Character[], done: boolean, dailyReset: number, weeklyReset: number, biWeeklyReset: number, biWeeklyOffsetReset: number, clickEvent?: MouseEvent, shownAmount?: number): void {
+    // A click writes a count worked out from the ticks on screen, so it must not start from a cached
+    // copy that the server's (possibly newer) copy is about to replace.
+    if (this.completionService.waitsForServerCopy(completion)) {
+      this.message.error(CHECKLIST_NOT_LOADED_MESSAGE);
+      return;
+    }
     let reset = Infinity;
     switch (task.frequency) {
       case TaskFrequency.DAILY:
@@ -479,13 +491,21 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     this.showHiddenCharacters$.next(true);
   }
 
-  /** Saves a ticket count or the show all tasks choice; refused while the roster is a cached copy (see ROSTER_NOT_LOADED_MESSAGE). */
+  /**
+   * Saves a ticket count. Firestore cannot change one element of the character list, so the whole
+   * roster is saved, and that is refused while it is a cached copy (see ROSTER_NOT_LOADED_MESSAGE).
+   */
   saveRoster(roster: Roster): void {
     if (roster.fromCache) {
       this.message.error(ROSTER_NOT_LOADED_MESSAGE);
       return;
     }
     this.rosterService.setOne(roster.$key, roster);
+  }
+
+  /** Saves the Show all tasks choice as a field patch on the roster, which is safe from a cached copy too. */
+  saveShowAllTasks(roster: Roster, showAllTasks: boolean): void {
+    this.rosterService.patchFields(roster.$key, [{ path: ['showAllTasks'], value: showAllTasks }]);
   }
 
   /** Saves the Hide completed tasks choice as a field patch on the settings document. */

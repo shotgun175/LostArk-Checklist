@@ -80,12 +80,6 @@ describe("planImportWrites", () => {
     expect(dataOf(plan([], file), "completion")).toEqual({ data: { "42:gone": { amount: 1, updated: 1 } } });
   });
 
-  it("returns the completion it writes, for the in-memory store", () => {
-    const result = planImportWrites("me", [], sampleExport(), counter());
-    expect(result.completion).toEqual({ data: { new1: { amount: 1, updated: 1 } } });
-    expect(dataOf(result.writes, "completion")).toEqual(result.completion);
-  });
-
   it("writes roster, settings, completion and energy under the current uid", () => {
     const docs = plan([]).filter(w => w.collection !== "tasks");
     expect(docs).toEqual([

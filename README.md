@@ -9,7 +9,7 @@ Fan-made tool, not affiliated with or endorsed by Smilegate or Amazon Games. Los
 - **Checklist**: daily and weekly tasks per character, with rest bonus.
 - **Gold Planner**: weekly gold per character and raid.
 - **Roster** and **Tasks Manager**: your characters and the tasks you track. On both pages, drag a row by the grip at the left of it to change the order, or focus the grip (Tab) and press Arrow Up or Arrow Down. The rest of the row works like a normal form, so text in its inputs can be selected.
-- **Settings**: lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
+- **Settings**: ticket tracking, lazy tasks, rest bonus, task tracking, backups and account deletion. Rest bonus lists only the characters shown on the Checklist; tick **Show hidden characters** to also edit the ones marked Hide on the Roster page. A cleared rest bonus cell saves 0, and values are rounded to the nearest 10.
 - On a phone (under 768 px wide) the sidebar is hidden; the menu button at the top left opens it over the page, and a tap on a page or outside it closes it. The menu fits the visible screen above the browser's toolbars; if the screen is short, the page links scroll and the bottom links stay in view. Wide tables (the Checklist grid, Tasks Manager, Settings) scroll sideways inside their own box, so the page itself always fits the phone's width. On a phone or tablet (touch screen) the Checklist and Tasks Manager tables have no up-and-down scroll box of their own: the whole page scrolls, and the table's header row stays at the top of the screen (not on a phone turned sideways, where it would cover too much). On a PC they keep their own scroll box. From 768 px up, the sidebar's collapse button (also reachable with Tab) remembers your choice.
 - **Lost Ark Tools** (at the bottom of the sidebar, just above GitHub, with a small gold mark) opens the [Lost Ark Tools](https://shotgun175.github.io/) hub, which lists this and the other tools, in a new tab. With the sidebar collapsed it shows only its mark, with a tooltip.
 - **Privacy** (footer link): what is stored and why. To report a problem or ask about your data, open an issue on the [GitHub issues page](https://github.com/shotgun175/LostArk-Checklist/issues).
@@ -23,6 +23,8 @@ Three checkboxes above the table choose what it shows:
 - **Show all tasks** also shows tasks that are not available today (for example Chaos Gate or Procyon Boss on their off days, or your own tasks with a day filter). They show greyed out. Saved with your roster.
 - **Hide completed tasks** hides a task once it is done for every character shown. It keeps hiding finished tasks when Show all tasks is ticked. Saved with your settings.
 - **Show hidden characters** also shows the characters marked Hide on the Roster page, on the Checklist and the Gold Planner. Remembered by this browser.
+
+The **Tickets tracking** panel above them (Ebony Cube tickets per character) only shows when **Track tickets** is on in Settings. It is off for new accounts, and on for accounts that already have a ticket count, until you change it. Saved with your settings; your ticket counts are kept while it is off.
 
 ### Which raids are tracked
 
@@ -105,6 +107,7 @@ Three checkboxes above the table choose what it shows:
 - **Sign in** also reloads the page and removes the previous account's data from that browser (a guest's data stays on the server, see above).
 - **Delete my account and data** (Settings) deletes everything stored for your account and then the account. Registered users confirm with their password. For a guest it deletes the data and starts a new guest account.
 - Log out, Sign in and account deletion reload every open tab of the site in that browser.
+- Open tabs and devices update live: a tick, roster change or setting saved on one shows on the others within a few seconds while they are online, without a reload.
 
 ## Offline
 
@@ -112,6 +115,7 @@ The site keeps a copy of your data in the browser (Firestore's IndexedDB cache, 
 
 - Data from another device shows as soon as the site reaches the server again. Until then you see this device's last copy.
 - The daily rest bonus update and other automatic fixes to your data wait until the device is online, so they never write an old copy over newer data.
+- Right after the site opens it shows this device's copy at once, while the server's copy loads. A checklist click in that moment says "Your checklist is still loading from the server" for up to about 2 seconds, so a click never counts on from an older copy; offline, clicks work after that. Roster edits (adding, editing or reordering characters, ticket counts) wait for the server's copy the same way, with no time limit.
 - A page whose data was never loaded on this device stays empty until the device is online.
 - **Log out**, **Sign in**, **Register**, **Delete my account and data**, **Import from Lostark-helper**, **Restore backup** and **Download backup** need the server. Offline they show "You're offline. Connect to the internet to ...". Log out, Sign in and account deletion also wait until every change made on the device has reached the server; if that takes more than 10 seconds they are refused, so nothing is lost.
 - After one visit online, the site also opens with no connection at all: a service worker keeps the app itself on the device. A banner says when you are offline. Each icon or image loads offline once it has been shown online.

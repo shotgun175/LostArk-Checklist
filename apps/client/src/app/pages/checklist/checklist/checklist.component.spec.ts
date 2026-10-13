@@ -33,16 +33,17 @@ describe('ChecklistComponent', () => {
   const arwen = { id: 1, name: 'Arwen', ilvl: 1700 } as Character;
 
   let energyService: { patchFields: jest.Mock };
-  let completionService: { patchFields: jest.Mock };
+  let completionService: { patchFields: jest.Mock; waitsForServerCopy: jest.Mock };
   let message: { error: jest.Mock };
   const rosterSetOne = jest.fn();
+  const rosterPatchFields = jest.fn();
 
   function createComponent(tasks$: Observable<LostarkTask[]> = NEVER): ChecklistComponent {
     energyService = { patchFields: jest.fn() };
-    completionService = { patchFields: jest.fn() };
+    completionService = { patchFields: jest.fn(), waitsForServerCopy: jest.fn(() => false) };
     message = { error: jest.fn() };
     return new ChecklistComponent(
-      { roster$: NEVER, setOne: rosterSetOne } as unknown as RosterService,
+      { roster$: NEVER, setOne: rosterSetOne, patchFields: rosterPatchFields } as unknown as RosterService,
       { tasks$ } as unknown as TasksService,
       { settings$: NEVER } as unknown as SettingsService,
       energyService as unknown as EnergyService,
@@ -63,12 +64,13 @@ describe('ChecklistComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     rosterSetOne.mockClear();
+    rosterPatchFields.mockClear();
   });
 
   describe('saveRoster', () => {
     const saved = { $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks: true };
 
-    it('saves a ticket count or the show all tasks choice from the server copy', () => {
+    it('saves a ticket count from the server copy', () => {
       createComponent().saveRoster(saved);
       expect(rosterSetOne).toHaveBeenCalledWith('uid', saved);
     });
@@ -77,6 +79,15 @@ describe('ChecklistComponent', () => {
       createComponent().saveRoster({ ...saved, fromCache: true });
       expect(rosterSetOne).not.toHaveBeenCalled();
       expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+    });
+  });
+
+  describe('saveShowAllTasks', () => {
+    it('saves only the showAllTasks field, even from a cached roster', () => {
+      createComponent().saveShowAllTasks({ $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks: true, fromCache: true }, true);
+      expect(rosterPatchFields).toHaveBeenCalledWith('uid', [{ path: ['showAllTasks'], value: true }]);
+      expect(rosterSetOne).not.toHaveBeenCalled();
+      expect(message.error).not.toHaveBeenCalled();
     });
   });
 
@@ -157,6 +168,25 @@ describe('ChecklistComponent', () => {
         { ctrlKey: true } as MouseEvent, 3);
 
       expect(completion.data['1:una'].amount).toBe(3);
+      expect(energy.data['1:una']).toEqual({ amount: 100 });
+      expect(completionService.patchFields).not.toHaveBeenCalled();
+      expect(energyService.patchFields).not.toHaveBeenCalled();
+    });
+
+    it('refuses a click or a reset on a cached copy the server copy is about to replace', () => {
+      const component = createComponent();
+      completionService.waitsForServerCopy.mockReturnValue(true);
+      const completion: Completion = { $key: 'uid', data: { '1:una': { amount: 1, updated: dailyReset - 60000 } }, fromCache: true };
+      const energy: Energy = { $key: 'uid', data: { '1:una': { amount: 100 } }, updated: dailyReset };
+
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], true, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+      component.markAsDone(completion, energy, arwen, unaTask, [arwen], false, dailyReset, weeklyReset, biWeeklyReset, biWeeklyOffsetReset);
+
+      expect(completionService.waitsForServerCopy).toHaveBeenCalledWith(completion);
+      expect(message.error).toHaveBeenCalledTimes(2);
+      expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+      // Nothing on screen changed either, not even the reset of the entry from before the reset.
+      expect(completion.data['1:una']).toEqual({ amount: 1, updated: dailyReset - 60000 });
       expect(energy.data['1:una']).toEqual({ amount: 100 });
       expect(completionService.patchFields).not.toHaveBeenCalled();
       expect(energyService.patchFields).not.toHaveBeenCalled();

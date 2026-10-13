@@ -3,7 +3,6 @@ import { collection, doc, Firestore, getDoc, getDocs, getDocsFromServer, query, 
 import { FIRESTORE } from "../firebase/firebase.providers";
 import { firstValueFrom } from "rxjs";
 import { AuthService } from "../database/services/auth.service";
-import { CompletionService } from "../database/services/completion.service";
 import { FirestoreStorage } from "../database/firestore-storage";
 import { EXPORT_FORMAT, LostarkExport } from "./lostark-export";
 import { FIRESTORE_BATCH_LIMIT, planImportWrites } from "./plan-import-writes";
@@ -19,12 +18,12 @@ export class DataTransferService {
   protected tabId = TAB_ID;
 
   constructor(@Inject(FIRESTORE) private firestore: Firestore, private auth: AuthService,
-              private completionService: CompletionService, private connection: ServerConnectionService) {
+              private connection: ServerConnectionService) {
   }
 
   /**
    * Reloads this tab when another tab of the same account finishes an import or restore. Until the
-   * reload it writes nothing, so its old data (first snapshots, the old task list) cannot be written
+   * reload it writes nothing, so its old data (ticks on screen, the old task list) cannot be written
    * over the imported data. Field changes still waiting here are dropped: the import replaced them.
    * Log out, Sign in and account deletion in another tab reload every tab (cleared): the data saved
    * in this browser is deleted on the next load, and this tab would otherwise show the old account.
@@ -69,8 +68,8 @@ export class DataTransferService {
 
   /**
    * Replaces the current user's roster, settings, completion, energy and tasks with an
-   * export, in one atomic batch. The page must be reloaded afterwards because roster and
-   * completion streams keep their first snapshot in memory, and service writes stay paused. A Lostark-helper file
+   * export, in one atomic batch. The page must be reloaded afterwards because service writes stay
+   * paused until then (the services would otherwise answer the new data with the old task list). A Lostark-helper file
    * (fromLostarkHelper) also drops its raid tracking choices, so raids start on automatic, and never
    * changes the display name. Other open tabs of the same account reload once the batch is written.
    * It needs the server: offline it rejects with a ConnectionRequiredError and changes nothing, and
@@ -81,7 +80,7 @@ export class DataTransferService {
     const uid = await firstValueFrom(this.auth.uid$);
     const existingTasks = await getDocsFromServer(query(collection(this.firestore, "tasks"), where("authorId", "==", uid)));
     const file: LostarkExport = fromLostarkHelper ? { ...data, user: null } : data;
-    const { writes, completion } = planImportWrites(uid, existingTasks.docs.map(task => task.id), file,
+    const { writes } = planImportWrites(uid, existingTasks.docs.map(task => task.id), file,
       () => doc(collection(this.firestore, "tasks")).id, fromLostarkHelper);
     if (writes.length > FIRESTORE_BATCH_LIMIT) {
       throw new Error(`This import needs ${writes.length} writes, more than the ${FIRESTORE_BATCH_LIMIT} Firestore allows in one batch. Nothing was changed.`);
@@ -95,22 +94,23 @@ export class DataTransferService {
         batch.set(ref, write.data);
       }
     });
-    // Give the in-memory completion the imported ticks before the energy document changes,
-    // so the rest bonus update in EnergyService cannot write the old ticks back. If the batch
-    // fails, put the previous ticks back so the next checklist tick cannot write the file's.
-    const previous = JSON.parse(JSON.stringify(await firstValueFrom(this.completionService.completion$)));
-    this.completionService.setLocal(uid, { ...JSON.parse(JSON.stringify(completion)), $key: uid });
     // Send field changes still waiting in their one-second window now, so they land before the
     // import replaces these documents instead of on top of it.
     FirestoreStorage.flushPending();
     // Until the reload, the services would answer the new documents with the old task list (for
     // example the daily rest bonus update for a file saved before the last reset), so they stop writing.
+    // This also means no tick on screen from before the import can be written over it: the pause
+    // starts before the batch is handed to the SDK, with no await in between. The live listeners show
+    // the batch at once, and if the server refuses it, the SDK's rollback shows the old data again
+    // before writes resume.
     FirestoreStorage.pauseWrites();
     try {
       await batch.commit();
     } catch (error) {
+      // The SDK refuses the batch before the snapshots that show the old data again reach the
+      // services, so until then they still hold the refused file's data and must not write.
+      await FirestoreStorage.localSnapshotsDelivered();
       FirestoreStorage.resumeWrites();
-      this.completionService.setLocal(uid, previous);
       throw error;
     }
     this.announceDataReplaced(uid);

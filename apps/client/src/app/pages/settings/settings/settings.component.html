@@ -113,6 +113,17 @@
           </nz-modal>
         </nz-card>
       </div>
+      @if (rawRoster$ | async; as rawRoster) {
+        <div nz-row class="lazy-matrix">
+          <nz-card nz-col nzSpan="24" nzTitle="Tickets" nzSize="small">
+            <div class="ticket-switch">
+              <nz-switch nzSize="small" nzId="track-tickets" [ngModel]="ticketTrackingOn(settings, rawRoster)" (ngModelChange)="setTrackTickets(settings.$key, $event)"></nz-switch>
+              <label for="track-tickets">Track tickets</label>
+            </div>
+            <p class="card-help">Shows the Tickets tracking panel (Ebony Cube tickets per character) at the top of the Checklist. Your ticket counts are kept while it is off.</p>
+          </nz-card>
+        </div>
+      }
       @if (lazyTracking$ | async; as tracking) {
         @if (roster$ | async; as roster) {
           @if (lazyFlags$ | async; as lazyFlags) {

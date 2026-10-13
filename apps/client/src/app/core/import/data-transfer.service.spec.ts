@@ -1,7 +1,6 @@
 import { of } from "rxjs";
 import { Firestore } from "firebase/firestore";
 import { AuthService } from "../database/services/auth.service";
-import { CompletionService } from "../database/services/completion.service";
 import { FirestoreStorage } from "../database/firestore-storage";
 import { DataTransferService } from "./data-transfer.service";
 import { LostarkExport } from "./lostark-export";
@@ -42,8 +41,6 @@ function file(): LostarkExport {
 }
 
 describe("DataTransferService", () => {
-  const previous = { $key: "me", data: { old: { amount: 1, updated: 1 } } };
-  let setLocal: jest.Mock;
   let connection: { requireServer: jest.Mock };
   let service: DataTransferService;
 
@@ -51,18 +48,15 @@ describe("DataTransferService", () => {
     commit.mockReset();
     getDocMock.mockReset();
     batchSet.mockReset();
-    setLocal = jest.fn();
-    const completionService = { completion$: of(previous), setLocal } as unknown as CompletionService;
     const auth = { uid$: of("me") } as unknown as AuthService;
     connection = { requireServer: jest.fn(() => Promise.resolve()) };
-    service = new DataTransferService({} as Firestore, auth, completionService, connection as unknown as ServerConnectionService);
+    service = new DataTransferService({} as Firestore, auth, connection as unknown as ServerConnectionService);
   });
 
   it("refuses an import or restore offline before anything changes", async () => {
     connection.requireServer.mockRejectedValueOnce(new ConnectionRequiredError("You're offline. Connect to the internet to import or restore data."));
     await expect(service.importExport(file())).rejects.toThrow("You're offline. Connect to the internet to import or restore data.");
     expect(connection.requireServer).toHaveBeenCalledWith("import or restore data");
-    expect(setLocal).not.toHaveBeenCalled();
     expect(FirestoreStorage.writesArePaused()).toBe(false);
     expect(commit).not.toHaveBeenCalled();
   });
@@ -84,20 +78,6 @@ describe("DataTransferService", () => {
 
   afterEach(() => FirestoreStorage.resumeWrites());
 
-  it("puts the previous in-memory completion back when the batch fails", async () => {
-    commit.mockRejectedValue(new Error("permission-denied"));
-    await expect(service.importExport(file())).rejects.toThrow("permission-denied");
-    expect(setLocal).toHaveBeenCalledTimes(2);
-    expect(setLocal.mock.calls[0][1]).toEqual({ $key: "me", data: { fresh: { amount: 1, updated: 1 } } });
-    expect(setLocal.mock.calls[1]).toEqual(["me", previous]);
-  });
-
-  it("keeps the imported completion in memory when the batch succeeds", async () => {
-    commit.mockResolvedValue(undefined);
-    await service.importExport(file());
-    expect(setLocal).toHaveBeenCalledTimes(1);
-  });
-
   it("writes queued field changes before the import batch, so the import lands on top of them", async () => {
     const flush = jest.spyOn(FirestoreStorage, "flushPending").mockImplementation(() => undefined);
     commit.mockImplementation(async () => expect(flush).toHaveBeenCalledTimes(1));
@@ -106,10 +86,13 @@ describe("DataTransferService", () => {
     flush.mockRestore();
   });
 
-  it("pauses service writes for the import, so stale data cannot be written over it before the reload", async () => {
-    commit.mockImplementation(async () => expect(FirestoreStorage.writesArePaused()).toBe(true));
+  it("pauses service writes before the batch is handed over, so ticks on screen from before the import cannot be written over it", async () => {
+    const pausedAtCommit: boolean[] = [];
+    commit.mockImplementation(async () => {
+      pausedAtCommit.push(FirestoreStorage.writesArePaused());
+    });
     await service.importExport(file());
-    expect(commit).toHaveBeenCalledTimes(1);
+    expect(pausedAtCommit).toEqual([true]);
     expect(FirestoreStorage.writesArePaused()).toBe(true);
   });
 
@@ -117,6 +100,23 @@ describe("DataTransferService", () => {
     commit.mockRejectedValue(new Error("permission-denied"));
     await expect(service.importExport(file())).rejects.toThrow("permission-denied");
     expect(FirestoreStorage.writesArePaused()).toBe(false);
+  });
+
+  it("after a failed import, writes again only once the old data is back in the services", async () => {
+    let delivered: () => void = () => undefined;
+    const wait = jest.spyOn(FirestoreStorage, "localSnapshotsDelivered")
+      .mockImplementation(() => new Promise<void>(resolve => delivered = resolve));
+    commit.mockRejectedValue(new Error("permission-denied"));
+    const result = service.importExport(file());
+    for (let i = 0; i < 20; i++) {
+      await Promise.resolve();
+    }
+    expect(wait).toHaveBeenCalledTimes(1);
+    expect(FirestoreStorage.writesArePaused()).toBe(true);
+    delivered();
+    await expect(result).rejects.toThrow("permission-denied");
+    expect(FirestoreStorage.writesArePaused()).toBe(false);
+    wait.mockRestore();
   });
 
   it("backs up an account with no roster or settings document as a restorable file", async () => {
@@ -180,8 +180,7 @@ describe("DataTransferService", () => {
     });
 
     function otherTab(uid: string): { reload: jest.Mock } {
-      const completionService = { completion$: of(previous), setLocal: jest.fn() } as unknown as CompletionService;
-      const other = new DataTransferService({} as Firestore, { uid$: of(uid) } as unknown as AuthService, completionService,
+      const other = new DataTransferService({} as Firestore, { uid$: of(uid) } as unknown as AuthService,
         connection as unknown as ServerConnectionService);
       (other as unknown as { tabId: string }).tabId = "other-tab";
       const reload = jest.fn();
