@@ -615,4 +615,16 @@ describe("FirestoreStorage.flushPendingLocally", () => {
     jest.advanceTimersByTime(1);
     expect(await isDone(flushed)).toBe(true);
   });
+
+  it("localSnapshotsDelivered waits for a cache read, then gives the listeners' timers a moment", async () => {
+    let finishRead: () => void = () => undefined;
+    jest.mocked(getDocFromCache).mockImplementationOnce(() => new Promise(resolve => finishRead = () => resolve({} as never)));
+    const delivered = FirestoreStorage.localSnapshotsDelivered();
+    jest.advanceTimersByTime(FirestoreStorage.SNAPSHOT_DELIVERY_MS);
+    expect(await isDone(delivered)).toBe(false);
+    finishRead();
+    expect(await isDone(delivered)).toBe(false);
+    jest.advanceTimersByTime(FirestoreStorage.SNAPSHOT_DELIVERY_MS);
+    expect(await isDone(delivered)).toBe(true);
+  });
 });

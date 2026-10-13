@@ -129,6 +129,25 @@ export abstract class FirestoreStorage<T extends DataModel> {
    */
   public static async flushPendingLocally(): Promise<void> {
     FirestoreStorage.flushPending();
+    await FirestoreStorage.localHandoff();
+  }
+
+  /** How long localSnapshotsDelivered gives the listeners' snapshot timers after the cache read. */
+  public static readonly SNAPSHOT_DELIVERY_MS = 50;
+
+  /**
+   * Resolves once the snapshots the SDK raised before this call have reached the listeners. The SDK
+   * settles a write's promise before it raises the snapshots that follow from it (a refused batch
+   * rolled back), and hands each listener its snapshot in a timer of its own. A cache read queued
+   * now finishes after that work, and a short wait after it lets those timers run first.
+   */
+  public static async localSnapshotsDelivered(): Promise<void> {
+    await FirestoreStorage.localHandoff();
+    await new Promise<void>(resolve => setTimeout(resolve, FirestoreStorage.SNAPSHOT_DELIVERY_MS));
+  }
+
+  /** Waits until the SDK's queue has run everything started before it, for LOCAL_HANDOFF_TIMEOUT_MS at most. */
+  private static async localHandoff(): Promise<void> {
     const db = FirestoreStorage.db;
     if (!db) {
       return;

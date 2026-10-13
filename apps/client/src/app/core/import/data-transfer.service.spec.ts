@@ -102,6 +102,23 @@ describe("DataTransferService", () => {
     expect(FirestoreStorage.writesArePaused()).toBe(false);
   });
 
+  it("after a failed import, writes again only once the old data is back in the services", async () => {
+    let delivered: () => void = () => undefined;
+    const wait = jest.spyOn(FirestoreStorage, "localSnapshotsDelivered")
+      .mockImplementation(() => new Promise<void>(resolve => delivered = resolve));
+    commit.mockRejectedValue(new Error("permission-denied"));
+    const result = service.importExport(file());
+    for (let i = 0; i < 20; i++) {
+      await Promise.resolve();
+    }
+    expect(wait).toHaveBeenCalledTimes(1);
+    expect(FirestoreStorage.writesArePaused()).toBe(true);
+    delivered();
+    await expect(result).rejects.toThrow("permission-denied");
+    expect(FirestoreStorage.writesArePaused()).toBe(false);
+    wait.mockRestore();
+  });
+
   it("backs up an account with no roster or settings document as a restorable file", async () => {
     getDocMock.mockResolvedValue({ data: () => undefined });
     const backup = await service.buildBackup();

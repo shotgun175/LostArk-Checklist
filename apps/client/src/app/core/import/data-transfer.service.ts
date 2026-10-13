@@ -101,11 +101,15 @@ export class DataTransferService {
     // example the daily rest bonus update for a file saved before the last reset), so they stop writing.
     // This also means no tick on screen from before the import can be written over it: the pause
     // starts before the batch is handed to the SDK, with no await in between. The live listeners show
-    // the batch at once, and if the server refuses it, the SDK's rollback shows the old data again.
+    // the batch at once, and if the server refuses it, the SDK's rollback shows the old data again
+    // before writes resume.
     FirestoreStorage.pauseWrites();
     try {
       await batch.commit();
     } catch (error) {
+      // The SDK refuses the batch before the snapshots that show the old data again reach the
+      // services, so until then they still hold the refused file's data and must not write.
+      await FirestoreStorage.localSnapshotsDelivered();
       FirestoreStorage.resumeWrites();
       throw error;
     }
