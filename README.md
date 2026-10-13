@@ -113,6 +113,7 @@ The site keeps a copy of your data in the browser (Firestore's IndexedDB cache, 
 
 - Data from another device shows as soon as the site reaches the server again. Until then you see this device's last copy.
 - The daily rest bonus update and other automatic fixes to your data wait until the device is online, so they never write an old copy over newer data.
+- Right after the site opens it shows this device's copy at once, while the server's copy loads. A checklist click in that moment says "Your checklist is still loading from the server" for up to about 2 seconds, so a click never counts on from an older copy; offline, clicks work after that. Roster edits (adding, editing or reordering characters, ticket counts) wait for the server's copy the same way, with no time limit.
 - A page whose data was never loaded on this device stays empty until the device is online.
 - **Log out**, **Sign in**, **Register**, **Delete my account and data**, **Import from Lostark-helper**, **Restore backup** and **Download backup** need the server. Offline they show "You're offline. Connect to the internet to ...". Log out, Sign in and account deletion also wait until every change made on the device has reached the server; if that takes more than 10 seconds they are refused, so nothing is lost.
 - After one visit online, the site also opens with no connection at all: a service worker keeps the app itself on the device. A banner says when you are offline. Each icon or image loads offline once it has been shown online.
