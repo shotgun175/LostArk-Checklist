@@ -36,13 +36,14 @@ describe('ChecklistComponent', () => {
   let completionService: { patchFields: jest.Mock };
   let message: { error: jest.Mock };
   const rosterSetOne = jest.fn();
+  const rosterPatchFields = jest.fn();
 
   function createComponent(tasks$: Observable<LostarkTask[]> = NEVER): ChecklistComponent {
     energyService = { patchFields: jest.fn() };
     completionService = { patchFields: jest.fn() };
     message = { error: jest.fn() };
     return new ChecklistComponent(
-      { roster$: NEVER, setOne: rosterSetOne } as unknown as RosterService,
+      { roster$: NEVER, setOne: rosterSetOne, patchFields: rosterPatchFields } as unknown as RosterService,
       { tasks$ } as unknown as TasksService,
       { settings$: NEVER } as unknown as SettingsService,
       energyService as unknown as EnergyService,
@@ -63,12 +64,13 @@ describe('ChecklistComponent', () => {
   beforeEach(() => {
     localStorage.clear();
     rosterSetOne.mockClear();
+    rosterPatchFields.mockClear();
   });
 
   describe('saveRoster', () => {
     const saved = { $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks: true };
 
-    it('saves a ticket count or the show all tasks choice from the server copy', () => {
+    it('saves a ticket count from the server copy', () => {
       createComponent().saveRoster(saved);
       expect(rosterSetOne).toHaveBeenCalledWith('uid', saved);
     });
@@ -77,6 +79,15 @@ describe('ChecklistComponent', () => {
       createComponent().saveRoster({ ...saved, fromCache: true });
       expect(rosterSetOne).not.toHaveBeenCalled();
       expect(message.error).toHaveBeenCalledWith(expect.stringMatching(/still loading/));
+    });
+  });
+
+  describe('saveShowAllTasks', () => {
+    it('saves only the showAllTasks field, even from a cached roster', () => {
+      createComponent().saveShowAllTasks({ $key: 'uid', characters: [arwen], trackedTasks: {}, showAllTasks: true, fromCache: true }, true);
+      expect(rosterPatchFields).toHaveBeenCalledWith('uid', [{ path: ['showAllTasks'], value: true }]);
+      expect(rosterSetOne).not.toHaveBeenCalled();
+      expect(message.error).not.toHaveBeenCalled();
     });
   });
 

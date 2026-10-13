@@ -479,13 +479,21 @@ export class ChecklistComponent implements AfterViewInit, OnDestroy {
     this.showHiddenCharacters$.next(true);
   }
 
-  /** Saves a ticket count or the show all tasks choice; refused while the roster is a cached copy (see ROSTER_NOT_LOADED_MESSAGE). */
+  /**
+   * Saves a ticket count. Firestore cannot change one element of the character list, so the whole
+   * roster is saved, and that is refused while it is a cached copy (see ROSTER_NOT_LOADED_MESSAGE).
+   */
   saveRoster(roster: Roster): void {
     if (roster.fromCache) {
       this.message.error(ROSTER_NOT_LOADED_MESSAGE);
       return;
     }
     this.rosterService.setOne(roster.$key, roster);
+  }
+
+  /** Saves the Show all tasks choice as a field patch on the roster, which is safe from a cached copy too. */
+  saveShowAllTasks(roster: Roster, showAllTasks: boolean): void {
+    this.rosterService.patchFields(roster.$key, [{ path: ['showAllTasks'], value: showAllTasks }]);
   }
 
   /** Saves the Hide completed tasks choice as a field patch on the settings document. */

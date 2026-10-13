@@ -87,7 +87,7 @@
 @if (rawRoster$ | async; as roster) {
   @if (roster.characters.length > 0) {
     <div class="view-toggles">
-      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveRoster(roster)">
+      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveShowAllTasks(roster, $event)">
         Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
       </label>
       @if (settings$ | async; as settings) {
