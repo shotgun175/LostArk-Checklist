@@ -32,8 +32,8 @@ const takingRaids = (tracking: Record<string, boolean>, name: string): string[] 
   .filter(key => key.startsWith(`${keyOf(name)}:gold:taking:`) && tracking[key])
   .map(key => key.slice(`${keyOf(name)}:gold:taking:`.length).replace(/ Gate \d$/, '')))].sort();
 
-// A 1780 character tracks Horizon Cathedral, Serca and Kazeros by default; Armoche and Mordum need an explicit true
-const allTracked = { '1:Armoche': true, '1:Mordum': true };
+// A 1780 character tracks Belgardin, Horizon Cathedral and Serca by default; Kazeros, Armoche and Mordum need an explicit true
+const allTracked = { '1:Kazeros': true, '1:Armoche': true, '1:Mordum': true };
 const five = ['Horizon Cathedral', 'Serca', 'Kazeros', 'Armoche', 'Mordum'];
 
 describe('capGoldTracking', () => {
@@ -111,7 +111,7 @@ describe('capGoldTracking', () => {
   });
 
   it('does not count raids the character does not track or cannot enter', () => {
-    // Without explicit choices Armoche and Mordum are not tracked at 1780, so only 3 raids count
+    // Without explicit choices Kazeros, Armoche and Mordum are not tracked at 1780, so only 2 raids count
     const result = capGoldTracking([character(1780)], ticked('Char1', five), modes('Char1', five), tasks, {}, gTasks);
     expect(result.unticked).toEqual([]);
     const disabled = tasks.map(t => t.label === 'Mordum' ? { ...t, enabled: false } : t);
