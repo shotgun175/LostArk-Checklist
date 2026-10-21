@@ -12,6 +12,15 @@ describe('pickDefaultRunningMode', () => {
     expect(pickDefaultRunningMode(gate('Serca Gate 2'), character(1740))).toBe('Nightmare');
   });
 
+  it('picks the highest mode the item level allows on both Belgardin gates', () => {
+    ['Belgardin Gate 1', 'Belgardin Gate 2'].forEach(name => {
+      expect(pickDefaultRunningMode(gate(name), character(1769))).toBe('NM');
+      expect(pickDefaultRunningMode(gate(name), character(1770))).toBe('HM');
+      expect(pickDefaultRunningMode(gate(name), character(1779))).toBe('HM');
+      expect(pickDefaultRunningMode(gate(name), character(1780))).toBe('Nightmare');
+    });
+  });
+
   it('picks Hard when the raid has no Nightmare', () => {
     expect(pickDefaultRunningMode(gate('Kazeros Gate 1'), character(1725))).toBe('NM');
     expect(pickDefaultRunningMode(gate('Kazeros Gate 1'), character(1730))).toBe('HM');

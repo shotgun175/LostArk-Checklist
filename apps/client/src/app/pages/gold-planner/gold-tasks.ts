@@ -1657,4 +1657,86 @@ export const goldTasks: GoldTask[] = [
       }
     ],
   },
+
+  // Shadow Raid Belgardin
+  // Gold and bonus costs are not in the release notes; read from the in-game Gate Info (2026-10-21).
+  // Normal, Hard and Nightmare gold is all tradable; Solo (Matching mode) pays half as roster-bound gold.
+  {
+    name: 'Belgardin',
+    taskName: 'Belgardin',
+    gates: [
+      {
+        name: 'Belgardin Gate 1',
+        completionId: 'T4.SR2.G1',
+        modes: [
+          {
+            name: 'Solo',
+            unboundGoldReward: 10000,
+            boundGoldReward: 10000,
+            chestPrice: 6400,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'NM',
+            unboundGoldReward: 20000,
+            boundGoldReward: 0,
+            chestPrice: 6400,
+            HMThreashold: 1770,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'HM',
+            unboundGoldReward: 25000,
+            boundGoldReward: 0,
+            chestPrice: 8000,
+            NightmareThreashold: 1780,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'Nightmare',
+            unboundGoldReward: 30000,
+            boundGoldReward: 0,
+            chestPrice: 9600,
+            goldILvlLimit: Infinity,
+          }
+        ],
+      },
+      {
+        name: 'Belgardin Gate 2',
+        completionId: 'T4.SR2.G2',
+        modes: [
+          {
+            name: 'Solo',
+            unboundGoldReward: 15000,
+            boundGoldReward: 15000,
+            chestPrice: 9600,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'NM',
+            unboundGoldReward: 30000,
+            boundGoldReward: 0,
+            chestPrice: 9600,
+            HMThreashold: 1770,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'HM',
+            unboundGoldReward: 37000,
+            boundGoldReward: 0,
+            chestPrice: 11840,
+            NightmareThreashold: 1780,
+            goldILvlLimit: Infinity,
+          },
+          {
+            name: 'Nightmare',
+            unboundGoldReward: 45000,
+            boundGoldReward: 0,
+            chestPrice: 14400,
+            goldILvlLimit: Infinity,
+          }
+        ],
+      }
+    ],
+  },
 ];

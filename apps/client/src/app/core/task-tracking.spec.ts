@@ -35,8 +35,12 @@ describe('raidReleaseOrder', () => {
 describe('getDefaultTrackedRaidLabels', () => {
   const tracked = (ilvl: number) => [...getDefaultTrackedRaidLabels(character(ilvl), tasks)].sort();
 
-  it('picks Horizon Cathedral, Serca and Kazeros at 1780', () => {
-    expect(tracked(1780)).toEqual(['horizon cathedral', 'kazeros', 'serca']);
+  it('picks Belgardin, Horizon Cathedral and Serca at 1780', () => {
+    expect(tracked(1780)).toEqual(['belgardin', 'horizon cathedral', 'serca']);
+  });
+
+  it('keeps Kazeros until Belgardin can be entered (1749)', () => {
+    expect(tracked(1749)).toEqual(['horizon cathedral', 'kazeros', 'serca']);
   });
 
   it('skips raids the character cannot enter yet (1705)', () => {
@@ -61,13 +65,13 @@ describe('getDefaultTrackedRaidLabels', () => {
 
   it('ignores disabled raid tasks', () => {
     const withoutSerca = tasks.map(t => t.label === 'Serca' ? { ...t, enabled: false } : t);
-    expect([...getDefaultTrackedRaidLabels(character(1780), withoutSerca)].sort()).toEqual(['armoche', 'horizon cathedral', 'kazeros']);
+    expect([...getDefaultTrackedRaidLabels(character(1780), withoutSerca)].sort()).toEqual(['belgardin', 'horizon cathedral', 'kazeros']);
   });
 
   it('ignores custom tasks that reuse a raid label', () => {
     const custom = { ...task('Valtan'), custom: true, minIlvl: 1, $key: 'custom-valtan' };
     expect([...getDefaultTrackedRaidLabels(character(1780), [...tasks.filter(t => t.label !== 'Valtan'), custom])].sort())
-      .toEqual(['horizon cathedral', 'kazeros', 'serca']);
+      .toEqual(['belgardin', 'horizon cathedral', 'serca']);
   });
 });
 
@@ -75,9 +79,10 @@ describe('isTaskTracked', () => {
   const c = character(1780, 42);
 
   it('tracks the 3 newest raids and untracks older raids by default', () => {
+    expect(isTaskTracked({}, c, task('Belgardin'), tasks)).toBe(true);
     expect(isTaskTracked({}, c, task('Horizon Cathedral'), tasks)).toBe(true);
     expect(isTaskTracked({}, c, task('Serca'), tasks)).toBe(true);
-    expect(isTaskTracked({}, c, task('Kazeros'), tasks)).toBe(true);
+    expect(isTaskTracked({}, c, task('Kazeros'), tasks)).toBe(false);
     expect(isTaskTracked({}, c, task('Armoche'), tasks)).toBe(false);
     expect(isTaskTracked({}, c, task('Mordum'), tasks)).toBe(false);
     expect(isTaskTracked({}, c, task('Thaemine G4'), tasks)).toBe(false);
@@ -242,7 +247,7 @@ describe('isRaidTask', () => {
 });
 
 describe('isRaidInMainList', () => {
-  // 1780 tracks Horizon Cathedral, Serca and Kazeros by default; 1705 tracks Armoche, Horizon Cathedral and Mordum
+  // 1780 tracks Belgardin, Horizon Cathedral and Serca by default; 1705 tracks Armoche, Horizon Cathedral and Mordum
   const grid = [character(1780, 1), character(1705, 2)];
 
   it('keeps a raid that is among the default newest 3 of at least one character', () => {
@@ -287,7 +292,8 @@ describe('groupTrackingGridTasks', () => {
 
   it('splits character tasks into current raids, older raids and other tasks, leaving roster tasks out', () => {
     const groups = groupTrackingGridTasks({}, grid, tasks);
-    expect(labels(groups.raids).sort()).toEqual(['Armoche', 'Horizon Cathedral', 'Kazeros', 'Mordum', 'Serca']);
+    expect(labels(groups.raids).sort()).toEqual(['Armoche', 'Belgardin', 'Horizon Cathedral', 'Mordum', 'Serca']);
+    expect(labels(groups.olderRaids)).toContain('Kazeros');
     expect(labels(groups.olderRaids)).toContain('Aegir');
     expect(labels(groups.olderRaids)).toContain('Demon Beast Canyon');
     expect(labels(groups.others)).toContain('Guild Support');
