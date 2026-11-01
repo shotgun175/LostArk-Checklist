@@ -22,7 +22,7 @@
     "@angular/service-worker": "22.2.2",
     "@ant-design/icons-angular": "22.1.1",
     "date-fns": "^4.4.0",
-    "firebase": "^12.19.0",
+    "firebase": "^13.1.0",
     "ng-zorro-antd": "^22.1.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.0.0",
