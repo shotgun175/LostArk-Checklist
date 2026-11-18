@@ -56,6 +56,19 @@
   }
 }
 
+// A checkbox with its info icon beside the label, not inside it: an nz-checkbox label toggles on a click
+// anywhere inside it, and a click or tap is how the icon's tooltip opens on a phone. Markup:
+// <span class="checkbox-with-info"><label nz-checkbox>Text</label>&ngsp;<span nz-icon nz-tooltip></span></span>.
+// Spaced as when the icon ended the label text: the label's end padding moves after the icon.
+.checkbox-with-info {
+  white-space: nowrap;
+  padding-inline-end: 8px;
+
+  .ant-checkbox + span {
+    padding-inline-end: 0;
+  }
+}
+
 // Roster and Tasks Manager headers: when the title and the buttons do not fit on one line, the
 // buttons move below the title instead of cutting it off, and the subtitle can go under the title.
 .wrapping-header {

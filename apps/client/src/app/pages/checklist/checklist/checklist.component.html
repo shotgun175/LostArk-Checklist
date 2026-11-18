@@ -87,17 +87,17 @@
 @if (rawRoster$ | async; as roster) {
   @if (roster.characters.length > 0) {
     <div class="view-toggles">
-      <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveShowAllTasks(roster, $event)">
-        Show all tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
-      </label>
+      <span class="checkbox-with-info">
+        <label nz-checkbox [(ngModel)]="roster.showAllTasks" (ngModelChange)="saveShowAllTasks(roster, $event)">Show all tasks</label>&ngsp;<span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show tasks that are not available today"></span>
+      </span>
       @if (settings$ | async; as settings) {
-        <label nz-checkbox [ngModel]="settings.hiddenOnCompletion" (ngModelChange)="saveHiddenOnCompletion(settings.$key, $event)">
-          Hide completed tasks <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide a task once it is done for every character shown"></span>
-        </label>
+        <span class="checkbox-with-info">
+          <label nz-checkbox [ngModel]="settings.hiddenOnCompletion" (ngModelChange)="saveHiddenOnCompletion(settings.$key, $event)">Hide completed tasks</label>&ngsp;<span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Hide a task once it is done for every character shown"></span>
+        </span>
       }
-      <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)">
-        Show hidden characters <span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show characters marked Hide on the Roster page, here and on the Gold Planner"></span>
-      </label>
+      <span class="checkbox-with-info">
+        <label nz-checkbox [ngModel]="showHiddenCharacters$ | async" (ngModelChange)="showHiddenCharacters$.next($event)">Show hidden characters</label>&ngsp;<span nz-icon nzType="info-circle" nz-tooltip nzTooltipTitle="Also show characters marked Hide on the Roster page, here and on the Gold Planner"></span>
+      </span>
     </div>
   }
 }
