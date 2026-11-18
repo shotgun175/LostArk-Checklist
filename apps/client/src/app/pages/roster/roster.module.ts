@@ -20,6 +20,7 @@ import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { DragDropModule } from "@angular/cdk/drag-drop";
 import { NzAlertModule } from "ng-zorro-antd/alert";
 import { NzPopoverModule } from "ng-zorro-antd/popover";
+import { SteadySelectDropdownModule } from "../../components/steady-select-dropdown/steady-select-dropdown.module";
 
 const routes = [{
   path: "",
@@ -49,7 +50,8 @@ const routes = [{
     NzPageHeaderModule,
     DragDropModule,
     NzAlertModule,
-    NzPopoverModule
+    NzPopoverModule,
+    SteadySelectDropdownModule
   ]
 })
 export class RosterModule {

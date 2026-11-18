@@ -64,9 +64,10 @@
             <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
           </ng-template>
           <ng-template #setClassAction>
-            <nz-select class="class-selector"
+            <nz-select lostarkHelperSteadyDropdown class="class-selector"
               [(ngModel)]="character.class"
               (ngModelChange)="saveCharacter(character, roster)"
+              [nzOptionHeightPx]="classOptionHeight" [nzOptionOverflowSize]="classOptionRows"
               nzShowSearch>
               @for (row of classes; track row.id) {
                 <nz-option
@@ -152,7 +153,8 @@
       <nz-form-item class="class-field">
         <nz-form-label nzFor="add-character-class">Class</nz-form-label>
         <nz-form-control nzErrorTip="Please choose a class">
-          <nz-select nzId="add-character-class" formControlName="class" class="class-selector" nzShowSearch nzPlaceHolder="Choose a class">
+          <nz-select lostarkHelperSteadyDropdown nzId="add-character-class" formControlName="class" class="class-selector" nzShowSearch nzPlaceHolder="Choose a class"
+            [nzOptionHeightPx]="classOptionHeight" [nzOptionOverflowSize]="classOptionRows">
             @for (row of classes; track row.id) {
               <nz-option
                 [nzValue]="row.id" [nzLabel]="row.name" [nzHide]="row.hide"

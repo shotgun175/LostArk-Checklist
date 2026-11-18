@@ -112,6 +112,16 @@ export class TasksComponent {
   /** Paths in `icons`; a custom task can carry any other path, from an import or a retired built-in task. */
   public listedIcons = new Set(this.icons.map(icon => icon.path));
 
+  /**
+   * Height of an option in the icon dropdowns: the 32 px icon (.task-icon) plus the option's 5 px padding
+   * above and below. The dropdown's list draws only the options in view and places them by this height,
+   * so a different value makes the options jump while the list scrolls.
+   */
+  public readonly iconOptionHeight = 42;
+
+  /** Options in view at once in the icon dropdowns. */
+  public readonly iconOptionRows = 6;
+
   /** Day options for the Days column, Sunday first as in the saved values (0 is Sunday). */
   public days = [
     { value: 0, label: "Sunday", short: "Sun" },

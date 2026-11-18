@@ -19,6 +19,7 @@ import { NzModalModule } from "ng-zorro-antd/modal";
 import { TextQuestionPopupModule } from "../../components/text-question-popup/text-question-popup.module";
 import { DragDropModule } from "@angular/cdk/drag-drop";
 import { NzDrawerModule } from "ng-zorro-antd/drawer";
+import { SteadySelectDropdownModule } from "../../components/steady-select-dropdown/steady-select-dropdown.module";
 
 const routes: Routes = [{
   path: "",
@@ -48,7 +49,8 @@ const routes: Routes = [{
     IconsProviderModule,
     NzModalModule,
     DragDropModule,
-    NzDrawerModule
+    NzDrawerModule,
+    SteadySelectDropdownModule
   ]
 })
 export class TasksModule {
