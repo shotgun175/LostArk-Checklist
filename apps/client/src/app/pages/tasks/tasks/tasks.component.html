@@ -78,9 +78,10 @@
               <td>
                 <div class="task-icon-wrapper">
                   @if (task.custom) {
-                    <nz-select [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task, 'iconPath')"
+                    <nz-select lostarkHelperSteadyDropdown [(ngModel)]="task.iconPath" (ngModelChange)="updateTask(task, 'iconPath')"
                       nzAllowClear nzShowSearch nzPlaceHolder="No icon"
                       [nzCustomTemplate]="chosenIcon"
+                      [nzOptionHeightPx]="iconOptionHeight" [nzOptionOverflowSize]="iconOptionRows"
                       class="icon-select">
                       <!-- An icon that is not in the list still shows, named by its file -->
                       @if (task.iconPath && !listedIcons.has(task.iconPath)) {
@@ -106,7 +107,7 @@
                 </div>
               </td>
               <td>
-                <nz-select [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task, 'frequency')" [nzDisabled]="!task.custom">
+                <nz-select lostarkHelperSteadyDropdown [(ngModel)]="task.frequency" (ngModelChange)="updateTask(task, 'frequency')" [nzDisabled]="!task.custom">
                   <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
                   <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
                   <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
@@ -115,7 +116,7 @@
                 </nz-select>
               </td>
               <td>
-                <nz-select [(ngModel)]="task.scope" (ngModelChange)="updateTask(task, 'scope')" [nzDisabled]="!task.custom">
+                <nz-select lostarkHelperSteadyDropdown [(ngModel)]="task.scope" (ngModelChange)="updateTask(task, 'scope')" [nzDisabled]="!task.custom">
                   <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
                   <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
                 </nz-select>
@@ -136,7 +137,7 @@
               <td><label nz-checkbox aria-label="Tracked" [(ngModel)]="task.enabled" (ngModelChange)="updateTask(task, 'enabled')"></label></td>
               <td>
                 <!-- All 7 days is the same as every day -->
-                <nz-select [nzDisabled]="task.canEditDaysFilter === false"
+                <nz-select lostarkHelperSteadyDropdown [nzDisabled]="task.canEditDaysFilter === false"
                   [nzMode]="'multiple'"
                   [nzMaxTagCount]="2"
                   nzPlaceHolder="Every day"
@@ -194,9 +195,10 @@
     <nz-form-item class="icon-field">
       <nz-form-label nzFor="add-task-icon">Icon</nz-form-label>
       <nz-form-control>
-        <nz-select nzId="add-task-icon" formControlName="iconPath"
+        <nz-select lostarkHelperSteadyDropdown nzId="add-task-icon" formControlName="iconPath"
           nzAllowClear nzShowSearch nzPlaceHolder="No icon"
           [nzCustomTemplate]="chosenIcon"
+          [nzOptionHeightPx]="iconOptionHeight" [nzOptionOverflowSize]="iconOptionRows"
           class="icon-select">
           @for (icon of icons; track icon.path) {
             <nz-option [nzValue]="icon.path" [nzLabel]="icon.label" nzCustomContent>
@@ -212,7 +214,7 @@
     <nz-form-item class="select-field">
       <nz-form-label nzFor="add-task-frequency">Frequency</nz-form-label>
       <nz-form-control nzErrorTip="Please choose a task frequency">
-        <nz-select nzId="add-task-frequency" formControlName="frequency">
+        <nz-select lostarkHelperSteadyDropdown nzId="add-task-frequency" formControlName="frequency">
           <nz-option [nzValue]="TaskFrequency.DAILY" nzLabel="Daily"></nz-option>
           <nz-option [nzValue]="TaskFrequency.WEEKLY" nzLabel="Weekly"></nz-option>
           <nz-option [nzValue]="TaskFrequency.BIWEEKLY" nzLabel="Biweekly"></nz-option>
@@ -224,7 +226,7 @@
     <nz-form-item class="select-field">
       <nz-form-label nzFor="add-task-scope">Scope</nz-form-label>
       <nz-form-control nzErrorTip="Please choose a task scope">
-        <nz-select nzId="add-task-scope" formControlName="scope">
+        <nz-select lostarkHelperSteadyDropdown nzId="add-task-scope" formControlName="scope">
           <nz-option [nzValue]="TaskScope.CHARACTER" nzLabel="Character"></nz-option>
           <nz-option [nzValue]="TaskScope.ROSTER" nzLabel="Roster"></nz-option>
         </nz-select>

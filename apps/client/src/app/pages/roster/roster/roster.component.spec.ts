@@ -8,6 +8,18 @@ import { Character } from '../../../model/character/character';
 import { applyFieldWrites } from '../../../core/database/write-coalescer';
 import { readCharacterFlag, readManualGold } from '../../../core/character-keys';
 import { nextCharacterId } from '../../../core/roster-input';
+import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
+import { NzSelectComponent } from 'ng-zorro-antd/select';
+import { RosterModule } from '../roster.module';
+import { RosterService } from '../../../core/database/services/roster.service';
+import { AuthService } from '../../../core/database/services/auth.service';
+import { CompletionService } from '../../../core/database/services/completion.service';
+import { EnergyService } from '../../../core/database/services/energy.service';
+import { SettingsService } from '../../../core/database/services/settings.service';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
 jest.mock('firebase/app', () => ({}));
@@ -426,5 +438,35 @@ describe('RosterComponent', () => {
     it('tracks rows by id, so two characters with the same name stay apart', () => {
       expect(component.trackByCharacter(0, character(7, 'Twin'))).toBe(7);
     });
+  });
+});
+
+describe('RosterComponent page', () => {
+  // A dropdown checks both sides with one shared gap otherwise, and can flip sides on every scroll; and its
+  // list places the options by their height, so a wrong one makes them jump while it scrolls
+  it('gives both Class selects a gap of its own for each side, and rows the height of a class option', () => {
+    TestBed.configureTestingModule({
+      imports: [RosterModule, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        provideNzIconsTesting(),
+        { provide: RosterService, useValue: { roster$: of({ $key: 'uid1', characters: [character(1, 'Arwen')], trackedTasks: {}, showAllTasks: false }) } },
+        { provide: AuthService, useValue: { uid$: of('uid1') } },
+        { provide: CompletionService, useValue: {} },
+        { provide: EnergyService, useValue: {} },
+        { provide: SettingsService, useValue: {} }
+      ]
+    });
+    const fixture = TestBed.createComponent(RosterComponent);
+    fixture.detectChanges();
+    const selects = fixture.debugElement.queryAll(By.directive(NzSelectComponent)).map(d => d.componentInstance as NzSelectComponent);
+    // The Class select on the character's row and the one in the add form
+    expect(selects.length).toBe(2);
+    for (const select of selects) {
+      expect(select.cdkConnectedOverlay.positions.map(p => [p.overlayY, p.offsetY]))
+        .toEqual([['top', 4], ['bottom', -4], ['bottom', -4], ['top', 4]]);
+      // A 32 px class icon with 5 px padding above and below, six in view
+      expect([select.nzOptionHeightPx, select.nzOptionOverflowSize]).toEqual([42, 6]);
+    }
   });
 });

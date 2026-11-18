@@ -45,6 +45,16 @@ export class RosterComponent {
   // and unreleased placeholders are hidden from the list but still show for characters saved with them.
   public classes = CLASS_OPTIONS;
 
+  /**
+   * Height of an option in the Class dropdowns: the 32 px class icon (.class-icon) plus the option's 5 px
+   * padding above and below. The dropdown's list draws only the options in view and places them by this
+   * height, so a different value makes the options jump while the list scrolls.
+   */
+  public readonly classOptionHeight = 42;
+
+  /** Options in view at once in the Class dropdowns. */
+  public readonly classOptionRows = 6;
+
   public roster$ = this.rosterService.roster$;
 
   public readonly maxNameLength = MAX_CHARACTER_NAME_LENGTH;

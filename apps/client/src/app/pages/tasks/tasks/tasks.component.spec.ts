@@ -13,6 +13,8 @@ import { TasksService } from '../../../core/database/services/tasks.service';
 import { AuthService } from '../../../core/database/services/auth.service';
 import { LayoutStateService } from '../../../core/services/layout-state.service';
 import { DRAWER_ANIMATE_DURATION } from 'ng-zorro-antd/drawer';
+import { By } from '@angular/platform-browser';
+import { NzSelectComponent } from 'ng-zorro-antd/select';
 
 // No real Firebase in unit tests (same as energy.service.spec.ts): the services are stubbed below
 jest.mock('firebase/app', () => ({}));
@@ -403,6 +405,29 @@ describe('TasksComponent page', () => {
     expect(cardTitles(el)).toEqual(['Tasks', 'Add a custom task']);
     expect(forms().length).toBe(1);
   }));
+
+  // A dropdown checks both sides with one shared gap otherwise, and can flip sides on every scroll
+  it('gives every select on the page a gap of its own for each side of the field', () => {
+    const fixture = setup(false);
+    const selects = fixture.debugElement.queryAll(By.directive(NzSelectComponent)).map(d => d.componentInstance as NzSelectComponent);
+    // Icon, Frequency, Scope and Days in the row, Icon, Frequency and Scope in the add form
+    expect(selects.length).toBe(7);
+    for (const select of selects) {
+      expect(select.cdkConnectedOverlay.positions.map(p => [p.overlayY, p.offsetY]))
+        .toEqual([['top', 4], ['bottom', -4], ['bottom', -4], ['top', 4]]);
+    }
+  });
+
+  // The dropdown's list places its options by this height, so a wrong one makes them jump while it scrolls
+  it('sizes the icon dropdowns to their 42 px options, and leaves the text dropdowns at the default', () => {
+    const fixture = setup(false);
+    const sizes = (css: string) => fixture.debugElement.queryAll(By.css(css))
+      .map(d => d.componentInstance as NzSelectComponent)
+      .map(select => [select.nzOptionHeightPx, select.nzOptionOverflowSize]);
+    // A 32 px icon with 5 px padding above and below, six in view
+    expect(sizes('nz-select.icon-select')).toEqual([[42, 6], [42, 6]]);
+    expect(sizes('nz-select:not(.icon-select)')).toEqual(Array(5).fill([32, 8]));
+  });
 
   it('asks before Track all and Untrack all change every task', async () => {
     const setTrackAll = jest.fn();
