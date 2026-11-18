@@ -47,7 +47,7 @@
     "@nx/workspace": "23.3.2",
     "@schematics/angular": "22.2.6",
     "@types/jest": "30.0.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.6",
     "@typescript-eslint/eslint-plugin": "8.73.0",
     "@typescript-eslint/parser": "8.73.0",
     "@typescript-eslint/utils": "8.73.0",
