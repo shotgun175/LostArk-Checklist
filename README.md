@@ -159,7 +159,7 @@ The import replaces this account's roster, tasks, ticks, rest bonus and settings
 
 ## Development
 
-Stack: Angular 22 with NgModules, ng-zorro-antd 22, Nx 23, Firebase JS SDK 12 (used directly through `apps/client/src/app/core/firebase`, no AngularFire), Jest.
+Stack: Angular 22 with NgModules, ng-zorro-antd 22, Nx 23, Firebase JS SDK 13 (used directly through `apps/client/src/app/core/firebase`, no AngularFire), Jest.
 
 Requirements:
 
@@ -189,16 +189,17 @@ Lint warnings do not fail CI, only errors do.
 
 This workspace has no `angular.json` (Nx `project.json` layout), so `ng update` refuses to run here. Use `nx migrate` instead, and move all Angular packages together: they pin each other exactly, so a single-package bump cannot install.
 
-1. Update Angular, replacing `X` with the target version:
+1. Update Angular, replacing `X` with the target version. `NX_MIGRATE_USE_LOCAL=true` makes `nx migrate` run the Nx already installed here; without it, it downloads and runs `nx@latest`, which can be a newer major than this workspace uses:
 
    ```bash
+   export NX_MIGRATE_USE_LOCAL=true
    npx nx migrate @angular/core@X
    npx nx migrate @angular/cli@X
    npx nx migrate @angular/cdk@X
    ```
 
-   Then set `@schematics/angular` to `X` by hand in `package.json`; it is outside Angular's package groups, so `nx migrate` leaves it behind.
-2. Update Nx with `npx nx migrate <version>`, replacing `<version>` with the target Nx version.
+   Then set `@schematics/angular` to `X` by hand in `package.json`; it is outside Angular's package groups, so `nx migrate` leaves it behind. If the CLI and the framework ever end up on different patch versions, `@schematics/angular` follows the CLI.
+2. Update Nx with `npx nx migrate <version>`, replacing `<version>` with an explicit target Nx version. Never use `latest` there: it moves the workspace to the newest Nx major.
 3. If either step wrote a `migrations.json`, run `npx nx migrate --run-migrations`, then delete `migrations.json`.
 4. Regenerate the lockfile from scratch. An in-place `npm install` fails with `ERESOLVE` on Angular's exact peer pins:
 
@@ -211,7 +212,9 @@ This workspace has no `angular.json` (Nx `project.json` layout), so `ng update` 
 
 Edit `package.json` directly rather than with `npm pkg set`: on Windows, `npm pkg set` run through cmd.exe silently drops the `^` from a range.
 
-The `overrides` entry in `package.json` forces Nx's `undici` dependency to 7.29.1, because Nx 23.3.0 pins exactly 7.29.0, which has known security advisories ([nrwl/nx#37331](https://github.com/nrwl/nx/issues/37331)). Remove it in the same change as the next Nx update once `npm view nx@latest dependencies.undici` shows a range that allows 7.29.1 or newer.
+The `overrides` entry in `package.json` forces Nx's `undici` dependency to 7.30.2, because the Nx 23 line (23.3.2 included) pins exactly 7.29.0, which has known security advisories ([nrwl/nx#37331](https://github.com/nrwl/nx/issues/37331); the fix landed only in Nx 24). Check the Nx version this project is on or is moving to, not `latest`: `npm view nx@<that version> dependencies.undici`. Remove the override in the same change as an Nx update only when that version declares an undici with no open advisories (`npm audit` reports nothing for undici with the override removed). Until then, keep it, and raise it to the newest patched 7.x whenever a new undici advisory appears.
+
+`ng-zorro-antd` is pinned at exactly 22.1.1. From 22.1.2 on, hover tooltips no longer open on a tap on touch screens, and every tooltip in this app uses the default hover trigger, so phones would lose them. Move ng-zorro in a change of its own that gives the tooltips a tap fallback, checked on a phone.
 
 Every select (Tasks Manager and Roster) carries `lostarkHelperSteadyDropdown` (`SteadySelectDropdownDirective`, from `SteadySelectDropdownModule` in `apps/client/src/app/components/steady-select-dropdown`) to work around an ng-zorro 22 bug: the 4 px gap between a select and its dropdown takes its sign from the side the dropdown is on, so with about the dropdown's height of room below the field, every scroll moved the dropdown to the other side and it flickered. Give a new `nz-select` the attribute too, and import `SteadySelectDropdownModule` in its page's module: without that import the attribute does nothing, and there is no error to say so. When its options are taller than ng-zorro's 32 px (an icon in each option, for example), also set `nzOptionHeightPx` to their real height, or its list jumps while it scrolls. After an ng-zorro update, search `node_modules/ng-zorro-antd/fesm2022/ng-zorro-antd-select.mjs` for `cdkConnectedOverlayOffsetY`: once it no longer depends on `placement()`, the directive can go.
 
