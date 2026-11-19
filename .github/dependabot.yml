@@ -28,7 +28,7 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@ant-design/icons-angular"
         update-types: ["version-update:semver-major"]
-      # Held on purpose, every update type (see README and .claude/DECISIONS.md):
+      # Held on purpose, every update type (see README "Updating Angular and Nx"):
       # angular-eslint 22.7 changed inline template processing, so it moves by hand
       # together with an Nx update, which also removes these entries.
       - dependency-name: "angular-eslint"
