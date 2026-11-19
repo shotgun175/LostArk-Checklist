@@ -185,7 +185,7 @@ npx nx test client
 
 Lint warnings do not fail CI, only errors do.
 
-An info icon that explains a checkbox goes beside its label, never inside it: an `nz-checkbox` label toggles on a click anywhere inside it, and a tap on the icon is how its tooltip opens on a phone. Wrap the pair as `<span class="checkbox-with-info"><label nz-checkbox>Text</label>&ngsp;<span nz-icon nz-tooltip></span></span>`; the `.checkbox-with-info` rule in `apps/client/src/styles.less` spaces it as if the icon ended the label text. `apps/client/src/app/template-rules.spec.ts` fails when a tooltip host sits inside a checkbox label.
+An info icon that explains a checkbox goes beside its label, never inside it: an `nz-checkbox` label toggles on a click anywhere inside it, and a tap on the icon is how its tooltip opens on a phone. Wrap the pair as `<span class="checkbox-with-info"><label nz-checkbox>Text</label>&ngsp;<span nz-icon nz-tooltip></span></span>`; the `.checkbox-with-info` rule in `apps/client/src/styles.less` spaces it as if the icon ended the label text. Keep `&ngsp;` between the label and the icon, written on one line: Angular drops a plain space or a line break between two elements, and the icon would then touch the text. `apps/client/src/app/template-rules.spec.ts` fails when a tooltip (static or bound), popover or popconfirm host sits inside a checkbox or radio.
 
 ### Updating Angular and Nx
 

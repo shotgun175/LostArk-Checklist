@@ -455,4 +455,17 @@ describe('ChecklistComponent page', () => {
     expect(settingsPatch).toHaveBeenCalledWith('uid1', [{ path: ['hiddenOnCompletion'], value: true }]);
     expect(showHidden.value).toBe(true);
   });
+
+  // Space on the focused box and a tap on the box itself both reach the box as a click on its input
+  it('still changes each view toggle from the box itself', async () => {
+    const { toggles, click, showHidden, rosterPatch, settingsPatch } = await renderPage();
+    const box = (text: string) => ([...toggles.querySelectorAll<HTMLElement>('label[nz-checkbox]')]
+      .find(l => l.textContent?.includes(text)) as HTMLElement).querySelector('input[type=checkbox]') as HTMLElement;
+    await click(box('Show all tasks'));
+    await click(box('Hide completed tasks'));
+    await click(box('Show hidden characters'));
+    expect(rosterPatch).toHaveBeenCalledWith('uid1', [{ path: ['showAllTasks'], value: true }]);
+    expect(settingsPatch).toHaveBeenCalledWith('uid1', [{ path: ['hiddenOnCompletion'], value: true }]);
+    expect(showHidden.value).toBe(true);
+  });
 });

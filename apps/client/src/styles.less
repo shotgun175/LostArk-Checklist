@@ -59,7 +59,8 @@
 // A checkbox with its info icon beside the label, not inside it: an nz-checkbox label toggles on a click
 // anywhere inside it, and a click or tap is how the icon's tooltip opens on a phone. Markup:
 // <span class="checkbox-with-info"><label nz-checkbox>Text</label>&ngsp;<span nz-icon nz-tooltip></span></span>.
-// Spaced as when the icon ended the label text: the label's end padding moves after the icon.
+// Spaced as when the icon ended the label text: the label's end padding moves after the icon, and &ngsp;
+// (not a plain space or a line break, which Angular drops between elements) gives the space before the icon.
 .checkbox-with-info {
   white-space: nowrap;
   padding-inline-end: 8px;
