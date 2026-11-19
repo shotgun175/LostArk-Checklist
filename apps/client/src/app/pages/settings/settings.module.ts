@@ -12,7 +12,7 @@ import { NzCardModule } from "ng-zorro-antd/card";
 import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { TapTooltipModule } from "../../components/tap-tooltip/tap-tooltip.module";
 import { NzEmptyModule } from "ng-zorro-antd/empty";
 import { NzDropdownModule } from "ng-zorro-antd/dropdown";
 import { NzInputModule } from "ng-zorro-antd/input";
@@ -40,7 +40,7 @@ const routes: Routes = [{
     NzInputNumberModule,
     NzButtonModule,
     NzPopconfirmModule,
-    NzTooltipModule,
+    TapTooltipModule,
     NzEmptyModule,
     NzDropdownModule,
     NzInputModule,

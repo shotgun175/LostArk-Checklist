@@ -13,7 +13,7 @@ import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzSelectModule } from "ng-zorro-antd/select";
 import { NzFormModule } from "ng-zorro-antd/form";
 import { NzPopconfirmModule } from "ng-zorro-antd/popconfirm";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { TapTooltipModule } from "../../components/tap-tooltip/tap-tooltip.module";
 import { IconsProviderModule } from "../../icons-provider.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { TextQuestionPopupModule } from "../../components/text-question-popup/text-question-popup.module";
@@ -45,7 +45,7 @@ const routes: Routes = [{
     ReactiveFormsModule,
     NzFormModule,
     NzPopconfirmModule,
-    NzTooltipModule,
+    TapTooltipModule,
     IconsProviderModule,
     NzModalModule,
     DragDropModule,
