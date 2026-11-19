@@ -185,6 +185,8 @@ npx nx test client
 
 Lint warnings do not fail CI, only errors do.
 
+An info icon that explains a checkbox goes beside its label, never inside it: an `nz-checkbox` label toggles on a click anywhere inside it, and a tap on the icon is how its tooltip opens on a phone. Wrap the pair as `<span class="checkbox-with-info"><label nz-checkbox>Text</label>&ngsp;<span nz-icon nz-tooltip></span></span>`; the `.checkbox-with-info` rule in `apps/client/src/styles.less` spaces it as if the icon ended the label text. `apps/client/src/app/template-rules.spec.ts` fails when a tooltip host sits inside a checkbox label.
+
 ### Updating Angular and Nx
 
 This workspace has no `angular.json` (Nx `project.json` layout), so `ng update` refuses to run here. Use `nx migrate` instead, and move all Angular packages together: they pin each other exactly, so a single-package bump cannot install.
