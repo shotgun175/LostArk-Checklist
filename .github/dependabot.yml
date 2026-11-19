@@ -29,10 +29,8 @@ updates:
       - dependency-name: "@ant-design/icons-angular"
         update-types: ["version-update:semver-major"]
       # Held on purpose, every update type (see README and .claude/DECISIONS.md):
-      # ng-zorro-antd 22.1.2 and later stop hover tooltips from opening on a tap on
-      # phones, and angular-eslint 22.7 changed inline template processing. Each moves
-      # by hand in a change of its own, which also removes its entries here.
-      - dependency-name: "ng-zorro-antd"
+      # angular-eslint 22.7 changed inline template processing, so it moves by hand
+      # together with an Nx update, which also removes these entries.
       - dependency-name: "angular-eslint"
       - dependency-name: "@angular-eslint/*"
       # Angular pins these to a minor range (compiler-cli: typescript >=6.0 <6.1),
