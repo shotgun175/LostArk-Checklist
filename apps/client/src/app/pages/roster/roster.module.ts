@@ -14,7 +14,7 @@ import { IconsProviderModule } from "../../icons-provider.module";
 import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzSelectModule } from "ng-zorro-antd/select";
 import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { TapTooltipModule } from "../../components/tap-tooltip/tap-tooltip.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { DragDropModule } from "@angular/cdk/drag-drop";
@@ -45,7 +45,7 @@ const routes = [{
     FormsModule,
     NzSelectModule,
     NzCheckboxModule,
-    NzTooltipModule,
+    TapTooltipModule,
     NzModalModule,
     NzPageHeaderModule,
     DragDropModule,

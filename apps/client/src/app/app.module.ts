@@ -19,7 +19,7 @@ import { AuthPopupsModule } from "./components/auth-popups/auth-popups.module";
 import { NzModalModule } from "ng-zorro-antd/modal";
 import { NzAlertModule } from "ng-zorro-antd/alert";
 import { NzButtonModule } from "ng-zorro-antd/button";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { TapTooltipModule } from "./components/tap-tooltip/tap-tooltip.module";
 import { provideNzDateFnsAdapter } from 'ng-zorro-antd/core/time';
 import { CdkScrollableModule } from "@angular/cdk/scrolling";
 import { provideServiceWorker } from "@angular/service-worker";
@@ -41,7 +41,7 @@ registerLocaleData(en);
     NzModalModule,
     NzAlertModule,
     NzButtonModule,
-    NzTooltipModule,
+    TapTooltipModule,
     CdkScrollableModule
   ],
   providers: [

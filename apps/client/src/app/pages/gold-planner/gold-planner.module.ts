@@ -8,7 +8,7 @@ import { FormsModule } from "@angular/forms";
 import { NzPageHeaderModule } from "ng-zorro-antd/page-header";
 import { NzCheckboxModule } from "ng-zorro-antd/checkbox";
 import { IconsProviderModule } from "../../icons-provider.module";
-import { NzTooltipModule } from "ng-zorro-antd/tooltip";
+import { TapTooltipModule } from "../../components/tap-tooltip/tap-tooltip.module";
 import { NzInputNumberModule } from "ng-zorro-antd/input-number";
 import { NzButtonModule } from "ng-zorro-antd/button";
 import { NzEmptyModule } from "ng-zorro-antd/empty";
@@ -29,7 +29,7 @@ const routes: Routes = [{
     NzPageHeaderModule,
     NzCheckboxModule,
     IconsProviderModule,
-    NzTooltipModule,
+    TapTooltipModule,
     NzInputNumberModule,
     NzButtonModule,
     NzEmptyModule
