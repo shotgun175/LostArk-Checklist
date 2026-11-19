@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, signal, Type } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzTooltipDirective, NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { TAP_SLOP_PX } from './tap-tooltip.directive';
 import { TapTooltipModule } from './tap-tooltip.module';
 
 @Component({
   template: `
     <span id="info" nz-tooltip nzTooltipTitle="Info" (nzTooltipVisibleChange)="visible = $event">i</span>
-    <button type="button" id="cleared" nz-tooltip [nzTooltipTitle]="title()" (click)="title.set('')" (nzTooltipVisibleChange)="clearedVisible = $event">c</button>
+    <button type="button" id="cleared" nz-tooltip [nzTooltipTitle]="title()" (click)="title.set('')" (nzTooltipVisibleChange)="clearedVisible = $event; clearedEverVisible = clearedEverVisible || $event">c</button>
+    <span id="slow" nz-tooltip nzTooltipTitle="Slow" nzTooltipMouseEnterDelay="0.5" (nzTooltipVisibleChange)="slowVisible = $event">s</span>
     <span id="click" nz-tooltip nzTooltipTrigger="click" nzTooltipTitle="Click" (nzTooltipVisibleChange)="clickVisible = $event">k</span>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: false
@@ -17,6 +19,8 @@ class HostComponent {
   readonly title = signal('Note');
   visible = false;
   clearedVisible = false;
+  clearedEverVisible = false;
+  slowVisible = false;
   clickVisible = false;
 }
 
@@ -26,6 +30,14 @@ function touch(target: Element, type: string, x = 10, y = 10): void {
   const point = [{ clientX: x, clientY: y, target }];
   Object.defineProperty(event, 'touches', { value: type === 'touchend' || type === 'touchcancel' ? [] : point });
   Object.defineProperty(event, 'changedTouches', { value: point });
+  target.dispatchEvent(event);
+}
+
+/** A touch event with these fingers still on the screen (touches) and this one changing (changedTouches). */
+function touchWith(target: Element, type: string, fingers: { clientX: number; clientY: number }[], changed = fingers.slice(-1)): void {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'touches', { value: fingers });
+  Object.defineProperty(event, 'changedTouches', { value: changed });
   target.dispatchEvent(event);
 }
 
@@ -69,11 +81,21 @@ describe('TapTooltipDirective', () => {
   }));
 
   // If this starts failing after an ng-zorro update, ng-zorro opens hover tooltips on a tap again and the directive may go
-  it('without the directive, ng-zorro 22.2 ignores the same tap', fakeAsync(() => {
+  it('ng-zorro on its own still ignores the same tap, which is why the directive exists', fakeAsync(() => {
     setup(NzTooltipModule);
     tap(el('info'));
-    wait();
+    tick(1000);
+    fixture.detectChanges();
+    tick();
     expect(host.visible).toBe(false);
+  }));
+
+  // Control for the test above: this harness does see ng-zorro open a tooltip by itself
+  it('ng-zorro on its own still opens the tooltip on a mouse hover', fakeAsync(() => {
+    setup(NzTooltipModule);
+    mouse(el('info'), 'mouseenter');
+    wait();
+    expect(host.visible).toBe(true);
   }));
 
   it('opens on a tap that no click follows, as on a disabled checkbox', fakeAsync(() => {
@@ -124,6 +146,23 @@ describe('TapTooltipDirective', () => {
     expect(host.visible).toBe(false);
   }));
 
+  it('opens nothing when another finger touches down during the tap (a pinch that starts elsewhere)', fakeAsync(() => {
+    setup(TapTooltipModule);
+    touch(el('info'), 'touchstart', 10, 10);
+    touchWith(el('info'), 'touchmove', [{ clientX: 10, clientY: 10 }, { clientX: 200, clientY: 200 }]);
+    touchWith(el('info'), 'touchend', [{ clientX: 200, clientY: 200 }], [{ clientX: 10, clientY: 10 }]);
+    wait();
+    expect(host.visible).toBe(false);
+  }));
+
+  it('opens nothing when another finger is still down as this one lifts', fakeAsync(() => {
+    setup(TapTooltipModule);
+    touch(el('info'), 'touchstart', 10, 10);
+    touchWith(el('info'), 'touchend', [{ clientX: 200, clientY: 200 }], [{ clientX: 10, clientY: 10 }]);
+    wait();
+    expect(host.visible).toBe(false);
+  }));
+
   it('opens nothing when the touch is cancelled', fakeAsync(() => {
     setup(TapTooltipModule);
     touch(el('info'), 'touchstart');
@@ -137,7 +176,7 @@ describe('TapTooltipDirective', () => {
     setup(TapTooltipModule);
     tap(el('cleared'));
     wait();
-    expect(host.clearedVisible).toBe(false);
+    expect(host.clearedEverVisible).toBe(false);
   }));
 
   it('leaves tooltips with another trigger to ng-zorro', fakeAsync(() => {
@@ -146,6 +185,35 @@ describe('TapTooltipDirective', () => {
     touch(el('click'), 'touchend');
     wait();
     expect(host.clickVisible).toBe(false);
+  }));
+
+  it('waits the hover delay the tooltip sets for itself', fakeAsync(() => {
+    setup(TapTooltipModule);
+    tap(el('slow'));
+    wait();
+    expect(host.slowVisible).toBe(false);
+    tick(350);
+    fixture.detectChanges();
+    expect(host.slowVisible).toBe(true);
+  }));
+
+  it('opens nothing once the element is gone, when it goes during the wait', fakeAsync(() => {
+    setup(TapTooltipModule);
+    const tooltip = fixture.debugElement.query(By.css('#info')).injector.get(NzTooltipDirective);
+    const show = jest.spyOn(tooltip, 'show');
+    tap(el('info'));
+    fixture.destroy();
+    tick(200);
+    expect(show).not.toHaveBeenCalled();
+  }));
+
+  it('leaves an open tooltip open on a second tap on the same element', fakeAsync(() => {
+    setup(TapTooltipModule);
+    tap(el('info'));
+    wait();
+    tap(el('info'));
+    wait();
+    expect(host.visible).toBe(true);
   }));
 
   it('ignores the mouse: a click with no touch opens nothing', fakeAsync(() => {

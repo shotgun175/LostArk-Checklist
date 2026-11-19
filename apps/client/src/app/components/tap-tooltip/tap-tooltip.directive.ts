@@ -12,8 +12,8 @@ const DEFAULT_ENTER_DELAY_S = 0.15;
  *
  * Since ng-zorro 22.1.2 (NG-ZORRO/ng-zorro-antd#9881) a hover tooltip ignores the mouse events a phone makes up
  * after a tap, so a tap no longer opens it. This directive opens it on a tap instead: one finger that lifts again
- * without moving more than TAP_SLOP_PX and without the touch being cancelled, so a scroll or a drag that starts
- * on the element opens nothing. It waits the tooltip's own hover delay first, so a title that the tap itself
+ * without moving more than TAP_SLOP_PX, without the touch being cancelled and with no other finger on the screen,
+ * so a scroll, a drag or a pinch that starts on the element opens nothing. It waits the tooltip's own hover delay first, so a title that the tap itself
  * clears (the Roster note button opening its popup) is already empty by then; ng-zorro shows nothing for an
  * empty title and closes the tooltip on a tap anywhere else. The mouse and the keyboard are left to ng-zorro,
  * and so are tooltips with a click, focus or manual trigger.
@@ -38,7 +38,7 @@ export class TapTooltipDirective {
       ["touchstart", event => this.onTouchStart(event)],
       ["touchmove", event => this.onTouchMove(event)],
       ["touchcancel", () => this.start = null],
-      ["touchend", () => this.onTouchEnd()]
+      ["touchend", event => this.onTouchEnd(event)]
     ];
     // Passive and outside Angular: a touch never waits for these, and a moving finger runs no change detection
     this.zone.runOutsideAngular(() => {
@@ -60,17 +60,18 @@ export class TapTooltipDirective {
     this.start = touch ? { x: touch.clientX, y: touch.clientY } : null;
   }
 
-  /** A finger that travels further than TAP_SLOP_PX is a scroll or a drag. */
+  /** A finger that travels further than TAP_SLOP_PX is a scroll or a drag; another finger touching down is a pinch. */
   private onTouchMove(event: TouchEvent): void {
     const touch = event.touches[0];
-    if (this.start && touch && Math.hypot(touch.clientX - this.start.x, touch.clientY - this.start.y) > TAP_SLOP_PX) {
+    if (this.start && touch && (event.touches.length > 1 || Math.hypot(touch.clientX - this.start.x, touch.clientY - this.start.y) > TAP_SLOP_PX)) {
       this.start = null;
     }
   }
 
   /** The finger lifted after a tap: open the tooltip once its hover delay has passed, as a hover would. */
-  private onTouchEnd(): void {
-    const tapped = this.start !== null;
+  private onTouchEnd(event: TouchEvent): void {
+    // Another finger still on the screen means this one was part of a pinch
+    const tapped = this.start !== null && event.touches.length === 0;
     this.start = null;
     if (!tapped || this.tooltip.trigger !== "hover") {
       return;
