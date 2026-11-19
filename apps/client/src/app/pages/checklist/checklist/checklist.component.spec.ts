@@ -1,6 +1,11 @@
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ElementRef, NgZone } from '@angular/core';
-import { NEVER, Observable, firstValueFrom, of } from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
+import { provideNzIconsTesting } from 'ng-zorro-antd/icon/testing';
+import { BehaviorSubject, NEVER, Observable, firstValueFrom, of } from 'rxjs';
+import { ChecklistModule } from '../checklist.module';
 import { ChecklistComponent } from './checklist.component';
 import { tasks } from '../../../core/tasks';
 import { Completion } from '../../../model/completion';
@@ -388,5 +393,79 @@ describe('ChecklistComponent', () => {
       expect(cell.modeBadge).toBe('HM');
       expect(cell.goldBadgeTooltip).toBe('Hard Mode, earns gold');
     });
+  });
+});
+
+describe('ChecklistComponent page', () => {
+  const arwen = { id: 1, name: 'Arwen', ilvl: 1700 } as Character;
+
+  // The real template with stubbed data: one character, so the view toggles show
+  async function renderPage() {
+    const showHidden = new BehaviorSubject(false);
+    const rosterPatch = jest.fn();
+    const settingsPatch = jest.fn();
+    TestBed.configureTestingModule({
+      imports: [ChecklistModule, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        provideNzIconsTesting(),
+        { provide: RosterService, useValue: { roster$: of({ $key: 'uid1', characters: [arwen], trackedTasks: {}, showAllTasks: false }), patchFields: rosterPatch, setOne: jest.fn() } },
+        { provide: TasksService, useValue: { tasks$: NEVER } },
+        { provide: SettingsService, useValue: { settings$: of({ $key: 'uid1', hiddenOnCompletion: false }), patchFields: settingsPatch } },
+        { provide: EnergyService, useValue: { energy$: NEVER } },
+        { provide: TimeService, useValue: { lastDailyReset$: NEVER, lastWeeklyReset$: NEVER, lastBiWeeklyReset$: NEVER, lastBiWeeklyOffsetReset$: NEVER } },
+        { provide: CompletionService, useValue: { completion$: NEVER } },
+        { provide: LayoutStateService, useValue: { showHiddenCharacters$: showHidden, sidebarCollapsed$: of(false), sidebarWidth$: of(200) } }
+      ]
+    });
+    const fixture = TestBed.createComponent(ChecklistComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const toggles = fixture.nativeElement.querySelector('.view-toggles') as HTMLElement;
+    const click = async (element: HTMLElement) => {
+      element.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    return { toggles, click, showHidden, rosterPatch, settingsPatch };
+  }
+
+  // A click or tap on an info icon is how phones open its tooltip; it must not also change the choice
+  it('leaves every view toggle as it was when one of their info icons is clicked', async () => {
+    const { toggles, click, showHidden, rosterPatch, settingsPatch } = await renderPage();
+    const icons = [...toggles.querySelectorAll<HTMLElement>('[nz-tooltip]')];
+    expect(icons.length).toBe(3);
+    for (const icon of icons) {
+      await click(icon);
+    }
+    expect(rosterPatch).not.toHaveBeenCalled();
+    expect(settingsPatch).not.toHaveBeenCalled();
+    expect(showHidden.value).toBe(false);
+  });
+
+  it('still changes each view toggle from its label text', async () => {
+    const { toggles, click, showHidden, rosterPatch, settingsPatch } = await renderPage();
+    const label = (text: string) => [...toggles.querySelectorAll<HTMLElement>('label[nz-checkbox]')].find(l => l.textContent?.includes(text)) as HTMLElement;
+    await click(label('Show all tasks'));
+    await click(label('Hide completed tasks'));
+    await click(label('Show hidden characters'));
+    expect(rosterPatch).toHaveBeenCalledWith('uid1', [{ path: ['showAllTasks'], value: true }]);
+    expect(settingsPatch).toHaveBeenCalledWith('uid1', [{ path: ['hiddenOnCompletion'], value: true }]);
+    expect(showHidden.value).toBe(true);
+  });
+
+  // Space on the focused box and a tap on the box itself both reach the box as a click on its input
+  it('still changes each view toggle from the box itself', async () => {
+    const { toggles, click, showHidden, rosterPatch, settingsPatch } = await renderPage();
+    const box = (text: string) => ([...toggles.querySelectorAll<HTMLElement>('label[nz-checkbox]')]
+      .find(l => l.textContent?.includes(text)) as HTMLElement).querySelector('input[type=checkbox]') as HTMLElement;
+    await click(box('Show all tasks'));
+    await click(box('Hide completed tasks'));
+    await click(box('Show hidden characters'));
+    expect(rosterPatch).toHaveBeenCalledWith('uid1', [{ path: ['showAllTasks'], value: true }]);
+    expect(settingsPatch).toHaveBeenCalledWith('uid1', [{ path: ['hiddenOnCompletion'], value: true }]);
+    expect(showHidden.value).toBe(true);
   });
 });

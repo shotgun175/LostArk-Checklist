@@ -442,9 +442,7 @@ describe('RosterComponent', () => {
 });
 
 describe('RosterComponent page', () => {
-  // A dropdown checks both sides with one shared gap otherwise, and can flip sides on every scroll; and its
-  // list places the options by their height, so a wrong one makes them jump while it scrolls
-  it('gives both Class selects a gap of its own for each side, and rows the height of a class option', () => {
+  const renderPage = () => {
     TestBed.configureTestingModule({
       imports: [RosterModule, NoopAnimationsModule],
       providers: [
@@ -459,6 +457,28 @@ describe('RosterComponent page', () => {
     });
     const fixture = TestBed.createComponent(RosterComponent);
     fixture.detectChanges();
+    return fixture;
+  };
+
+  // A click or tap on the info icon is how phones open its tooltip; it must not also tick Lazy
+  it('leaves Lazy alone in the add form when its info icon is clicked, and the label still ticks it', async () => {
+    const fixture = renderPage();
+    const field = fixture.nativeElement.querySelector('nz-form-item.check-field') as HTMLElement;
+    const click = async (element: HTMLElement) => {
+      element.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    };
+    await click(field.querySelector('[nz-tooltip]') as HTMLElement);
+    expect(fixture.componentInstance.form.value.lazy).toBe(false);
+    await click(field.querySelector('label[nz-checkbox]') as HTMLElement);
+    expect(fixture.componentInstance.form.value.lazy).toBe(true);
+  });
+
+  // A dropdown checks both sides with one shared gap otherwise, and can flip sides on every scroll; and its
+  // list places the options by their height, so a wrong one makes them jump while it scrolls
+  it('gives both Class selects a gap of its own for each side, and rows the height of a class option', () => {
+    const fixture = renderPage();
     const selects = fixture.debugElement.queryAll(By.directive(NzSelectComponent)).map(d => d.componentInstance as NzSelectComponent);
     // The Class select on the character's row and the one in the add form
     expect(selects.length).toBe(2);

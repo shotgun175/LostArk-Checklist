@@ -169,10 +169,9 @@
         </nz-form-control>
       </nz-form-item>
       <nz-form-item class="check-field">
-        <label nz-checkbox formControlName="lazy">
-          Lazy
-          <span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
-        </label>
+        <span class="checkbox-with-info">
+          <label nz-checkbox formControlName="lazy">Lazy</label>&ngsp;<span nz-icon nzType="info-circle" nzTheme="outline" nz-tooltip nzTooltipTitle="Only resets after 3 days"></span>
+        </span>
       </nz-form-item>
       <button nz-button class="add-button" [nzType]="'primary'" [disabled]="!form.valid">Add</button>
     </form>
